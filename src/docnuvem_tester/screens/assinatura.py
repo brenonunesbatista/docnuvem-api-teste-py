@@ -149,4 +149,3 @@ class AssinaturaScreen(FormScreen):
             if s.linkAssinatura
         ]
         self.app.push_screen(ResultScreen("Assinatura solicitada", resultado, copiaveis=copiaveis))
-        self.dismiss(None)

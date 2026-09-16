@@ -75,7 +75,6 @@ class FluxoCompletoScreen(AutoFillNomeArquivoMixin, FormScreen):
 
     async def ao_sucesso(self, resultado: Any) -> None:
         documento_id = resultado.documentoId
-        self.dismiss(None)
 
         async def ao_assinar(status: DocumentoStatusResponse) -> None:
             copiaveis = [(f"link de {s.nome}", s.linkAssinatura) for s in status.signatarios if s.linkAssinatura]

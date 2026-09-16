@@ -15,6 +15,10 @@ BannerScreen {
     background: #0000AA;
 }
 
+/* width: auto em ambos é proposital: um Static de largura 100% ao lado de um
+   Static de largura automática faz o Textual desalinhar o centro do que é
+   "auto" (vira x=0 em vez de centralizado). Mantendo os dois "auto", o
+   `align: center middle` da tela centraliza cada um como um bloco. */
 #banner-art {
     color: #FFFF55;
     text-align: center;
@@ -23,7 +27,7 @@ BannerScreen {
 
 #banner-hint {
     color: #55FFFF;
-    text-align: center;
+    width: auto;
     margin-top: 2;
 }
 

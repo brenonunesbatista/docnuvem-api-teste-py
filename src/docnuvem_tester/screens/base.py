@@ -49,6 +49,11 @@ class FormScreen(ModalScreen[None]):
         raise NotImplementedError
 
     async def ao_sucesso(self, resultado: Any) -> None:
+        """Chamado com o formulário já desmontado (self.dismiss já foi feito).
+
+        Normalmente basta empilhar uma tela de resultado com
+        `self.app.push_screen(...)` — NÃO chame `self.dismiss()` aqui.
+        """
         raise NotImplementedError
 
     def compose(self):
@@ -113,4 +118,9 @@ class FormScreen(ModalScreen[None]):
             self.app.push_screen(ResultScreen("Erro inesperado", str(exc), is_error=True))
             return
         self._set_loading(False)
+        # Sempre desmontar este formulário ANTES de empilhar a próxima tela: se
+        # ao_sucesso() empilhar algo e só depois chamar dismiss(), este deixa de
+        # ser o topo da pilha e o dismiss corrompe o future interno do Textual
+        # (InvalidStateError). Centralizado aqui para nenhuma subclasse repetir.
+        self.dismiss(None)
         await self.ao_sucesso(resultado)

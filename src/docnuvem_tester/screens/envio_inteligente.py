@@ -64,4 +64,3 @@ class EnvioInteligenteScreen(AutoFillNomeArquivoMixin, FormScreen):
                 copiaveis=[("documentoId", str(resultado.documentoId))],
             )
         )
-        self.dismiss(None)

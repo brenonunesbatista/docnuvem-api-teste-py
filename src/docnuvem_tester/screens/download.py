@@ -90,4 +90,3 @@ class DownloadScreen(FormScreen):
 
     async def ao_sucesso(self, resultado: Any) -> None:
         self.app.push_screen(DownloadResultScreen(resultado))
-        self.dismiss(None)

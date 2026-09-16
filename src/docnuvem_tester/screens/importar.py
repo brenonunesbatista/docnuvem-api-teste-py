@@ -75,4 +75,3 @@ class ImportarScreen(AutoFillNomeArquivoMixin, FormScreen):
                 copiaveis=[("documentoId", str(resultado.documentoId))],
             )
         )
-        self.dismiss(None)

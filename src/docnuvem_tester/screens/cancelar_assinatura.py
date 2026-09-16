@@ -51,4 +51,3 @@ class CancelarAssinaturaScreen(FormScreen):
 
     async def ao_sucesso(self, resultado: Any) -> None:
         self.app.push_screen(ResultScreen("Assinatura cancelada", resultado))
-        self.dismiss(None)

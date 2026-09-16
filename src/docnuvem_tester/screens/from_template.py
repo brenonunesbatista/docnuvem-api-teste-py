@@ -74,4 +74,3 @@ class FromTemplateScreen(FormScreen):
         if resultado.referenciaExterna:
             copiaveis.append(("referenciaExterna", resultado.referenciaExterna))
         self.app.push_screen(ResultScreen("Documento criado a partir do modelo", resultado, copiaveis=copiaveis))
-        self.dismiss(None)
