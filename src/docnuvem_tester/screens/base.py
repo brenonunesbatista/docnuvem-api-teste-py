@@ -45,6 +45,13 @@ class FormScreen(ModalScreen[None]):
         """Ponto de extensão para ações destrutivas (ex.: cancelar assinatura)."""
         return True
 
+    def ao_erro_api(self, exc: DocNuvemAPIError) -> bool:
+        """Ponto de extensão para tratar um erro da API sem sair do formulário
+        (ex.: destacar campos citados em `variaveisFaltantes`). Retornar True
+        significa que a tela já tratou o erro (mostrou sua própria mensagem
+        inclusive, se for o caso) e a ResultScreen padrão não deve aparecer."""
+        return False
+
     async def chamar_api(self, perfil: PerfilConfig) -> Any:
         raise NotImplementedError
 
@@ -111,7 +118,8 @@ class FormScreen(ModalScreen[None]):
             resultado = await self.chamar_api(perfil)
         except DocNuvemAPIError as exc:
             self._set_loading(False)
-            self.app.push_screen(erro_para_tela(exc))
+            if not self.ao_erro_api(exc):
+                self.app.push_screen(erro_para_tela(exc))
             return
         except Exception as exc:  # erro local inesperado (não deve derrubar a TUI)
             self._set_loading(False)

@@ -60,7 +60,6 @@ class MainMenuScreen(Screen[None]):
 
     def _abrir_importar(self) -> None:
         from docnuvem_tester.screens.envio_inteligente import EnvioInteligenteScreen
-        from docnuvem_tester.screens.from_template import FromTemplateScreen
         from docnuvem_tester.screens.importar import ImportarScreen
 
         self.app.push_screen(
@@ -71,10 +70,6 @@ class MainMenuScreen(Screen[None]):
                     CategoryItem(
                         "Envio inteligente (POST /enviarParaEnvioInteligente)",
                         EnvioInteligenteScreen,
-                    ),
-                    CategoryItem(
-                        "Criar de modelo (POST /api/documento/from-template)",
-                        FromTemplateScreen,
                     ),
                 ],
             )

@@ -5,13 +5,13 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from textual.widgets import Input, Static
+from textual.widgets import Button, Input, Static
 
 from docnuvem_tester.client import OutputData
 from docnuvem_tester.config import PerfilConfig
 from docnuvem_tester.models import tem_extensao
 from docnuvem_tester.screens.base import FormScreen
-from docnuvem_tester.screens.formfields import AutoFillNomeArquivoMixin, campo
+from docnuvem_tester.screens.formfields import AutoFillNomeArquivoMixin, campo, campo_arquivo
 from docnuvem_tester.widgets.result_panel import ResultScreen
 
 
@@ -28,13 +28,20 @@ class ImportarScreen(AutoFillNomeArquivoMixin, FormScreen):
             "Importa um arquivo para uma pasta (cria a árvore se nomePastaPai não existir).",
             classes="form-hint",
         )
-        yield campo("Caminho do arquivo*", "in-caminho", "C:\\caminho\\Contrato.pdf")
+        yield campo_arquivo("Caminho do arquivo*", "in-caminho", "C:\\caminho\\Contrato.pdf")
         yield campo("Nome do arquivo*", "in-nome-arquivo", "Contrato.pdf")
         yield campo("Nome da pasta*", "in-nome-pasta", "Contratos")
         yield campo("Nome da pasta pai", "in-nome-pasta-pai", "Clientes/2026")
 
     def on_input_changed(self, event: Input.Changed) -> None:
         self._tratar_input_changed_autofill(event, "in-caminho", "in-nome-arquivo")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if self._e_botao_seletor_arquivo(event.button.id, "in-caminho"):
+            event.stop()
+            self.run_worker(self._abrir_seletor_arquivo("in-caminho"))
+            return
+        super().on_button_pressed(event)
 
     def validar(self) -> list[str]:
         avisos = []

@@ -121,6 +121,21 @@ textual run --dev -m docnuvem_tester
 Mais a opção **Fluxo Completo**, que encadeia `/importar` → `/api/assinatura`
 com o `documentoId` já preenchido no segundo formulário.
 
+O `from-template` não tem tela própria no menu: a porta de entrada é a tela
+**Modelos** — clicar num modelo da lista abre um formulário montado
+dinamicamente a partir das `variaveis` daquele modelo (um campo por
+variável, com o tipo de widget certo conforme `tipo`: texto, texto longo,
+data, numérico, checkbox ou seleção). Campos com `aceitaPorApi: false` ou
+`preenchidoPeloDestinatario: true` aparecem desabilitados e não entram no
+payload. Se a API responder 400 com `variaveisFaltantes`, os campos citados
+ficam com borda vermelha até o próximo envio.
+
+Nos campos de caminho de arquivo (Importar, Envio Inteligente, Fluxo
+Completo), o botão **"Selecionar arquivo..."** abre o explorador nativo do
+sistema operacional (via `tkinter.filedialog`, sem travar a interface). Sem
+display gráfico disponível (ex.: SSH sem X11), cai automaticamente para um
+seletor dentro do terminal (`DirectoryTree` do Textual).
+
 Toda chamada fica registrada no log (tecla `L`), com método, URL completa
 (incluindo os query params efetivamente enviados), timestamp, status HTTP e
 o header `Authorization` sempre mascarado (`Bearer ***...últimos4`).

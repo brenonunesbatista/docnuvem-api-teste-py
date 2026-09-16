@@ -10,7 +10,7 @@ from docnuvem_tester.client import DocNuvemAPIError
 from docnuvem_tester.formatting import valor_ou_traco
 from docnuvem_tester.models import ModeloDTO
 from docnuvem_tester.widgets.confirm_dialog import AlertScreen
-from docnuvem_tester.widgets.result_panel import ResultScreen, erro_para_tela
+from docnuvem_tester.widgets.result_panel import erro_para_tela
 
 
 class ModelosScreen(ModalScreen[None]):
@@ -26,7 +26,8 @@ class ModelosScreen(ModalScreen[None]):
             yield LoadingIndicator(id="modelos-loading")
             yield DataTable(id="modelos-table", cursor_type="row")
             yield Static(
-                "Enter para ver variáveis   |   F5 Atualizar   |   Esc Voltar",
+                "Enter/clique cria um documento a partir do modelo   |   "
+                "F5 Atualizar   |   Esc Voltar",
                 classes="result-hint",
             )
 
@@ -71,9 +72,22 @@ class ModelosScreen(ModalScreen[None]):
             )
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        from docnuvem_tester.screens.from_template import CriarDocumentoModeloScreen
+
         modelo = self._modelos[event.cursor_row]
-        titulo = f"Variáveis do modelo {modelo.codigo or modelo.id or ''}".strip()
-        self.app.push_screen(ResultScreen(titulo, modelo))
+        if not modelo.geravelPorApi:
+            self.app.push_screen(
+                AlertScreen(
+                    "Modelo não gerável por API",
+                    [
+                        f"O modelo {modelo.nome or modelo.codigo or modelo.id!r} está "
+                        "marcado como geravelPorApi=false — não é possível criar um "
+                        "documento a partir dele por aqui."
+                    ],
+                )
+            )
+            return
+        self.app.push_screen(CriarDocumentoModeloScreen(modelo))
 
     def action_voltar(self) -> None:
         self.dismiss(None)

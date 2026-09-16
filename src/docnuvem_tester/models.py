@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -35,6 +36,23 @@ def tem_extensao(nome_arquivo: str) -> bool:
         return False
     _, _, ext = nome.rpartition(".")
     return bool(ext)
+
+
+def validar_data_br(valor: str) -> bool:
+    """Valida o formato dd/MM/yyyy esperado pela API para campos DATA."""
+    try:
+        datetime.strptime(valor, "%d/%m/%Y")
+    except ValueError:
+        return False
+    return True
+
+
+_NUMERO_BR_RE = re.compile(r"^-?(\d{1,3}(\.\d{3})*|\d+)(,\d+)?$")
+
+
+def validar_numero_br(valor: str) -> bool:
+    """Valida o formato 1.234,56 (sem símbolo de moeda) esperado pela API."""
+    return bool(_NUMERO_BR_RE.match(valor))
 
 
 class ApiModel(BaseModel):

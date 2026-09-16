@@ -27,8 +27,11 @@ DENTRO DE UMA TELA DE RESULTADO
   Esc                                  fecha o resultado
 
 MENU PRINCIPAL
-  Importar          /importar, /enviarParaEnvioInteligente, from-template
-  Modelos           GET /api/modelos
+  Importar          /importar, /enviarParaEnvioInteligente (com botão para
+                    escolher o arquivo pelo explorador nativo do sistema)
+  Modelos           GET /api/modelos — clique num modelo para criar um
+                    documento a partir dele (POST /api/documento/from-template),
+                    com um campo por variável do modelo
   Assinatura        POST/DELETE /api/assinatura, GET status
   Documentos        GET /api/documentos, GET download
   Fluxo Completo    importar + solicitar assinatura em sequência

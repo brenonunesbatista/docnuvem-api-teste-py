@@ -48,31 +48,6 @@ class DynamicListEditor(Vertical):
             self.remover_linha(event.button.id.removeprefix("remove-"))
 
 
-class KeyValueEditor(DynamicListEditor):
-    """Editor de pares chave/valor (usado em `variaveis` do from-template)."""
-
-    def __init__(self) -> None:
-        super().__init__("+ Variável")
-
-    def build_row(self, row_id: str) -> Widget:
-        return Horizontal(
-            Input(placeholder="chave", classes="dyn-key"),
-            Input(placeholder="valor", classes="dyn-value"),
-            Button("Remover", id=f"remove-{row_id}", classes="secondary"),
-            id=row_id,
-            classes="dyn-row",
-        )
-
-    def valores(self) -> dict[str, str]:
-        resultado: dict[str, str] = {}
-        for row in self.query(".dyn-row"):
-            chave = row.query_one(".dyn-key", Input).value.strip()
-            valor = row.query_one(".dyn-value", Input).value
-            if chave:
-                resultado[chave] = valor
-        return resultado
-
-
 class SignatariosEditor(DynamicListEditor):
     """Editor de lista de signatários (nome, e-mail, CPF, telefone, ordem)."""
 

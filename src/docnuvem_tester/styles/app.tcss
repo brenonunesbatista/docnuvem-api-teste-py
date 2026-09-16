@@ -243,6 +243,57 @@ Button.danger:focus {
     color: #000000;
 }
 
+/* ---------------------- Variáveis de modelo (from-template) ---------------- */
+
+.var-row {
+    height: auto;
+    margin-bottom: 1;
+    border: solid #55FFFF;
+    padding: 0 1;
+}
+
+.var-row.-campo-erro {
+    border: solid #FF5555;
+}
+
+.var-label {
+    color: #55FFFF;
+    text-style: bold;
+}
+
+.var-row Input,
+.var-row TextArea {
+    background: #FFFFFF;
+    color: #000000;
+    border: solid #000000;
+}
+
+.var-row Input:disabled {
+    background: #AAAAAA;
+    color: #333333;
+}
+
+.var-row TextArea {
+    height: 5;
+}
+
+.var-row Select {
+    width: 1fr;
+}
+
+/* --------------------------- Seletor de arquivo nativo --------------------- */
+
+FilePickerModal > .dos-window {
+    width: 90%;
+    height: 80%;
+}
+
+FilePickerModal DirectoryTree {
+    height: 1fr;
+    background: #0000AA;
+    color: #FFFFFF;
+}
+
 /* ------------------------ Editores dinâmicos (kv / signatários) ------------ */
 
 DynamicListEditor {
