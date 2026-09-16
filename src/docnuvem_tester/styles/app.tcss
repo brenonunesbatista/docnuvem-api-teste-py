@@ -1,0 +1,415 @@
+/* ---------------------------------------------------------------------
+   Paleta fixa estilo Turbo Pascal / Norton Commander (DOS, fim dos 80).
+   Independente do tema claro/escuro do terminal do usuário.
+   ------------------------------------------------------------------- */
+
+Screen {
+    background: #0000AA;
+    color: #FFFFFF;
+}
+
+/* ------------------------------ Banner -------------------------------- */
+
+BannerScreen {
+    align: center middle;
+    background: #0000AA;
+}
+
+#banner-art {
+    color: #FFFF55;
+    text-align: center;
+    width: auto;
+}
+
+#banner-hint {
+    color: #55FFFF;
+    text-align: center;
+    margin-top: 2;
+}
+
+/* ----------------------------- Menu bar -------------------------------- */
+
+MenuBar {
+    dock: top;
+    height: 1;
+    background: #00AAAA;
+    color: #000000;
+}
+
+MenuBar Button {
+    background: #00AAAA;
+    color: #000000;
+    border: none;
+    height: 1;
+    min-width: 3;
+    padding: 0 2;
+    text-style: none;
+}
+
+MenuBar Button:focus {
+    background: #0000AA;
+    color: #FFFF55;
+    text-style: bold;
+}
+
+MenuBar Button:hover {
+    background: #55FFFF;
+    color: #000000;
+}
+
+/* ----------------------------- Rodapé (Footer) -------------------------- */
+
+Footer {
+    background: #00AAAA;
+    color: #000000;
+}
+
+Footer > .footer--key {
+    background: #00AAAA;
+    color: #AA0000;
+    text-style: bold;
+}
+
+Footer > .footer--description {
+    background: #00AAAA;
+    color: #000000;
+}
+
+Footer > .footer--highlight {
+    background: #55FFFF;
+    color: #000000;
+}
+
+/* ---------------------- Barra de status própria ------------------------- */
+
+#status-bar {
+    dock: bottom;
+    height: 1;
+    background: #00AAAA;
+    color: #000000;
+    padding: 0 1;
+}
+
+/* ------------------------------ Janelas --------------------------------- */
+
+.dos-window {
+    background: #0000AA;
+    border: double #FFFFFF;
+    padding: 1 2;
+}
+
+.dos-window-title {
+    background: #0000AA;
+    color: #FFFF55;
+    text-style: bold;
+    text-align: center;
+    width: 100%;
+}
+
+/* --------------------------- Menu de categoria --------------------------- */
+
+CategoryScreen {
+    align: center middle;
+}
+
+CategoryScreen > .dos-window {
+    width: 60;
+    height: auto;
+    max-height: 80%;
+}
+
+CategoryScreen ListView {
+    background: #0000AA;
+    color: #FFFFFF;
+    height: auto;
+    max-height: 20;
+}
+
+CategoryScreen ListItem {
+    background: #0000AA;
+    color: #FFFFFF;
+    padding: 0 1;
+}
+
+CategoryScreen ListItem.-highlight {
+    background: #00AAAA;
+    color: #000000;
+}
+
+/* -------------------------------- Menu principal -------------------------- */
+
+MainMenuScreen {
+    align: center middle;
+}
+
+#main-menu-hint {
+    color: #55FFFF;
+    text-align: center;
+    margin-top: 2;
+}
+
+#perfil-ativo {
+    color: #FFFF55;
+    text-align: center;
+}
+
+/* --------------------------------- Formulários ----------------------------- */
+
+FormScreen {
+    align: center middle;
+}
+
+FormScreen > .dos-window {
+    width: 90%;
+    max-width: 100;
+    height: auto;
+    max-height: 90%;
+}
+
+.form-row {
+    height: auto;
+    margin-bottom: 1;
+}
+
+.form-label {
+    width: 26;
+    color: #55FFFF;
+    padding-top: 1;
+}
+
+.form-row Input {
+    width: 1fr;
+    background: #FFFFFF;
+    color: #000000;
+    border: solid #000000;
+}
+
+.form-row Input:focus {
+    border: solid #FFFF55;
+}
+
+.form-row Select {
+    width: 1fr;
+}
+
+.form-row Checkbox {
+    width: 1fr;
+    background: #0000AA;
+    color: #FFFFFF;
+}
+
+.form-hint {
+    color: #AAAAAA;
+    text-style: italic;
+    margin-bottom: 1;
+}
+
+.form-actions {
+    height: auto;
+    align-horizontal: right;
+    margin-top: 1;
+}
+
+Button.primary {
+    background: #00AA00;
+    color: #FFFFFF;
+    text-style: bold;
+    border: solid #FFFFFF;
+}
+
+Button.primary:focus {
+    background: #55FF55;
+    color: #000000;
+}
+
+Button.secondary {
+    background: #444444;
+    color: #FFFFFF;
+    border: solid #AAAAAA;
+}
+
+Button.danger {
+    background: #AA0000;
+    color: #FFFFFF;
+    border: solid #FFFFFF;
+}
+
+Button.danger:focus {
+    background: #FF5555;
+    color: #000000;
+}
+
+/* ------------------------ Editores dinâmicos (kv / signatários) ------------ */
+
+DynamicListEditor {
+    height: auto;
+    border: solid #55FFFF;
+    padding: 1;
+    margin-bottom: 1;
+}
+
+DynamicListEditor .dyn-row {
+    height: auto;
+    margin-bottom: 1;
+}
+
+DynamicListEditor .dyn-row Input {
+    background: #FFFFFF;
+    color: #000000;
+}
+
+/* ------------------------------- Resultado --------------------------------- */
+
+ResultScreen {
+    align: center middle;
+}
+
+ResultScreen > .dos-window {
+    width: 95%;
+    height: 90%;
+}
+
+ResultScreen.-error > .dos-window {
+    border: double #FF5555;
+}
+
+ResultScreen .dos-window-title {
+    color: #FFFF55;
+}
+
+ResultScreen.-error .dos-window-title {
+    color: #FF5555;
+}
+
+#result-body {
+    height: 1fr;
+    background: #000055;
+    border: solid #55FFFF;
+}
+
+ResultScreen.-error #result-body {
+    border: solid #FF5555;
+}
+
+#result-body TextArea {
+    background: #000055;
+    color: #FFFF55;
+}
+
+.result-copy-bar {
+    height: auto;
+    margin-top: 1;
+}
+
+.result-copy-bar Button {
+    margin-right: 1;
+    background: #444444;
+    color: #FFFFFF;
+    border: solid #AAAAAA;
+}
+
+.result-hint {
+    color: #55FFFF;
+    margin-top: 1;
+}
+
+/* --------------------------------- Tabelas --------------------------------- */
+
+DataTable {
+    background: #0000AA;
+    color: #FFFFFF;
+}
+
+DataTable > .datatable--header {
+    background: #00AAAA;
+    color: #000000;
+    text-style: bold;
+}
+
+DataTable > .datatable--cursor {
+    background: #FFFF55;
+    color: #000000;
+}
+
+DataTable > .datatable--fixed {
+    background: #0000AA;
+}
+
+/* -------------------------------- Confirmação ------------------------------ */
+
+ConfirmScreen {
+    align: center middle;
+}
+
+ConfirmScreen > .dos-window {
+    width: 60;
+    height: auto;
+}
+
+ConfirmScreen .confirm-message {
+    margin-bottom: 1;
+}
+
+ConfirmScreen .confirm-actions {
+    height: auto;
+    align-horizontal: center;
+}
+
+ConfirmScreen .confirm-actions Button {
+    margin: 0 1;
+}
+
+/* ---------------------------------- Alerta ---------------------------------- */
+
+AlertScreen {
+    align: center middle;
+}
+
+AlertScreen > .dos-window {
+    width: 70;
+    height: auto;
+    border: double #FF5555;
+}
+
+AlertScreen .dos-window-title {
+    color: #FF5555;
+}
+
+AlertScreen .alert-message {
+    margin-bottom: 1;
+    color: #FFFF55;
+}
+
+/* ---------------------------------- Ajuda ------------------------------------ */
+
+HelpScreen {
+    align: center middle;
+}
+
+HelpScreen > .dos-window {
+    width: 70;
+    height: auto;
+    max-height: 90%;
+}
+
+/* -------------------------------- Log de chamadas ----------------------------- */
+
+CallLogScreen {
+    align: center middle;
+}
+
+CallLogScreen > .dos-window {
+    width: 95%;
+    height: 90%;
+}
+
+CallLogScreen DataTable {
+    height: 1fr;
+}
+
+/* ------------------------------ LoadingIndicator ------------------------------ */
+
+LoadingIndicator {
+    background: #0000AA;
+    color: #FFFF55;
+}
