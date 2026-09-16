@@ -38,18 +38,18 @@ cp config.example.json config.json
 ```json
 {
   "perfis": {
-    "sancris": {
-      "instancia": "sancris",
+    "cliente1": {
+      "instancia": "cliente1",
       "baseUrl": "http://docnuvem-1325424578.sa-east-1.elb.amazonaws.com:8083",
       "token": "COLE_AQUI"
     },
-    "dotteponto": {
-      "instancia": "dotteponto",
+    "cliente2": {
+      "instancia": "cliente2",
       "baseUrl": "http://docnuvem-1325424578.sa-east-1.elb.amazonaws.com:8083",
       "token": "COLE_AQUI"
     }
   },
-  "perfilPadrao": "sancris"
+  "perfilPadrao": "cliente1"
 }
 ```
 
