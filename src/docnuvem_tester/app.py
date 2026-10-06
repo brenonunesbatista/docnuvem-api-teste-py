@@ -33,7 +33,18 @@ class DocNuvemTesterApp(App[None]):
         self.config_error: str | None = None
         self.perfil_atual: str | None = None
         self.call_log: list[CallLogEntry] = []
-        self.client = DocNuvemClient(on_call_logged=self.call_log.append)
+        self.ultimo_documento_id: int | None = None
+        self.client = DocNuvemClient(
+            on_call_logged=self.call_log.append,
+            on_documento_id=self._guardar_documento_id,
+        )
+
+    def _guardar_documento_id(self, documento_id: int) -> None:
+        self.ultimo_documento_id = documento_id
+
+    @property
+    def ultima_chamada(self) -> CallLogEntry | None:
+        return self.call_log[-1] if self.call_log else None
 
     @property
     def perfil_ativo(self) -> PerfilConfig | None:

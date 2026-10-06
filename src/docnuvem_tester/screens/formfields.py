@@ -6,13 +6,39 @@ from pathlib import Path
 
 from pydantic import ValidationError
 from textual.containers import Horizontal
+from textual.validation import Validator
 from textual.widgets import Button, Input, Static
 
+from docnuvem_tester.validators import arquivo_existente, so_digitos
 
-def campo(label: str, input_id: str, placeholder: str = "", value: str = "") -> Horizontal:
+
+def campo(
+    label: str,
+    input_id: str,
+    placeholder: str = "",
+    value: str = "",
+    validators: list[Validator] | None = None,
+) -> Horizontal:
     return Horizontal(
         Static(label, classes="form-label"),
-        Input(placeholder=placeholder, id=input_id, value=value),
+        Input(placeholder=placeholder, id=input_id, value=value, validators=validators),
+        classes="form-row",
+    )
+
+
+def campo_documento_id(
+    label: str, input_id: str, placeholder: str = "123", value: str = ""
+) -> Horizontal:
+    """Campo de documentoId com botão para reaproveitar o último ID devolvido pela API."""
+    return Horizontal(
+        Static(label, classes="form-label"),
+        Input(
+            placeholder=placeholder,
+            id=input_id,
+            value=value,
+            validators=[so_digitos("Documento ID")],
+        ),
+        Button("Usar último ID", id=f"{input_id}-ultimo", classes="secondary"),
         classes="form-row",
     )
 
@@ -21,7 +47,7 @@ def campo_arquivo(label: str, input_id: str, placeholder: str = "") -> Horizonta
     """Linha com Input de caminho + botão que abre o explorador nativo do SO."""
     return Horizontal(
         Static(label, classes="form-label"),
-        Input(placeholder=placeholder, id=input_id),
+        Input(placeholder=placeholder, id=input_id, validators=[arquivo_existente()]),
         Button("Selecionar arquivo...", id=f"{input_id}-picker", classes="secondary"),
         classes="form-row",
     )

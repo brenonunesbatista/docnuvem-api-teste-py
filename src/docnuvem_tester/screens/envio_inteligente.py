@@ -12,6 +12,7 @@ from docnuvem_tester.config import PerfilConfig
 from docnuvem_tester.models import tem_extensao
 from docnuvem_tester.screens.base import FormScreen
 from docnuvem_tester.screens.formfields import AutoFillNomeArquivoMixin, campo, campo_arquivo
+from docnuvem_tester.validators import nome_com_extensao
 from docnuvem_tester.widgets.result_panel import ResultScreen
 
 
@@ -29,7 +30,10 @@ class EnvioInteligenteScreen(AutoFillNomeArquivoMixin, FormScreen):
             classes="form-hint",
         )
         yield campo_arquivo("Caminho do arquivo*", "in-caminho", "C:\\caminho\\Contrato.pdf")
-        yield campo("Nome do arquivo*", "in-nome-arquivo", "Contrato.pdf")
+        yield campo(
+            "Nome do arquivo*", "in-nome-arquivo", "Contrato.pdf",
+            validators=[nome_com_extensao()],
+        )
 
     def on_input_changed(self, event: Input.Changed) -> None:
         self._tratar_input_changed_autofill(event, "in-caminho", "in-nome-arquivo")
@@ -38,8 +42,6 @@ class EnvioInteligenteScreen(AutoFillNomeArquivoMixin, FormScreen):
         if self._e_botao_seletor_arquivo(event.button.id, "in-caminho"):
             event.stop()
             self.run_worker(self._abrir_seletor_arquivo("in-caminho"))
-            return
-        super().on_button_pressed(event)
 
     def validar(self) -> list[str]:
         avisos = []
@@ -69,5 +71,6 @@ class EnvioInteligenteScreen(AutoFillNomeArquivoMixin, FormScreen):
                 "Enviado para o envio inteligente",
                 resultado,
                 copiaveis=[("documentoId", str(resultado.documentoId))],
+                chamada=self.app.ultima_chamada,  # type: ignore[attr-defined]
             )
         )

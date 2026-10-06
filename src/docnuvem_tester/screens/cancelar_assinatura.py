@@ -40,6 +40,7 @@ class CancelarAssinaturaScreen(FormScreen):
                 "Confirmar cancelamento",
                 f"Tem certeza que deseja cancelar a assinatura {assinatura_id}? "
                 "Essa ação não pode ser desfeita pela API.",
+                digitar=assinatura_id,
             )
         )
 
@@ -50,4 +51,10 @@ class CancelarAssinaturaScreen(FormScreen):
         return await client.cancelar_assinatura(perfil, assinatura_id, motivo)
 
     async def ao_sucesso(self, resultado: Any) -> None:
-        self.app.push_screen(ResultScreen("Assinatura cancelada", resultado))
+        self.app.push_screen(
+            ResultScreen(
+                "Assinatura cancelada",
+                resultado,
+                chamada=self.app.ultima_chamada,  # type: ignore[attr-defined]
+            )
+        )

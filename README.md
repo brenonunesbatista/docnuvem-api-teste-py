@@ -103,8 +103,10 @@ textual run --dev -m docnuvem_tester
 | `L`                   | log de requisições/respostas                      |
 | `F10`                 | sair (com confirmação)                            |
 | `F5` (num formulário) | executa a chamada à API                           |
+| `F2` (num formulário) | prévia: mostra método, URL final e corpo, sem enviar (com "Copiar cURL") |
 | `Esc`                 | volta para a tela anterior                        |
 | `C` (num resultado)   | copia o valor em destaque (link, URL, ID) para a área de transferência |
+| `F` / `R` / `C` / `S` (no log) | favoritar / reenviar / copiar cURL / só favoritos |
 
 ## Endpoints cobertos
 
@@ -138,7 +140,22 @@ seletor dentro do terminal (`DirectoryTree` do Textual).
 
 Toda chamada fica registrada no log (tecla `L`), com método, URL completa
 (incluindo os query params efetivamente enviados), timestamp, status HTTP e
-o header `Authorization` sempre mascarado (`Bearer ***...últimos4`).
+o header `Authorization` sempre mascarado (`Bearer ***...últimos4`). No log
+dá para favoritar (★), reenviar a mesma chamada, copiar o cURL (token
+mascarado) e filtrar só os favoritos.
+
+Outros recursos para depurar:
+
+- **Prévia (F2)** em qualquer formulário: mostra a requisição exata que seria
+  enviada, sem enviar.
+- **Resultado em abas:** "Resposta" e "Requisição" (o que foi enviado), também
+  nos erros.
+- **Validação inline:** campos inválidos (arquivo inexistente, extensão, CPF,
+  e-mail, datas, números) ganham borda vermelha e uma mensagem abaixo do
+  formulário enquanto você digita.
+- **"Usar último ID":** os campos de `documentoId` têm um botão que reaproveita
+  o último ID devolvido pela API na sessão.
+- **Cancelar assinatura** só habilita o "Sim" depois de você digitar o ID.
 
 ## Estrutura
 

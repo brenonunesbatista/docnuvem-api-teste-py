@@ -11,7 +11,8 @@ from textual.widgets import Checkbox, Input, Static
 from docnuvem_tester.config import PerfilConfig
 from docnuvem_tester.models import DocumentoStatusResponse, SolicitacaoAssinaturaRequest
 from docnuvem_tester.screens.base import FormScreen
-from docnuvem_tester.screens.formfields import campo, erros_pydantic
+from docnuvem_tester.screens.formfields import campo, campo_documento_id, erros_pydantic
+from docnuvem_tester.validators import lista_inteiros, max_caracteres, so_digitos
 from docnuvem_tester.widgets.dynamic_list import SignatariosEditor
 from docnuvem_tester.widgets.result_panel import ResultScreen
 
@@ -43,7 +44,7 @@ class AssinaturaScreen(FormScreen):
             "Cria a solicitação e devolve o link de cada signatário (não envia e-mail).",
             classes="form-hint",
         )
-        yield campo(
+        yield campo_documento_id(
             "Documento ID*",
             "in-documento-id",
             "123",
@@ -57,7 +58,7 @@ class AssinaturaScreen(FormScreen):
             classes="form-row",
         )
         yield campo("Data de validade (ISO)", "in-data-validade", "2026-12-31T23:59:59")
-        yield campo("Prazo em dias", "in-prazo-dias", "15")
+        yield campo("Prazo em dias", "in-prazo-dias", "15", validators=[so_digitos("Prazo em dias")])
         yield Static("Métodos:", classes="form-hint")
         yield Horizontal(
             Checkbox("Eletrônica", value=True, id="in-metodo-eletronica"),
@@ -67,8 +68,14 @@ class AssinaturaScreen(FormScreen):
         )
         yield campo("Texto do e-mail", "in-texto-email")
         yield campo("Login do solicitante", "in-login")
-        yield campo("Referência externa (até 64)", "in-referencia")
-        yield campo("Lembretes (dias, separados por vírgula)", "in-lembretes", "1,7")
+        yield campo(
+            "Referência externa (até 64)", "in-referencia",
+            validators=[max_caracteres("Referência externa", 64)],
+        )
+        yield campo(
+            "Lembretes (dias, separados por vírgula)", "in-lembretes", "1,7",
+            validators=[lista_inteiros("Lembretes")],
+        )
 
     def validar(self) -> list[str]:
         avisos: list[str] = []
@@ -148,4 +155,11 @@ class AssinaturaScreen(FormScreen):
             for s in resultado.signatarios
             if s.linkAssinatura
         ]
-        self.app.push_screen(ResultScreen("Assinatura solicitada", resultado, copiaveis=copiaveis))
+        self.app.push_screen(
+            ResultScreen(
+                "Assinatura solicitada",
+                resultado,
+                copiaveis=copiaveis,
+                chamada=self.app.ultima_chamada,  # type: ignore[attr-defined]
+            )
+        )

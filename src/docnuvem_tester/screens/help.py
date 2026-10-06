@@ -14,11 +14,13 @@ NAVEGAÇÃO
 
 TECLAS GLOBAIS
   F1                  esta tela de ajuda
-  L                   log de requisições/respostas
+  L                   log de requisições/respostas (F favoritar, R reenviar,
+                      C copiar cURL, S só favoritos)
   F10                 sair do programa (com confirmação)
 
 DENTRO DE UM FORMULÁRIO
   F5                  executa a chamada (equivalente a clicar em "Executar")
+  F2                  prévia da requisição (método, URL, corpo), sem enviar
   Esc                 volta para a tela anterior, descartando o formulário
 
 DENTRO DE UMA TELA DE RESULTADO

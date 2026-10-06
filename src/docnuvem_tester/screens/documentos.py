@@ -7,18 +7,21 @@ from textual.containers import Container, Horizontal, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import Button, Checkbox, DataTable, Input, LoadingIndicator, Select, Static
 
-from docnuvem_tester.client import DocNuvemAPIError
+from docnuvem_tester.client import DocNuvemAPIError, PreviaCapturada
 from docnuvem_tester.formatting import valor_ou_traco
 from docnuvem_tester.models import STATUS_FILTRO_VALIDOS, DocumentoListaItemDTO, FiltroDocumentos
 from docnuvem_tester.screens.formfields import campo, erros_pydantic
+from docnuvem_tester.screens.inline import ValidacaoInlineMixin, caixa_avisos
+from docnuvem_tester.validators import data_iso, inteiro_entre, so_digitos
 from docnuvem_tester.widgets.confirm_dialog import AlertScreen
-from docnuvem_tester.widgets.result_panel import erro_para_tela
+from docnuvem_tester.widgets.result_panel import RequisicaoScreen, erro_para_tela
 
 
-class DocumentosScreen(ModalScreen[None]):
+class DocumentosScreen(ValidacaoInlineMixin, ModalScreen[None]):
     BINDINGS = [
         ("escape", "voltar", "Voltar"),
         ("f5", "buscar", "Buscar"),
+        ("f2", "previa", "Prévia"),
         ("n", "proxima_pagina", "Próxima"),
         ("p", "pagina_anterior", "Anterior"),
     ]
@@ -33,7 +36,10 @@ class DocumentosScreen(ModalScreen[None]):
         with Container(classes="card"):
             yield Static("Documentos — GET /api/documentos", classes="card-title")
             with VerticalScroll(id="doc-filtros"):
-                yield campo("Diretório ID", "in-diretorio-id", "789")
+                yield campo(
+                    "Diretório ID", "in-diretorio-id", "789",
+                    validators=[so_digitos("Diretório ID")],
+                )
                 yield Horizontal(
                     Static("Incluir subpastas", classes="form-label"),
                     Checkbox(id="in-subpastas"),
@@ -48,13 +54,24 @@ class DocumentosScreen(ModalScreen[None]):
                     ),
                     classes="form-row",
                 )
-                yield campo("Data início (yyyy-MM-dd)", "in-data-inicio", "2026-01-01")
-                yield campo("Data fim (yyyy-MM-dd)", "in-data-fim", "2026-12-31")
-                yield campo("Tamanho da página (máx. 200)", "in-tamanho", "50", value="50")
+                yield campo(
+                    "Data início (yyyy-MM-dd)", "in-data-inicio", "2026-01-01",
+                    validators=[data_iso("Data início")],
+                )
+                yield campo(
+                    "Data fim (yyyy-MM-dd)", "in-data-fim", "2026-12-31",
+                    validators=[data_iso("Data fim")],
+                )
+                yield campo(
+                    "Tamanho da página (máx. 200)", "in-tamanho", "50", value="50",
+                    validators=[inteiro_entre("Tamanho da página", 1, 200)],
+                )
+            yield caixa_avisos()
             yield LoadingIndicator(id="doc-loading")
             yield DataTable(id="doc-table", cursor_type="row")
             yield Static("", id="doc-paginacao")
             with Horizontal(classes="form-actions"):
+                yield Button("Prévia (F2)", id="doc-previa", classes="secondary")
                 yield Button("Buscar (F5)", id="doc-buscar", classes="primary")
                 yield Button("Anterior (P)", id="doc-anterior", classes="secondary")
                 yield Button("Próxima (N)", id="doc-proxima", classes="secondary")
@@ -71,6 +88,8 @@ class DocumentosScreen(ModalScreen[None]):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "doc-buscar":
             self.action_buscar()
+        elif event.button.id == "doc-previa":
+            self.action_previa()
         elif event.button.id == "doc-anterior":
             self.action_pagina_anterior()
         elif event.button.id == "doc-proxima":
@@ -101,6 +120,8 @@ class DocumentosScreen(ModalScreen[None]):
 
     def _montar_filtro(self) -> FiltroDocumentos | list[str]:
         diretorio_raw = self.query_one("#in-diretorio-id", Input).value.strip()
+        if diretorio_raw and not diretorio_raw.isdigit():
+            return ["Diretório ID deve ser um número."]
         tamanho_raw = self.query_one("#in-tamanho", Input).value.strip() or "50"
         status = self.query_one("#in-status", Select).value
         # Select "sem seleção" varia entre versões do Textual (Select.BLANK vs
@@ -115,8 +136,6 @@ class DocumentosScreen(ModalScreen[None]):
             "pagina": self._pagina,
             "tamanho": int(tamanho_raw) if tamanho_raw.isdigit() else 50,
         }
-        if diretorio_raw and not diretorio_raw.isdigit():
-            return ["Diretório ID deve ser um número."]
         try:
             return FiltroDocumentos.model_validate(dados)
         except ValidationError as exc:
@@ -125,6 +144,27 @@ class DocumentosScreen(ModalScreen[None]):
     def action_buscar(self) -> None:
         self._pagina = 0
         self.run_worker(self._carregar(), exclusive=True)
+
+    def action_previa(self) -> None:
+        self.run_worker(self._previa(), exclusive=True)
+
+    async def _previa(self) -> None:
+        perfil = getattr(self.app, "perfil_ativo", None)
+        if perfil is None:
+            await self.app.push_screen_wait(
+                AlertScreen("Sem perfil ativo", ["Configure um perfil em Perfil antes de chamar a API."])
+            )
+            return
+        filtro = self._montar_filtro()
+        if isinstance(filtro, list):
+            await self.app.push_screen_wait(AlertScreen("Verifique os filtros", filtro))
+            return
+        client = self.app.client  # type: ignore[attr-defined]
+        with client.modo_previa():
+            try:
+                await client.listar_documentos(perfil, filtro)
+            except PreviaCapturada as capturada:
+                self.app.push_screen(RequisicaoScreen(capturada.requisicao))
 
     def action_proxima_pagina(self) -> None:
         if self._tem_mais:

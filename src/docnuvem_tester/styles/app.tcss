@@ -200,6 +200,17 @@ Input:focus {
     background-tint: transparent;
 }
 
+Input.-invalid,
+Input.-invalid:focus {
+    border: round $error;
+}
+
+.inline-erros {
+    color: $error;
+    height: auto;
+    margin-top: 1;
+}
+
 Input:disabled {
     background: $surface;
     color: $text-muted;
@@ -345,17 +356,17 @@ ResultScreen.-error .card-title {
     color: $error;
 }
 
-#result-body {
+.result-body {
     height: 1fr;
     background: $background;
     border: round $border;
 }
 
-ResultScreen.-error #result-body {
+ResultScreen.-error .result-body {
     border: round $error;
 }
 
-#result-body TextArea {
+.result-body TextArea {
     background: $background;
     border: none;
 }
@@ -373,6 +384,14 @@ StatusResultScreen DataTable {
     height: auto;
     max-height: 14;
     margin-top: 1;
+}
+
+#result-tabs {
+    height: 1fr;
+}
+
+#result-tabs TabPane {
+    padding: 0;
 }
 
 .result-copy-bar {

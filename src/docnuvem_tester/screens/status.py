@@ -12,7 +12,7 @@ from docnuvem_tester.config import PerfilConfig
 from docnuvem_tester.formatting import valor_ou_traco
 from docnuvem_tester.models import DocumentoStatusResponse
 from docnuvem_tester.screens.base import FormScreen
-from docnuvem_tester.screens.formfields import campo
+from docnuvem_tester.screens.formfields import campo_documento_id
 
 
 class StatusResultScreen(ModalScreen[None]):
@@ -96,7 +96,7 @@ class StatusScreen(FormScreen):
             "linkAssinatura só é preenchido para signatários pendentes.",
             classes="form-hint",
         )
-        yield campo("Documento ID*", "in-documento-id", "123")
+        yield campo_documento_id("Documento ID*", "in-documento-id")
 
     def validar(self) -> list[str]:
         avisos = []

@@ -28,6 +28,7 @@ from docnuvem_tester.models import (
 )
 from docnuvem_tester.screens.base import FormScreen
 from docnuvem_tester.screens.formfields import campo, erros_pydantic
+from docnuvem_tester.validators import data_br, max_caracteres, numero_br
 from docnuvem_tester.widgets.result_panel import erro_para_tela
 
 TIPOS_TEXTO_LONGO = {"TEXTO_LONGO", "PARAGRAFO"}
@@ -70,7 +71,10 @@ class CriarDocumentoModeloScreen(FormScreen):
         yield campo("Nome da pasta*", "in-nome-pasta", "Contratos")
         yield campo("Nome da pasta pai", "in-nome-pasta-pai", "Clientes/2026")
         yield campo("Nome do arquivo", "in-nome-arquivo", "Contrato Cliente X.pdf")
-        yield campo("Referência externa (até 64)", "in-referencia", "pedido-123")
+        yield campo(
+            "Referência externa (até 64)", "in-referencia", "pedido-123",
+            validators=[max_caracteres("Referência externa", 64)],
+        )
         yield campo("Login do solicitante", "in-login", "usuario@empresa.com")
 
         variaveis = self._modelo.variaveis
@@ -113,9 +117,17 @@ class CriarDocumentoModeloScreen(FormScreen):
         if tipo in TIPOS_TEXTO_LONGO:
             widget = TextArea(id=f"{linha_id}-widget")
         elif tipo in TIPOS_DATA:
-            widget = Input(placeholder="dd/MM/aaaa", id=f"{linha_id}-widget")
+            widget = Input(
+                placeholder="dd/MM/aaaa",
+                id=f"{linha_id}-widget",
+                validators=[data_br(rotulo)],
+            )
         elif tipo == "NUMERICO":
-            widget = Input(placeholder="1.234,56", id=f"{linha_id}-widget")
+            widget = Input(
+                placeholder="1.234,56",
+                id=f"{linha_id}-widget",
+                validators=[numero_br(rotulo)],
+            )
         elif tipo == "CHECKBOX":
             widget = Switch(id=f"{linha_id}-widget")
         elif tipo == "SELECT":

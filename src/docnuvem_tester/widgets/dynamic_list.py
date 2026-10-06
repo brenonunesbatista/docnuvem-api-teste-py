@@ -9,6 +9,8 @@ from textual.css.query import NoMatches
 from textual.widget import Widget
 from textual.widgets import Button, Input
 
+from docnuvem_tester.validators import cpf_valido, email_valido, so_digitos
+
 
 class DynamicListEditor(Vertical):
     """Lista de linhas removíveis com um botão "+ adicionar" no rodapé."""
@@ -58,12 +60,16 @@ class SignatariosEditor(DynamicListEditor):
         return Vertical(
             Horizontal(
                 Input(placeholder="Nome*", classes="sig-nome"),
-                Input(placeholder="E-mail*", classes="sig-email"),
+                Input(placeholder="E-mail*", classes="sig-email", validators=[email_valido()]),
             ),
             Horizontal(
-                Input(placeholder="CPF*", classes="sig-cpf"),
+                Input(placeholder="CPF*", classes="sig-cpf", validators=[cpf_valido()]),
                 Input(placeholder="Telefone", classes="sig-telefone"),
-                Input(placeholder="Ordem (0, 1, 2...)", classes="sig-ordem"),
+                Input(
+                    placeholder="Ordem (0, 1, 2...)",
+                    classes="sig-ordem",
+                    validators=[so_digitos("Ordem")],
+                ),
                 Button("Remover", id=f"remove-{row_id}", classes="secondary"),
             ),
             id=row_id,
@@ -85,7 +91,7 @@ class SignatariosEditor(DynamicListEditor):
                         "email": email,
                         "cpf": cpf,
                         "telefone": telefone or None,
-                        "ordem": int(ordem) if ordem else None,
+                        "ordem": int(ordem) if ordem.isdigit() else (ordem or None),
                     }
                 )
         return resultado

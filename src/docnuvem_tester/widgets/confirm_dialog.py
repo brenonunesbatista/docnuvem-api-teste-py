@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from textual.containers import Container, Horizontal, VerticalScroll
 from textual.screen import ModalScreen
-from textual.widgets import Button, Static
+from textual.widgets import Button, Input, Static
 
 
 class ConfirmScreen(ModalScreen[bool]):
@@ -12,21 +12,32 @@ class ConfirmScreen(ModalScreen[bool]):
 
     BINDINGS = [("escape", "cancelar", "Voltar")]
 
-    def __init__(self, titulo: str, mensagem: str) -> None:
+    def __init__(self, titulo: str, mensagem: str, digitar: str | None = None) -> None:
         self._titulo = titulo
         self._mensagem = mensagem
+        self._digitar = digitar
         super().__init__()
 
     def compose(self):
         with Container(classes="card"):
             yield Static(self._titulo, classes="card-title")
             yield Static(self._mensagem, classes="confirm-message")
+            if self._digitar:
+                yield Static(f"Para confirmar, digite: {self._digitar}", classes="confirm-message")
+                yield Input(placeholder=self._digitar, id="confirm-input")
             with Horizontal(classes="confirm-actions"):
-                yield Button("Sim", id="confirm-yes", classes="danger")
+                yield Button("Sim", id="confirm-yes", classes="danger", disabled=bool(self._digitar))
                 yield Button("Não", id="confirm-no", classes="secondary")
 
     def on_mount(self) -> None:
-        self.query_one("#confirm-no", Button).focus()
+        if self._digitar:
+            self.query_one("#confirm-input", Input).focus()
+        else:
+            self.query_one("#confirm-no", Button).focus()
+
+    def on_input_changed(self, event: Input.Changed) -> None:
+        if self._digitar:
+            self.query_one("#confirm-yes", Button).disabled = event.value.strip() != self._digitar
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "confirm-yes")

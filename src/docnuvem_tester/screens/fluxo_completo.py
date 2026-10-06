@@ -13,6 +13,7 @@ from docnuvem_tester.models import tem_extensao
 from docnuvem_tester.screens.assinatura import AssinaturaScreen
 from docnuvem_tester.screens.base import FormScreen
 from docnuvem_tester.screens.formfields import AutoFillNomeArquivoMixin, campo, campo_arquivo
+from docnuvem_tester.validators import nome_com_extensao
 from docnuvem_tester.widgets.result_panel import ResultScreen
 
 
@@ -35,7 +36,10 @@ class FluxoCompletoScreen(AutoFillNomeArquivoMixin, FormScreen):
             classes="form-hint",
         )
         yield campo_arquivo("Caminho do arquivo*", "in-caminho", "C:\\caminho\\Contrato.pdf")
-        yield campo("Nome do arquivo*", "in-nome-arquivo", "Contrato.pdf")
+        yield campo(
+            "Nome do arquivo*", "in-nome-arquivo", "Contrato.pdf",
+            validators=[nome_com_extensao()],
+        )
         yield campo("Nome da pasta*", "in-nome-pasta", "Contratos")
         yield campo("Nome da pasta pai", "in-nome-pasta-pai", "Clientes/2026")
 
@@ -46,8 +50,6 @@ class FluxoCompletoScreen(AutoFillNomeArquivoMixin, FormScreen):
         if self._e_botao_seletor_arquivo(event.button.id, "in-caminho"):
             event.stop()
             self.run_worker(self._abrir_seletor_arquivo("in-caminho"))
-            return
-        super().on_button_pressed(event)
 
     def validar(self) -> list[str]:
         avisos = []
@@ -91,6 +93,7 @@ class FluxoCompletoScreen(AutoFillNomeArquivoMixin, FormScreen):
                     "Fluxo Completo concluído — documento importado e assinatura solicitada",
                     status,
                     copiaveis=copiaveis,
+                    chamada=self.app.ultima_chamada,  # type: ignore[attr-defined]
                 )
             )
 
