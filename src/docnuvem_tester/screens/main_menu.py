@@ -26,11 +26,11 @@ class MainMenuScreen(Screen[None]):
 
     def compose(self):
         yield MenuBar(MENU_ENTRIES)
-        with Container():
-            yield Static("DOCNUVEM API TESTER", id="main-menu-title", classes="dos-window-title")
+        with Container(id="home", classes="card"):
+            yield Static("DocNuvem API Tester", id="main-menu-title", classes="card-title")
             yield Static(self._texto_perfil(), id="perfil-ativo")
             yield Static(
-                "Use as setas/Tab e Enter, ou clique com o mouse, para escolher uma categoria.\n"
+                "Escolha uma categoria na barra acima.\n"
                 "F1 Ajuda   L Log de chamadas   F10 Sair",
                 id="main-menu-hint",
             )
@@ -39,7 +39,7 @@ class MainMenuScreen(Screen[None]):
     def _texto_perfil(self) -> str:
         perfil = getattr(self.app, "perfil_atual", None)
         if perfil:
-            return f"Perfil ativo: {perfil}"
+            return f"● Perfil ativo: {perfil}"
         return "Nenhum perfil configurado — abra 'Perfil' para configurar."
 
     def on_screen_resume(self) -> None:

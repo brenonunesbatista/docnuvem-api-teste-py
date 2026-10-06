@@ -21,8 +21,8 @@ class ModelosScreen(ModalScreen[None]):
         super().__init__()
 
     def compose(self):
-        with Container(classes="dos-window"):
-            yield Static("Modelos — GET /api/modelos", classes="dos-window-title")
+        with Container(classes="card"):
+            yield Static("Modelos — GET /api/modelos", classes="card-title")
             yield LoadingIndicator(id="modelos-loading")
             yield DataTable(id="modelos-table", cursor_type="row")
             yield Static(

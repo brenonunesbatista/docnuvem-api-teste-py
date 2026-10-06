@@ -18,8 +18,8 @@ class ConfirmScreen(ModalScreen[bool]):
         super().__init__()
 
     def compose(self):
-        with Container(classes="dos-window"):
-            yield Static(self._titulo, classes="dos-window-title")
+        with Container(classes="card"):
+            yield Static(self._titulo, classes="card-title")
             yield Static(self._mensagem, classes="confirm-message")
             with Horizontal(classes="confirm-actions"):
                 yield Button("Sim", id="confirm-yes", classes="danger")
@@ -46,8 +46,8 @@ class AlertScreen(ModalScreen[None]):
         super().__init__()
 
     def compose(self):
-        with Container(classes="dos-window"):
-            yield Static(self._titulo, classes="dos-window-title")
+        with Container(classes="card"):
+            yield Static(self._titulo, classes="card-title")
             with VerticalScroll():
                 for msg in self._mensagens:
                     yield Static(f"• {msg}", classes="alert-message")

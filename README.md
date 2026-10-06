@@ -6,9 +6,9 @@ modelos, assinatura eletrônica e consulta de documentos). Pensada para
 depurar integrações de clientes: reproduzir bugs relatados, conferir
 comportamento de parâmetros e validar o fluxo de importação + assinatura.
 
-Visual estilo Turbo Pascal / Norton Commander (DOS, fim dos anos 80): fundo
-azul, bordas duplas, barra de menu no topo, barra de teclas de função no
-rodapé.
+Visual moderno e limpo: tema escuro fixo (definido em `theme.py`, independente
+do tema do terminal), cartões com bordas arredondadas, barra de menu no topo e
+barra de atalhos no rodapé.
 
 ## Instalação
 
@@ -151,7 +151,7 @@ src/docnuvem_tester/
   formatting.py                helpers de formatação (json, valor-ou-traço)
   screens/                      uma tela por endpoint + banner, menu, log etc.
   widgets/                       menu bar, listas dinâmicas, diálogos, resultado
-  styles/app.tcss                  paleta e layout fixos (DOS azul)
+  theme.py + styles/app.tcss       tema escuro e layout
 ```
 
 ## Notas de implementação

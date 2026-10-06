@@ -38,8 +38,8 @@ class ResultScreen(ModalScreen[None]):
         super().__init__()
 
     def compose(self):
-        with Container(classes="dos-window"):
-            yield Static(self._titulo, classes="dos-window-title")
+        with Container(classes="card"):
+            yield Static(self._titulo, classes="card-title")
             with VerticalScroll(id="result-body"):
                 area = TextArea(self._texto, read_only=True, id="result-text")
                 area.show_line_numbers = False

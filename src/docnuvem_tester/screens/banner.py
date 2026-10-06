@@ -1,4 +1,4 @@
-"""Tela de abertura (banner ASCII), estilo boot screen de DOS."""
+"""Tela de abertura: marca do app e dica para continuar."""
 
 from __future__ import annotations
 
@@ -6,23 +6,22 @@ from textual.events import Key, MouseDown
 from textual.screen import Screen
 from textual.widgets import Static
 
-ASCII_ART = r"""
- ____   ___   ____  _   _ _   ___     _______ __  __
-|  _ \ / _ \ / ___|| \ | | | | \ \   / / ____|  \/  |
-| | | | | | | |    |  \| | | | |\ \ / /|  _| | |\/| |
-| |_| | |_| | |___ | |\  | |_| | \ V / | |___| |  | |
-|____/ \___/ \____||_| \_|\___/   \_/  |_____|_|  |_|
-
-           A P I   T E S T E R   v1.0
-"""
+MARCA = (
+    "[b #58a6ff]DocNuvem[/]\n"
+    "[b]API Tester[/]\n"
+    "\n"
+    "[#8b949e]Teste manual da API REST  ·  v1.0[/]\n"
+    "\n"
+    "\n"
+    "[#8b949e]Pressione qualquer tecla para começar[/]"
+)
 
 
 class BannerScreen(Screen[None]):
     """Primeira tela exibida: qualquer tecla ou clique avança para o menu principal."""
 
     def compose(self):
-        yield Static(ASCII_ART, id="banner-art")
-        yield Static("Pressione qualquer tecla ou clique para continuar...", id="banner-hint")
+        yield Static(MARCA, id="banner-art")
 
     def on_key(self, event: Key) -> None:
         self._avancar()

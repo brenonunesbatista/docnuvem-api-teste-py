@@ -229,8 +229,8 @@ class CriarDocumentoResultScreen(ModalScreen[None]):
             f"diretorioId: {valor_ou_traco(r.diretorioId)}\n"
             f"referenciaExterna: {valor_ou_traco(r.referenciaExterna)}"
         )
-        with Container(classes="dos-window"):
-            yield Static("Documento criado a partir do modelo", classes="dos-window-title")
+        with Container(classes="card"):
+            yield Static("Documento criado a partir do modelo", classes="card-title")
             yield Static(resumo)
             with Horizontal(classes="result-copy-bar"):
                 yield Button("Copiar documentoId", id="copy-doc", classes="secondary")

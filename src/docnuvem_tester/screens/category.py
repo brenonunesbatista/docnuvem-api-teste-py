@@ -27,8 +27,8 @@ class CategoryScreen(ModalScreen[None]):
         super().__init__()
 
     def compose(self):
-        with Container(classes="dos-window"):
-            yield Static(self._titulo, classes="dos-window-title")
+        with Container(classes="card"):
+            yield Static(self._titulo, classes="card-title")
             with ListView(id="category-list"):
                 for item in self._itens:
                     yield ListItem(Label(item.label))

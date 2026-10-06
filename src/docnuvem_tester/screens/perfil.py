@@ -14,8 +14,8 @@ class PerfilScreen(ModalScreen[None]):
     BINDINGS = [("escape", "voltar", "Voltar")]
 
     def compose(self):
-        with Container(classes="dos-window"):
-            yield Static("Perfil ativo", classes="dos-window-title")
+        with Container(classes="card"):
+            yield Static("Perfil ativo", classes="card-title")
             config = getattr(self.app, "config", None)
             if config is None:
                 yield Static(

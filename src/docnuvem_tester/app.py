@@ -9,13 +9,15 @@ from textual.binding import Binding
 
 from docnuvem_tester.client import CallLogEntry, DocNuvemClient
 from docnuvem_tester.config import AppConfig, ConfigError, PerfilConfig, load_config
+from docnuvem_tester.theme import DOCNUVEM_THEME
 
 
 class DocNuvemTesterApp(App[None]):
-    """TUI estilo Turbo Pascal/Norton Commander para testar a API do DocNuvem."""
+    """TUI para testar manualmente a API do DocNuvem."""
 
     CSS_PATH = str(Path(__file__).parent / "styles" / "app.tcss")
     TITLE = "DocNuvem API Tester"
+    ENABLE_COMMAND_PALETTE = False
 
     BINDINGS = [
         Binding("f1", "help", "Ajuda", show=True),
@@ -25,6 +27,8 @@ class DocNuvemTesterApp(App[None]):
 
     def __init__(self) -> None:
         super().__init__()
+        self.register_theme(DOCNUVEM_THEME)
+        self.theme = DOCNUVEM_THEME.name
         self.config: AppConfig | None = None
         self.config_error: str | None = None
         self.perfil_atual: str | None = None

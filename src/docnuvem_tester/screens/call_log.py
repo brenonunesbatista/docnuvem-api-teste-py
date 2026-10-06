@@ -19,8 +19,8 @@ class CallLogScreen(ModalScreen[None]):
         super().__init__()
 
     def compose(self):
-        with Container(classes="dos-window"):
-            yield Static("Log de chamadas", classes="dos-window-title")
+        with Container(classes="card"):
+            yield Static("Log de chamadas", classes="card-title")
             yield DataTable(id="log-table", cursor_type="row")
             yield Static("Enter para ver detalhes   |   Esc para fechar", classes="result-hint")
 

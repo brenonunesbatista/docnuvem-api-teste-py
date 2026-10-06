@@ -64,8 +64,8 @@ class FormScreen(ModalScreen[None]):
         raise NotImplementedError
 
     def compose(self):
-        with Container(classes="dos-window"):
-            yield Static(self.titulo(), classes="dos-window-title")
+        with Container(classes="card"):
+            yield Static(self.titulo(), classes="card-title")
             with VerticalScroll():
                 yield from self.compose_form()
             yield LoadingIndicator(id="form-loading")

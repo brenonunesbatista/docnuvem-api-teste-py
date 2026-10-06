@@ -36,10 +36,10 @@ class StatusResultScreen(ModalScreen[None]):
             f"Lembretes: {valor_ou_traco(s.lembretes)}\n"
             f"Último lembrete em: {valor_ou_traco(s.dataUltimoLembrete)}"
         )
-        with Container(classes="dos-window"):
+        with Container(classes="card"):
             yield Static(
                 f"Status do documento {valor_ou_traco(s.documentoId)} — {valor_ou_traco(s.nomeArquivo)}",
-                classes="dos-window-title",
+                classes="card-title",
             )
             yield Static(resumo)
             with Horizontal(classes="result-copy-bar"):

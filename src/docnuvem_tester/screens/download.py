@@ -32,8 +32,8 @@ class DownloadResultScreen(ModalScreen[None]):
             f"Tamanho: {valor_ou_traco(d.tamanho)} bytes\n"
             f"Status da assinatura: {valor_ou_traco(d.statusAssinatura)}\n"
         )
-        with Container(classes="dos-window"):
-            yield Static(f"Download do documento {valor_ou_traco(d.documentoId)}", classes="dos-window-title")
+        with Container(classes="card"):
+            yield Static(f"Download do documento {valor_ou_traco(d.documentoId)}", classes="card-title")
             yield Static(resumo)
             yield Static(
                 f"⚠ Expira em: {valor_ou_traco(d.expiraEm)} — URL temporária (S3), "

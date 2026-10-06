@@ -1,4 +1,4 @@
-"""Barra de menu fixa no topo, estilo Turbo Pascal/Norton Commander."""
+"""Barra de menu fixa no topo, com a marca do app e as categorias."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from textual.containers import Horizontal
 from textual.message import Message
-from textual.widgets import Button
+from textual.widgets import Button, Static
 
 
 @dataclass(frozen=True)
@@ -28,6 +28,7 @@ class MenuBar(Horizontal):
         super().__init__()
 
     def compose(self):
+        yield Static("[b #58a6ff]DocNuvem[/] [#8b949e]API Tester[/]", id="menu-brand")
         for entry in self._entries:
             yield Button(entry.label, id=f"menu-{entry.key}")
 

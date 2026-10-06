@@ -30,8 +30,8 @@ class DocumentosScreen(ModalScreen[None]):
         super().__init__()
 
     def compose(self):
-        with Container(classes="dos-window"):
-            yield Static("Documentos — GET /api/documentos", classes="dos-window-title")
+        with Container(classes="card"):
+            yield Static("Documentos — GET /api/documentos", classes="card-title")
             with VerticalScroll(id="doc-filtros"):
                 yield campo("Diretório ID", "in-diretorio-id", "789")
                 yield Horizontal(

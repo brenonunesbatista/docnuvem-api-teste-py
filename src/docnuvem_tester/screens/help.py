@@ -43,8 +43,8 @@ class HelpScreen(ModalScreen[None]):
     BINDINGS = [("escape", "fechar", "Fechar")]
 
     def compose(self):
-        with Container(classes="dos-window"):
-            yield Static("Ajuda", classes="dos-window-title")
+        with Container(classes="card"):
+            yield Static("Ajuda", classes="card-title")
             with VerticalScroll():
                 yield Static(TEXTO_AJUDA)
             yield Static("Esc para fechar", classes="result-hint")
