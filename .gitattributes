@@ -1,5 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+*.bat text eol=crlf
 
 # Código de terceiros: fora das estatísticas e dos diffs
 src/docnuvem_tester/webapp/dc-runtime.js linguist-vendored -diff

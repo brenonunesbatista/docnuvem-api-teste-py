@@ -42,6 +42,8 @@ lido da pasta atual; para usar outro caminho, defina `DOCNUVEM_TESTER_CONFIG`.
 docnuvem-web          # ou: python -m docnuvem_tester
 ```
 
+No Windows, o atalho mais simples é dar dois cliques em `iniciar-docnuvem.bat`.
+
 Abre o navegador em `http://127.0.0.1:8765/` (se a porta estiver bloqueada, escolhe outra).
 Opções: `--porta N`, `--nao-abrir`, `--sem-historico`, `--dados PASTA`.
 
