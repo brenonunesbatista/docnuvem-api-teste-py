@@ -29,15 +29,15 @@ Legenda: ✅ feito · 🔜 próximo · ⬜ planejado.
 - ✅ **Gerenciador de perfis** na tela (criar, editar, remover, padrão), gravando no `config.json`.
 - ✅ **Favoritos persistentes** no histórico: sobrevivem a reiniciar, à poda e a "Limpar".
 
-## Etapa 3 — Rotina de testes 🔜
+## Etapa 3 — Rotina de testes ✅
 
-1. **Roteiros salvos.** Importar, assinar, ver status e cancelar com checagens, rodando num clique
-   e gerando relatório. Serve de teste de fumaça de um cliente novo.
-2. **Comparar instâncias.** Roda a mesma chamada em dois perfis e destaca a diferença.
-3. **Lote para escolas.** CSV de alunos → solicitação em massa, com ensaio sem enviar, confirmação,
+1. ✅ **Teste de fumaça** (versão fixa do "roteiros salvos"). Importar, assinar, ver status, link e
+   cancelar com checagens, num clique, com relatório. *Fica para depois:* roteiros que o usuário monta e salva.
+2. ✅ **Comparar instâncias.** Lê dois perfis e destaca a diferença (modelos, pastas, diagnóstico).
+3. ✅ **Lote para escolas.** CSV de alunos → solicitação em massa, com ensaio sem enviar, confirmação,
    intervalo entre chamadas e relatório de sucessos e erros; depois, consulta em lote de pendências.
 
-## Etapa 4 — Conforto e distribuição ⬜
+## Etapa 4 — Conforto e distribuição 🔜
 
 1. **Vigia de assinaturas pendentes:** avisa quando mudam de status ou estão perto de expirar.
 2. **Distribuição:** gerar um `.exe` ou usar `pipx`, para o suporte rodar sem instalar Python.

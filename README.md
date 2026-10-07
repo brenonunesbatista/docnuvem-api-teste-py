@@ -74,6 +74,16 @@ Opções: `--porta N`, `--nao-abrir`, `--sem-historico`, `--dados PASTA`.
   quiser, refazendo a árvore). Você escolhe o destino por uma janela ou digitando o caminho;
   há "só contar" antes de baixar, andamento, cancelamento e um relatório CSV. Nunca sobrescreve
   arquivos. Só lê da API, então vale até em perfil protegido.
+- **Comparar instâncias**: lê dois perfis (só leituras) e mostra o que difere em modelos,
+  pastas ou na situação do diagnóstico.
+- **Lote para escolas**: importa um CSV de alunos (`codigoMatricula`, `nome`, `cpf`, `email`,
+  opcionais `telefone`, `tipoSolicitacao`, `emailResponsavel`), valida linha a linha e então
+  solicita o envio de documentos em massa (**e-mail real**, com confirmação, intervalo entre as
+  chamadas e parada após falhas seguidas) ou só consulta o status. Gera relatório CSV. Perfil
+  somente leitura não envia.
+- **Teste de fumaça**: roteiro para um cliente novo (API e token, importar PDF de teste,
+  assinar sem e-mail, status, link de download, cancelar). **Escreve** na instância e deixa o
+  PDF de teste numa pasta própria, por isso pede confirmação e não roda em perfil somente leitura.
 - **Diagnóstico da instância** (menu Suporte): só com leituras, confere API, token, modelos
   (e quais são geráveis por API), pastas e o módulo de escola, e explica a causa provável de
   cada falha.
