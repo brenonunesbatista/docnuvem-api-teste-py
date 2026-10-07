@@ -74,6 +74,12 @@ Opções: `--porta N`, `--nao-abrir`, `--sem-historico`, `--dados PASTA`.
   quiser, refazendo a árvore). Você escolhe o destino por uma janela ou digitando o caminho;
   há "só contar" antes de baixar, andamento, cancelamento e um relatório CSV. Nunca sobrescreve
   arquivos. Só lê da API, então vale até em perfil protegido.
+- **Vigia de assinaturas pendentes**: em segundo plano, consulta de tempos em tempos (a partir de
+  5 min) os documentos pendentes do perfil e registra quem assinou ou visualizou, documento
+  concluído, expirado ou cancelado e prazo perto de acabar. Mostra o contador no menu e pode
+  notificar pelo navegador. Só leituras; para quando o programa fecha.
+- **PDF de teste**: nas telas de importar, o botão "Gerar PDF de teste" cria um PDF válido de
+  10 KB a 40 MB e de 1 a 50 páginas, sem precisar ter um arquivo à mão.
 - **Comparar instâncias**: lê dois perfis (só leituras) e mostra o que difere em modelos,
   pastas ou na situação do diagnóstico.
 - **Lote para escolas**: importa um CSV de alunos (`codigoMatricula`, `nome`, `cpf`, `email`,
@@ -110,6 +116,20 @@ O histórico fica em `~/.docnuvem-tester/historico.jsonl` (até 5 mil chamadas).
 foi enviado e recebido, **incluindo dados pessoais do que você testou**, mas nunca o token.
 Mude a pasta com `--dados` ou `DOCNUVEM_TESTER_DADOS`, ou desligue com `--sem-historico`.
 
+## Distribuição
+
+Para quem vai só usar, sem instalar Python na máquina:
+
+- **Executável (Windows):** `packaging\gerar-exe.bat` gera `dist\docnuvem-web.exe`, um arquivo só
+  (cerca de 16 MB). Coloque o `config.json` na mesma pasta do `.exe` e dê dois cliques; ele também
+  acha o `config.json` ao lado do `.exe` quando aberto por um atalho. O workflow
+  `Executável` do GitHub gera o mesmo arquivo (Actions > Executável > Run workflow).
+- **`pipx`** (precisa de Python): `pipx install .` na pasta do projeto, ou `pipx install
+  git+<endereço do repositório>`. Cria os comandos `docnuvem-web` e `docnuvem-spec`.
+
+O executável leva junto o runtime da página; veja a questão da licença em
+[webapp/THIRD_PARTY.md](src/docnuvem_tester/webapp/THIRD_PARTY.md) antes de entregar a terceiros.
+
 ## Desenvolvimento
 
 ```bash
@@ -127,4 +147,5 @@ docnuvem-spec       # compara a API atual com o que a ferramenta conhece
 ## Mais
 
 - Plano de próximas etapas: [docs/ROADMAP.md](docs/ROADMAP.md)
+- Avaliação do runtime da página: [docs/runtime-da-pagina.md](docs/runtime-da-pagina.md)
 - A página usa um runtime de terceiros: [webapp/THIRD_PARTY.md](src/docnuvem_tester/webapp/THIRD_PARTY.md)

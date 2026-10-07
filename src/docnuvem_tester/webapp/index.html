@@ -457,6 +457,36 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
           </sc-if>
         </sc-if>
 
+        <!-- ===== VIGIA DE ASSINATURAS ===== -->
+        <sc-if value="{{show.vigia}}" hint-placeholder-val="{{ false }}">
+          <section class="card">
+            <div class="row"><h2>Vigia · {{perfil}}</h2><span class="pill {{vg.cls}}">{{vg.label}}</span><span class="grow"></span><button class="{{vg.notifCls}}" type="button" onClick="{{vg.notif}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.clock}}"/></svg>{{vg.notifLabel}}</button></div>
+            <p class="muted small">Enquanto o programa estiver aberto, o servidor local consulta os documentos com assinatura pendente deste perfil e registra o que muda: quem assinou ou visualizou, documento concluído, expirado ou cancelado, e prazo perto de acabar. Só faz leituras; fechar o programa para o vigia.</p>
+            <div class="fields">
+              <div class="field"><label class="lbl" for="vg-int"><span>Verificar</span></label><select id="vg-int" value="{{vg.intervalo}}" onChange="{{vg.onIntervalo}}"><sc-for list="{{vg.intervaloOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.value}}" selected="{{o.selected}}">{{o.label}}</option></sc-for></select><span class="hint">Cada verificação faz uma consulta por documento acompanhado.</span></div>
+              <div class="field"><label class="lbl" for="vg-al"><span>Avisar de expiração</span></label><select id="vg-al" value="{{vg.alerta}}" onChange="{{vg.onAlerta}}"><sc-for list="{{vg.alertaOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.value}}" selected="{{o.selected}}">{{o.label}}</option></sc-for></select></div>
+              <div class="field"><label class="lbl" for="vg-ids"><span>Acompanhar também estes documentos</span><span class="tag">opcional</span></label><input id="vg-ids" type="text" value="{{vg.ids}}" placeholder="30542, 29595" autocomplete="off" onInput="{{vg.onIds}}"><span class="hint">documentoId separados por vírgula. Além deles, acompanha até 100 pendentes do perfil.</span></div>
+            </div>
+            <sc-if value="{{vg.hasErr}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{vg.err}}</span></div></sc-if>
+            <div class="row"><button class="btn pri" type="button" onClick="{{vg.iniciar}}">{{vg.iniciarLabel}}</button><sc-if value="{{vg.ativo}}" hint-placeholder-val="{{ false }}"><button class="btn" type="button" onClick="{{vg.agora}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.refresh}}"/></svg>Verificar agora</button><button class="btn dng" type="button" onClick="{{vg.parar}}">Parar</button></sc-if></div>
+          </section>
+          <sc-if value="{{vg.has}}" hint-placeholder-val="{{ false }}">
+            <section class="card">
+              <h2>Acompanhando</h2>
+              <div class="muted small">{{vg.resumo}}</div>
+              <sc-if value="{{vg.truncado}}" hint-placeholder-val="{{ false }}"><div class="muted small">Há mais pendentes do que os 100 acompanhados: os demais não estão na lista.</div></sc-if>
+              <sc-if value="{{vg.falhas}}" hint-placeholder-val="{{ false }}"><div class="muted small">{{vg.nFalhas}} documento(s) não puderam ser consultados na última verificação; o último estado conhecido foi mantido.</div></sc-if>
+              <sc-if value="{{vg.semDocs}}" hint-placeholder-val="{{ false }}"><div class="empty"><strong>Nada pendente agora</strong><span>Quando houver documentos com assinatura pendente, eles aparecem aqui.</span></div></sc-if>
+              <sc-if value="{{vg.hasDocs}}" hint-placeholder-val="{{ false }}"><div class="dglist" style="max-height:340px"><sc-for list="{{vg.docs}}" as="d" hint-placeholder-count="3"><div class="mi" style="flex-direction:column;align-items:flex-start"><span class="row" style="flex-wrap:wrap"><strong style="overflow-wrap:anywhere">{{d.nome}}</strong><code>{{d.id}}</code><span class="pill mu">{{d.status}}</span></span><span class="muted small">Validade: {{d.validade}} · Signatários: {{d.sigs}}</span></div></sc-for></div></sc-if>
+            </section>
+            <section class="card">
+              <h2>Eventos</h2>
+              <sc-if value="{{vg.semEventos}}" hint-placeholder-val="{{ false }}"><div class="empty"><strong>Nenhum evento ainda</strong><span>A primeira verificação só registra o ponto de partida; as mudanças aparecem a partir da segunda.</span></div></sc-if>
+              <sc-if value="{{vg.hasEventos}}" hint-placeholder-val="{{ false }}"><div class="dglist" style="max-height:420px"><sc-for list="{{vg.eventos}}" as="e" hint-placeholder-count="3"><div class="mi"><span class="pill {{e.cls}}">{{e.label}}</span><strong style="overflow-wrap:anywhere">{{e.nome}}</strong><code>{{e.id}}</code><span class="muted small" style="flex-basis:100%">{{e.detalhe}} · {{e.quando}}</span></div></sc-for></div></sc-if>
+            </section>
+          </sc-if>
+        </sc-if>
+
         <!-- ===== TESTE DE FUMAÇA ===== -->
         <sc-if value="{{show.fumaca}}" hint-placeholder-val="{{ false }}">
           <section class="card">
@@ -587,6 +617,7 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
                       <span class="muted small">ou escolha no computador · parte multipart <code class="api">file</code> · nada sai do seu navegador</span>
                       <label class="lbl" for="arquivo" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Escolher arquivo</label>
                       <input id="arquivo" type="file" onChange="{{drop.onPick}}">
+                      <div class="row" onClick="{{stop}}" style="justify-content:center"><span class="muted small">Sem arquivo à mão?</span><select aria-label="Tamanho do PDF de teste" value="{{drop.tam}}" onChange="{{drop.onTam}}" style="width:auto"><sc-for list="{{drop.tamOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.value}}" selected="{{o.selected}}">{{o.label}}</option></sc-for></select><select aria-label="Páginas do PDF de teste" value="{{drop.pag}}" onChange="{{drop.onPag}}" style="width:auto"><sc-for list="{{drop.pagOpts}}" as="o" hint-placeholder-count="2"><option value="{{o.value}}" selected="{{o.selected}}">{{o.label}}</option></sc-for></select><button class="btn sm" type="button" onClick="{{drop.gerar}}">Gerar PDF de teste</button></div>
                       <sc-if value="{{drop.hasFile}}" hint-placeholder-val="{{ false }}"><div class="dfile"><span><strong>{{drop.name}}</strong> <span class="muted small">· {{drop.size}}</span></span><button class="btn sm" type="button" onClick="{{drop.onClear}}">Remover</button></div></sc-if>
                       <sc-if value="{{drop.hasErr}}" hint-placeholder-val="{{ false }}"><span class="msg bad" role="alert"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.x}}"/></svg>{{drop.err}}</span></sc-if>
                     </div>
@@ -1005,10 +1036,11 @@ baixarPasta:{label:'Baixar pasta',title:'Baixar pasta',sub:'Salva no computador 
 comparar:{label:'Comparar instâncias',title:'Comparar instâncias',sub:'Lê dois perfis e mostra o que difere entre eles: modelos, pastas ou a situação do diagnóstico. Só leituras.',d:ICON.layout,grp:'Rotinas'},
 lote:{label:'Lote para escolas',title:'Lote para escolas',sub:'Importe um CSV de alunos: valide, solicite o envio de documentos em massa (e-mail real) ou consulte os pendentes.',d:ICON.cap,grp:''},
 fumaca:{label:'Teste de fumaça',title:'Teste de fumaça',sub:'Roteiro de ponta a ponta para um cliente novo: importa um PDF de teste, assina sem e-mail, confere e cancela.',d:ICON.zap,grp:''},
+vigia:{label:'Vigia de assinaturas',title:'Vigia de assinaturas pendentes',sub:'Acompanha em segundo plano os documentos com assinatura pendente e avisa quando algo muda ou o prazo está perto de acabar. Só leituras.',d:ICON.clock,grp:''},
 diagnostico:{label:'Diagnóstico',title:'Diagnóstico da instância',sub:'Confere, só com leituras, se o perfil está pronto para uso e mostra a causa provável de cada problema.',d:ICON.pulse,grp:'Suporte'},
 perfis:{label:'Perfis',title:'Perfis',sub:'Crie, edite e remova os perfis do config.json: nome, instância, endereço, token e proteção.',d:ICON.gear,grp:''}
 };
-const ORDER=['inicio','fluxo','importar','envio','modelos','template','assinatura','cancelar','documentos','pastas','status','download','baixarPasta','alunoSolicitar','alunoStatus','comparar','lote','fumaca','diagnostico','perfis'];
+const ORDER=['inicio','fluxo','importar','envio','modelos','template','assinatura','cancelar','documentos','pastas','status','download','baixarPasta','alunoSolicitar','alunoStatus','comparar','lote','fumaca','vigia','diagnostico','perfis'];
 const AUTO=['documentos','pastas','modelos'];
 let LIVE=null;const FILEBLOB=new WeakMap();
 const BASE='https://api.docnuvem.example';
@@ -1126,11 +1158,12 @@ pastas:{diretorioPaiId:'',nome:'',caminho:'',pagina:'0',tamanho:'50'},
 status:{documentoId:''},download:{documentoId:''},modelos:{},
 alunoSolicitar:{codigoMatricula:'',nome:'',cpf:'',email:'',telefone:'',tipoSolicitacao:'1',emailResponsavel:'',confirmEmail:false},alunoStatus:{codigoMatricula:''},
 comparar:{a:'',b:'',tipo:'modelos'},
+vigia:{ids:'',intervalo:'10',alerta:'48'},
 lote:{csvNome:'',csvTexto:'',modo:'enviar',intervalo:'500',confirmando:false},
 fumaca:{ok:false},
 baixar:{diretorioId:'',subpastas:true,estrutura:true,conflito:'renomear',destino:''},
 perfis:{aberto:false,original:'',nome:'',instancia:'',baseUrl:'',token:'',protecao:'',erro:'',salvando:false,rm:''}},
-results:{},loading:{},lists:{},diag:{},bx:{id:'',snap:null,erro:'',escolhendo:false},cmp:{busy:false,res:null,erro:''},lt:{val:null,erro:'',validando:false,id:'',snap:null},fm:{busy:false,res:null,erro:''},protPend:null,tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
+results:{},loading:{},lists:{},diag:{},bx:{id:'',snap:null,erro:'',escolhendo:false},cmp:{busy:false,res:null,erro:''},vg:{todos:[],vistos:{},notif:false,erro:''},lt:{val:null,erro:'',validando:false,id:'',snap:null},fm:{busy:false,res:null,erro:''},protPend:null,tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
 paletteOpen:false,paletteQ:'',toast:'',wizStep:0,lastMat:'',openSol:null,navMin:false,
 lastDoc:{},lastAss:{},
 sort:{documentos:{k:'criadoEm',d:-1},pastas:{k:'caminho',d:1}},openModelo:'',dragging:false,newSg:sg};
@@ -1141,6 +1174,9 @@ constructor(){super(...arguments);this.state=mkState();this.seq=0;this._sid=Date
 componentDidMount(){try{if(localStorage.getItem('docnuvem-nav-min')==='1')this.setState({navMin:true});const tm=localStorage.getItem('docnuvem-tema');if(tm==='light'||tm==='dark')this.setState({theme:tm});}catch(e){}
 this._iv=setInterval(()=>{if(this.state.screen==='download'&&this.state.results.download)this.forceUpdate();},1000);
 this._api=setInterval(()=>this.checarApi(false),60000);
+this._vgN={};
+try{const vistos=JSON.parse(localStorage.getItem('docnuvem-vigia-vistos')||'{}');const n=localStorage.getItem('docnuvem-vigia-notif')==='1'&&('Notification' in window)&&Notification.permission==='granted';this.setState({vg:Object.assign({},this.state.vg,{vistos,notif:n})});}catch(e){}
+this._vgp=setInterval(()=>this.vgAtualizar(),15000);
 fetch('/_perfis',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{
 if(!j||!Array.isArray(j.perfis)||!j.perfis.length){this.setState({boot:'sem'});return;}
 this.aplicarPerfis(j,{inicial:true});
@@ -1151,11 +1187,62 @@ o=o||{};LIVE=j;PERFIS={};const st=this.state,lastDoc={},lastAss={};
 j.perfis.forEach(p=>{PERFIS[p.id]={mascara:p.tokenMascarado,baseUrl:p.baseUrl,instancia:p.instancia,protegido:p.protegido||''};lastDoc[p.id]=(st.lastDoc&&st.lastDoc[p.id])||null;lastAss[p.id]=(st.lastAss&&st.lastAss[p.id])||null;});
 const padrao=PERFIS[j.padrao]?j.padrao:j.perfis[0].id;
 if(o.inicial){let dest=j.pastaDownloads||'';try{dest=localStorage.getItem('docnuvem-destino')||dest;}catch(e){}
-this.setState({forms:Object.assign({},st.forms,{baixar:Object.assign({},st.forms.baixar,{destino:dest})}),boot:'ok',perfil:padrao,lastDoc,lastAss,results:{},lists:{},hist:{ligado:!!j.historico,arquivo:j.arquivoHistorico||'',confirmar:false}});this.checarApi(true);return;}
+this.setState({forms:Object.assign({},st.forms,{baixar:Object.assign({},st.forms.baixar,{destino:dest})}),boot:'ok',perfil:padrao,lastDoc,lastAss,results:{},lists:{},hist:{ligado:!!j.historico,arquivo:j.arquivoHistorico||'',confirmar:false}});this.checarApi(true);setTimeout(()=>this.vgAtualizar(),300);return;}
 let perfil=st.perfil;
 if(!PERFIS[perfil])perfil=(o.renomeado&&PERFIS[o.renomeado])?o.renomeado:padrao;
 this.setState({perfil,lastDoc,lastAss,results:{},lists:{},apiSt:{},diag:{}});
 setTimeout(()=>{const sc=this.eff();if(AUTO.indexOf(sc)>=0)this.run(sc);if(sc==='diagnostico')this.diagnosticar();this.checarApi(true);},0);
+}
+gerarPdf(sc){
+const f=this.state.forms[sc];const tam=Number(f.pdfTam)||102400,pg=Number(f.pdfPag)||1;
+this.aviso('Gerando o PDF de teste…');
+fetch('/_arquivo-teste?tamanho='+tam+'&paginas='+pg,{cache:'no-store'}).then(r=>r.ok?r.blob():Promise.reject(new Error('HTTP '+r.status))).then(b=>{
+const kb=tam>=1048576?(tam/1048576)+'MB':(tam/1024)+'KB';
+const fl=new File([b],'teste-'+kb+'-'+pg+'p.pdf',{type:'application/pdf'});
+this.setFile(sc,fl);this.aviso('PDF de teste pronto: '+fmtSize(fl.size)+', '+pg+' página(s).');
+}).catch(e=>this.aviso('Não consegui gerar o PDF: '+e.message));
+}
+vgSalvar(vistos){try{localStorage.setItem('docnuvem-vigia-vistos',JSON.stringify(vistos));}catch(e){}}
+vgAtualizar(){
+if(!LIVE)return;
+fetch('/_vigia',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{
+if(!j||!Array.isArray(j.vigias))return;
+const st=this.state,vistos=Object.assign({},st.vg.vistos);let mudou=false;const avisos=[];
+j.vigias.forEach(v=>{
+const jaAvisado=this._vgN[v.perfil]!=null?this._vgN[v.perfil]:(vistos[v.perfil]!=null?vistos[v.perfil]:v.ultimoEvento);
+const nv=v.eventos.filter(e=>e.id>jaAvisado);
+if(nv.length)avisos.push({perfil:v.perfil,eventos:nv});
+this._vgN[v.perfil]=v.ultimoEvento;
+if(vistos[v.perfil]==null||(st.screen==='vigia'&&v.perfil===st.perfil)){if(vistos[v.perfil]!==v.ultimoEvento){vistos[v.perfil]=v.ultimoEvento;mudou=true;}}
+});
+this.setState({vg:Object.assign({},this.state.vg,{todos:j.vigias,vistos})});
+if(mudou)this.vgSalvar(vistos);
+avisos.forEach(a=>{
+const n=a.eventos.length,ult=a.eventos[0];
+this.aviso('Vigia ('+a.perfil+'): '+n+' novo(s) evento(s). '+ult.nome+': '+ult.detalhe);
+try{if(this.state.vg.notif&&'Notification' in window&&Notification.permission==='granted')new Notification('Docnuvem · vigia ('+a.perfil+')',{body:n+' novo(s) evento(s). '+ult.nome+': '+ult.detalhe});}catch(e){}
+});
+}).catch(()=>{});
+}
+vgIniciar(){
+const s=this.state,f=s.forms.vigia;
+this.cfgCall('/_vigia/iniciar','POST',{perfil:s.perfil,intervaloMin:Number(f.intervalo),alertaHoras:Number(f.alerta),ids:f.ids}).then(r=>{
+if(!r.ok){this.setState({vg:Object.assign({},this.state.vg,{erro:r.erro||'Não foi possível iniciar.'})});return;}
+this.setState({vg:Object.assign({},this.state.vg,{erro:''})});
+setTimeout(()=>this.vgAtualizar(),800);
+});
+}
+vgAcao(acao){this.cfgCall('/_vigia/'+acao,'POST',{perfil:this.state.perfil}).then(r=>{if(!r.ok)this.aviso(r.erro||'Não foi possível.');setTimeout(()=>this.vgAtualizar(),acao==='agora'?1200:300);});}
+vgNotif(){
+const st=this.state.vg;
+if(st.notif){this.setState({vg:Object.assign({},st,{notif:false})});try{localStorage.setItem('docnuvem-vigia-notif','0');}catch(e){}return;}
+if(!('Notification' in window)){this.aviso('Este navegador não oferece notificações.');return;}
+Notification.requestPermission().then(p=>{
+const ok=p==='granted';
+this.setState({vg:Object.assign({},this.state.vg,{notif:ok})});
+try{localStorage.setItem('docnuvem-vigia-notif',ok?'1':'0');}catch(e){}
+this.aviso(ok?'Avisos do navegador ligados.':'O navegador não permitiu notificações.');
+});
 }
 cmpRodar(){
 const s=this.state,f=s.forms.comparar,ids=Object.keys(PERFIS);
@@ -1255,7 +1342,7 @@ if(f.rm!==id){this.setF('perfis',{rm:id});clearTimeout(this._rm);this._rm=setTim
 this.setF('perfis',{rm:''});
 this.cfgCall('/_config/perfil/'+encodeURIComponent(id),'DELETE').then(r=>{if(!r.ok){this.aviso(r.erro||'Não foi possível remover.');return;}this.recarregarPerfis({}).then(()=>this.aviso('Perfil "'+id+'" removido do config.json.'));});
 }
-componentWillUnmount(){clearInterval(this._iv);clearInterval(this._api);clearInterval(this._bxp);clearInterval(this._ltp);}
+componentWillUnmount(){clearInterval(this._iv);clearInterval(this._api);clearInterval(this._bxp);clearInterval(this._ltp);clearInterval(this._vgp);}
 
 eff(){const s=this.state;return s.screen==='fluxo'?['importar','assinatura','resultado'][s.wizStep]:s.screen;}
 setF(sc,patch){const s=this.state;this.setState({forms:Object.assign({},s.forms,{[sc]:Object.assign({},s.forms[sc],patch)})});}
@@ -1268,7 +1355,7 @@ goWith(sc,patch,runIt){
 const s=this.state;
 const forms=patch?Object.assign({},s.forms,{[sc]:Object.assign({},s.forms[sc],patch)}):s.forms;
 this.setState({screen:sc,prev:s.screen===sc?s.prev:s.screen,forms,paletteOpen:false,tab:'resumo'});
-setTimeout(()=>{const st=this.state;const e=this.eff();if(runIt||(AUTO.indexOf(sc)>=0&&!st.lists[sc]&&!st.loading[sc]))this.run(e);if(LIVE&&e==='template'&&!st.lists.modelos&&!st.loading.modelos)this.run('modelos');if(LIVE&&sc==='diagnostico'&&!st.diag[st.perfil])this.diagnosticar();},0);
+setTimeout(()=>{const st=this.state;const e=this.eff();if(runIt||(AUTO.indexOf(sc)>=0&&!st.lists[sc]&&!st.loading[sc]))this.run(e);if(LIVE&&e==='template'&&!st.lists.modelos&&!st.loading.modelos)this.run('modelos');if(LIVE&&sc==='diagnostico'&&!st.diag[st.perfil])this.diagnosticar();if(LIVE&&sc==='vigia')this.vgAtualizar();},0);
 }
 go(sc){this.goWith(sc,null,false);}
 back(){const s=this.state;this.go(s.prev&&s.prev!==s.screen?s.prev:'inicio');}
@@ -1341,7 +1428,7 @@ if(t&&(t.type==='file'||t.type==='checkbox'||t.type==='search'))return;
 if(s.logOpen)return;
 e.preventDefault();this.send();}
 };
-send(){const sc=this.eff();if(sc==='inicio'||sc==='resultado'||sc==='diagnostico'||sc==='perfis'||sc==='baixarPasta'||sc==='comparar'||sc==='lote'||sc==='fumaca')return;if(this.state.loading[sc])return;const p=this.plan(sc);if(p.ready)this.run(sc);}
+send(){const sc=this.eff();if(sc==='inicio'||sc==='resultado'||sc==='diagnostico'||sc==='perfis'||sc==='baixarPasta'||sc==='comparar'||sc==='lote'||sc==='fumaca'||sc==='vigia')return;if(this.state.loading[sc])return;const p=this.plan(sc);if(p.ready)this.run(sc);}
 
 plan(sc){
 const s=this.state,f=s.forms[sc]||{},perfil=s.perfil,v=s.validar;
@@ -1571,7 +1658,7 @@ const res0=s.results[eff];
 const loading=!!s.loading[eff];
 const show={};ORDER.concat(['resultado']).forEach(i=>{show[i]=eff===i;});
 show.fluxo=s.screen==='fluxo';
-show.form=eff!=='inicio'&&eff!=='resultado'&&eff!=='diagnostico'&&eff!=='perfis'&&eff!=='baixarPasta'&&eff!=='comparar'&&eff!=='lote'&&eff!=='fumaca';
+show.form=eff!=='inicio'&&eff!=='resultado'&&eff!=='diagnostico'&&eff!=='perfis'&&eff!=='baixarPasta'&&eff!=='comparar'&&eff!=='lote'&&eff!=='fumaca'&&eff!=='vigia';
 const T=(sc,k,o)=>this.fld(sc,k,o);
 const last=s.lastDoc[perfil],lastA=s.lastAss[perfil];
 const docLast=(sc)=>({useLast:true,lastLabel:last?'Usar último documentoId ('+last+')':'Nenhum documentoId recente',lastDisabled:!last,onLast:()=>this.setF(sc,{documentoId:String(last)})});
@@ -1687,7 +1774,11 @@ const drop={cls:(s.dragging?'over ':'')+(p.errs.file?'bad':''),hasFile:!!f.file,
 onOver:e=>{e.preventDefault();if(!this.state.dragging)this.setState({dragging:true});},onLeave:()=>this.setState({dragging:false}),
 onDrop:e=>{e.preventDefault();const fl=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];this.setState({dragging:false});if(fl)this.setFile(eff,fl);},
 onPick:e=>{const fl=e.target.files&&e.target.files[0];if(fl)this.setFile(eff,fl);},
-onClear:()=>this.setF(eff,{file:null})};
+onClear:()=>this.setF(eff,{file:null}),
+tam:String(f.pdfTam||'102400'),pag:String(f.pdfPag||'1'),
+tamOpts:[['10240','10 KB'],['102400','100 KB'],['1048576','1 MB'],['5242880','5 MB'],['20971520','20 MB'],['41943040','40 MB']].map(a=>({value:a[0],label:a[1],selected:String(f.pdfTam||'102400')===a[0]})),onTam:e=>this.setF(eff,{pdfTam:e.target.value}),
+pagOpts:[['1','1 página'],['3','3 páginas'],['10','10 páginas'],['50','50 páginas']].map(a=>({value:a[0],label:a[1],selected:String(f.pdfPag||'1')===a[0]})),onPag:e=>this.setF(eff,{pdfPag:e.target.value}),
+gerar:()=>this.gerarPdf(eff)};
 
 
 const SEND={alunoSolicitar:'Solicitar envio de documentos',alunoStatus:'Consultar aluno',importar:'Importar arquivo',envio:'Enviar para envio inteligente',modelos:'Listar modelos',template:'Criar documento',assinatura:'Solicitar assinatura',cancelar:'Cancelar assinatura',documentos:'Consultar documentos',pastas:'Consultar pastas',status:'Consultar status',download:'Gerar link de download'};
@@ -1847,6 +1938,25 @@ destinoAtual:bxs?bxs.destino:'',hasRel:!!bxs&&!!bxs.relatorio,relatorio:bxs?bxs.
 amostra:(bxs&&bxs.amostra||[]).map(n=>({n})),hasAmostra:!!bxs&&!!(bxs.amostra||[]).length&&!!bxs.ensaio,
 falhas:(bxs&&bxs.falhas||[]).map(x=>({id:x.documentoId,nome:x.nome||'(sem nome)',erro:x.erro})),hasFalhas:!!bxs&&bxs.nFalhas>0,nFalhas:bxs?bxs.nFalhas:0,
 copyFalhas:()=>this.copy((bxs?bxs.falhas:[]).map(x=>x.documentoId+' · '+x.nome+' · '+x.erro).join('\n'),'Falhas copiadas.')};
+// vigia de assinaturas
+const vgV=(s.vg.todos||[]).find(x=>x.perfil===perfil);
+const vgNovos=(s.vg.todos||[]).reduce((n,v)=>n+v.eventos.filter(e=>e.id>(s.vg.vistos[v.perfil]!=null?s.vg.vistos[v.perfil]:v.ultimoEvento)).length,0);
+const VGT={assinado:['ok','Assinado'],signatario_assinou:['ok','Assinou'],signatario_visualizou:['mu','Visualizou'],perto_de_expirar:['wn','Perto de expirar'],expirado:['er','Expirado'],cancelado:['er','Cancelado'],status:['mu','Status']};
+const fvg=s.forms.vigia;
+const vg={
+intervalo:fvg.intervalo,alerta:fvg.alerta,ids:fvg.ids,onIds:this.hf('vigia','ids'),
+intervaloOpts:[['5','a cada 5 min'],['10','a cada 10 min'],['30','a cada 30 min'],['60','a cada hora'],['240','a cada 4 horas']].map(a=>({value:a[0],label:a[1],selected:fvg.intervalo===a[0]})),onIntervalo:e=>this.setF('vigia',{intervalo:e.target.value}),
+alertaOpts:[['24','24 horas antes'],['48','48 horas antes'],['72','3 dias antes'],['168','7 dias antes']].map(a=>({value:a[0],label:a[1],selected:fvg.alerta===a[0]})),onAlerta:e=>this.setF('vigia',{alerta:e.target.value}),
+ativo:!!vgV&&vgV.ativo,parado:!(!!vgV&&vgV.ativo),iniciarLabel:(!!vgV&&vgV.ativo)?'Aplicar e reiniciar':'Iniciar vigia',
+iniciar:()=>this.vgIniciar(),parar:()=>this.vgAcao('parar'),agora:()=>this.vgAcao('agora'),
+notifLabel:s.vg.notif?'Avisos do navegador: ligados':'Ligar avisos do navegador',notifCls:s.vg.notif?'btn sm':'btn sm',notif:()=>this.vgNotif(),
+hasErr:!!s.vg.erro||(!!vgV&&!!vgV.erro),err:s.vg.erro||(vgV?vgV.erro:''),
+has:!!vgV,
+cls:vgV?(vgV.ativo?'ok':'mu'):'mu',label:vgV?(vgV.ativo?'Vigiando':'Parado'):'Desligado',
+resumo:vgV?(vgV.monitorados.length+' documento(s) acompanhado(s) · '+vgV.ciclos+' verificação(ões)'+(vgV.ultima?' · última às '+fmtT(vgV.ultima):'')+(vgV.ativo&&vgV.proxima?' · próxima às '+fmtT(vgV.proxima):'')):'',
+truncado:!!vgV&&vgV.truncado,falhas:!!vgV&&vgV.falhasConsulta>0,nFalhas:vgV?vgV.falhasConsulta:0,
+docs:(vgV?vgV.monitorados:[]).map(d=>({id:d.documentoId,nome:d.nome,status:d.status||'—',validade:d.validade?fmtDT(d.validade):'—',sigs:d.signatarios.map(x=>x.nome+(x.status==='assinado'?' ✓':(x.visualizou?' (visualizou)':''))).join(', ')||'—'})),hasDocs:!!vgV&&vgV.monitorados.length>0,semDocs:!!vgV&&vgV.monitorados.length===0,
+eventos:(vgV?vgV.eventos:[]).map(e=>{const t=VGT[e.tipo]||['mu',e.tipo];return {cls:t[0],label:t[1],quando:fmtDT(e.ts),nome:e.nome,id:e.documentoId,detalhe:e.detalhe};}),hasEventos:!!vgV&&vgV.eventos.length>0,semEventos:!!vgV&&vgV.eventos.length===0};
 // comparar instâncias
 const fc=s.forms.comparar,idsP=Object.keys(PERFIS),cmpA=fc.a&&PERFIS[fc.a]?fc.a:perfil,cmpB=fc.b&&PERFIS[fc.b]?fc.b:(idsP.find(k=>k!==cmpA)||'');
 const cr=s.cmp.res;
@@ -1962,7 +2072,7 @@ const noPrev=!p.req;
 return {
 theme:s.theme,bannerCls:car?'':'live',modeTitle:sem?'Sem servidor local':car?'Conectando':'API real',modeText:sem?'esta página precisa do programa docnuvem-web: rode "docnuvem-web" no terminal e abra o endereço que ele mostra.':car?'procurando o servidor local…':'as chamadas atingem a API de verdade, com os tokens do config.json. O token fica no servidor local e aparece sempre mascarado.',loadText:'Chamando a API…',themeIcon:s.theme==='dark'?ICON.sun:ICON.moon,themeLabel:s.theme==='dark'?'Mudar para tema claro':'Mudar para tema escuro',toggleTheme:()=>this.setTema(s.theme==='dark'?'light':'dark'),
 ic:ICON,onKey:this.onKey,sideCls:s.navMin?'min':'',sideOpen:!s.navMin,sideLabel:s.navMin?'Expandir menu':'Recolher menu',toggleSide:()=>this.toggleSide(),openPalette:()=>this.openPalette(),
-nav:ORDER.map(id=>({id,label:META[id].label,d:META[id].d,hasGrp:!!META[id].grp,grp:META[id].grp,cur:s.screen===id?'page':'false',go:()=>this.go(id)})),
+nav:ORDER.map(id=>({id,label:(id==='vigia'&&vgNovos>0)?META[id].label+' ('+vgNovos+')':META[id].label,d:META[id].d,hasGrp:!!META[id].grp,grp:META[id].grp,cur:s.screen===id?'page':'false',go:()=>this.go(id)})),
 perfil,perfilOpts:Object.keys(PERFIS).map(k=>({value:k,label:k,selected:k===perfil})),
 onPerfil:e=>{const v=e.target.value;this.setState({perfil:v,results:{},lists:{},collapsed:{}});setTimeout(()=>{const sc=this.eff();if(AUTO.indexOf(sc)>=0)this.run(sc);if(LIVE&&sc==='template')this.run('modelos');if(LIVE&&sc==='diagnostico'&&!this.state.diag[v])this.diagnosticar();this.checarApi(true);},0);},
 tokenMask:mask(perfil),revogado:false,validar:s.validar,validarOff:!s.validar&&show.form,onValidar:e=>this.setState({validar:e.target.checked}),
@@ -1982,7 +2092,7 @@ hasRes:!!res0,noRes:!res0&&!loading,res,tabs,tabResumo:s.tab==='resumo',tabJson:
 jsonCopyAll:()=>this.copy(JSON.stringify(res0?res0.body:{},null,2)),jsonCollapse:()=>this.setState({collapsed:allPaths(res0?res0.body:{},'$',{})}),jsonExpand:()=>this.setState({collapsed:{}}),
 nexts,hasNexts:nexts.length>0,
 hasLinks:links.length>0&&eff==='assinatura',links,linksNote:linkSrc?(linkSrc.conviteEnviado?'Convite enviado por e-mail (conviteEnviado = true). Os links abaixo também valem.':'Nenhum e-mail foi enviado (conviteEnviado = false, padrão). Envie cada link ao signatário.'):'',
-dt,pt,md,stv,dl,wiz,al,asv,api,hist,dg,prot,pf,bx,cm,lote,fumaca,
+dt,pt,md,stv,dl,wiz,al,asv,api,hist,dg,prot,pf,bx,cm,lote,fumaca,vg,
 logOpen:s.logOpen,logFav:s.logFav,onLogFav:e=>this.setState({logFav:e.target.checked}),logRows:lrows,logEmpty:lrows.length===0&&!sel,hasLogSel:!!sel,showLogList:!sel,ld,
 paletteOpen:s.paletteOpen,paletteQ:s.paletteQ,onPaletteQ:e=>this.setState({paletteQ:e.target.value}),palItems,palEmpty:palItems.length===0,closePalette:()=>this.setState({paletteOpen:false}),stop:e=>{if(e&&e.stopPropagation)e.stopPropagation();},
 toast:s.toast,toastCls:s.toast?'':'off'

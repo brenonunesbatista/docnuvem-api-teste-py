@@ -37,13 +37,20 @@ Legenda: ✅ feito · 🔜 próximo · ⬜ planejado.
 3. ✅ **Lote para escolas.** CSV de alunos → solicitação em massa, com ensaio sem enviar, confirmação,
    intervalo entre chamadas e relatório de sucessos e erros; depois, consulta em lote de pendências.
 
-## Etapa 4 — Conforto e distribuição 🔜
+## Etapa 4 — Conforto e distribuição ✅
 
-1. **Vigia de assinaturas pendentes:** avisa quando mudam de status ou estão perto de expirar.
-2. **Distribuição:** gerar um `.exe` ou usar `pipx`, para o suporte rodar sem instalar Python.
-3. **Arquivos de teste:** gerador de PDFs válidos de vários tamanhos (hoje o "arquivo de exemplo"
-   é só um texto).
-4. **Runtime da página:** avaliar trocar o `dc-runtime.js` copiado por HTML e JavaScript simples.
+1. ✅ **Vigia de assinaturas pendentes:** avisa quando mudam de status ou estão perto de expirar.
+2. ✅ **Distribuição:** `.exe` (PyInstaller, testado) e `pipx`, para o suporte rodar sem instalar
+   Python. *Falta testar* o workflow do GitHub que gera o `.exe`.
+3. ✅ **Arquivos de teste:** gerador de PDFs válidos de vários tamanhos e números de páginas.
+4. ✅ **Runtime da página:** avaliado em [runtime-da-pagina.md](runtime-da-pagina.md). Conclusão: não
+   trocar agora; antes, confirmar a licença e criar testes de navegador.
+
+## Próximos passos sugeridos
+
+- **Licença do `dc-runtime.js`** (bloqueia entregar o `.exe` a terceiros).
+- **Testes de navegador** (Playwright) para proteger a página.
+- Roteiros de teste que o usuário monta e salva (hoje só há o teste de fumaça fixo).
 
 ## Decisões em aberto
 

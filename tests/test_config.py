@@ -83,3 +83,40 @@ def test_load_config_aceita_arquivo_com_bom(tmp_path: Path) -> None:
     arq = tmp_path / "config.json"
     arq.write_bytes(b"\xef\xbb\xbf" + json.dumps(valido()).encode("utf-8"))
     assert load_config(arq).perfilPadrao == "cliente2"
+
+
+def test_config_path_no_executavel_procura_ao_lado_do_exe(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    exe_dir, outra = tmp_path / "exe", tmp_path / "outra"
+    exe_dir.mkdir()
+    outra.mkdir()
+    (exe_dir / "config.json").write_text("{}", encoding="utf-8")
+    monkeypatch.delenv("DOCNUVEM_TESTER_CONFIG", raising=False)
+    monkeypatch.chdir(outra)
+    monkeypatch.setattr("sys.frozen", True, raising=False)
+    monkeypatch.setattr("sys.executable", str(exe_dir / "docnuvem-web.exe"))
+    assert config_path() == exe_dir / "config.json"
+
+
+def test_config_path_prefere_a_pasta_atual_mesmo_no_executavel(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    exe_dir, aqui = tmp_path / "exe", tmp_path / "aqui"
+    exe_dir.mkdir()
+    aqui.mkdir()
+    (exe_dir / "config.json").write_text("{}", encoding="utf-8")
+    (aqui / "config.json").write_text("{}", encoding="utf-8")
+    monkeypatch.delenv("DOCNUVEM_TESTER_CONFIG", raising=False)
+    monkeypatch.chdir(aqui)
+    monkeypatch.setattr("sys.frozen", True, raising=False)
+    monkeypatch.setattr("sys.executable", str(exe_dir / "docnuvem-web.exe"))
+    assert config_path() == aqui / "config.json"
+
+
+def test_config_path_fora_do_executavel_ignora_a_pasta_do_python(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("DOCNUVEM_TESTER_CONFIG", raising=False)
+    monkeypatch.chdir(tmp_path)
+    assert config_path() == tmp_path / "config.json"

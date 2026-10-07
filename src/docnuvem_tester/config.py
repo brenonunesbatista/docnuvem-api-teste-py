@@ -6,6 +6,7 @@ import json
 import os
 import re
 import shutil
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -41,13 +42,18 @@ class PerfilJaExiste(ConfigError):
 def config_path() -> Path:
     """Resolve o caminho do config.json.
 
-    Por padrão procura na pasta atual. Pode ser sobrescrito com a variável de
-    ambiente DOCNUVEM_TESTER_CONFIG.
+    Por padrão procura na pasta atual e, no executável (.exe), também ao lado dele. Pode ser
+    sobrescrito com a variável de ambiente DOCNUVEM_TESTER_CONFIG.
     """
     env = os.environ.get("DOCNUVEM_TESTER_CONFIG")
     if env:
         return Path(env)
-    return Path.cwd() / "config.json"
+    atual = Path.cwd() / "config.json"
+    if not atual.exists() and getattr(sys, "frozen", False):
+        ao_lado = Path(sys.executable).parent / "config.json"  # atalho com outra pasta de partida
+        if ao_lado.exists():
+            return ao_lado
+    return atual
 
 
 def _texto(valor: Any, onde: str) -> str:

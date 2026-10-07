@@ -30,6 +30,7 @@ from urllib.parse import parse_qs, parse_qsl, unquote, urlsplit
 
 import httpx
 
+from docnuvem_tester.arquivos import gerar_pdf
 from docnuvem_tester.comparar import TIPOS as TIPOS_COMPARACAO
 from docnuvem_tester.comparar import comparar
 from docnuvem_tester.config import (
@@ -47,6 +48,7 @@ from docnuvem_tester.config import (
 from docnuvem_tester.download import ErroDownload, GerenciadorDownload, validar_destino
 from docnuvem_tester.lote import ErroLote, GerenciadorLote, preparar
 from docnuvem_tester.roteiro import rodar_fumaca
+from docnuvem_tester.vigia import ErroVigia, GerenciadorVigia
 
 PASTA_WEB = Path(__file__).parent / "webapp"
 PAGINA = PASTA_WEB / "index.html"
@@ -601,6 +603,7 @@ class Servidor(ThreadingHTTPServer):
         self._cfg_lock = threading.Lock()
         self.downloads = GerenciadorDownload()
         self.lotes = GerenciadorLote()
+        self.vigias = GerenciadorVigia()
         self.historico = historico
         self.cliente = cliente or httpx.Client(timeout=TIMEOUT)
         self._cliente_proprio = cliente is None
@@ -630,6 +633,7 @@ class Servidor(ThreadingHTTPServer):
             self._status_cache.clear()
 
     def server_close(self) -> None:
+        self.vigias.parar_todos()
         super().server_close()
         if self._cliente_proprio:
             self.cliente.close()
@@ -717,6 +721,10 @@ class Handler(BaseHTTPRequestHandler):
             return self._perfis()
         if caminho.startswith("/_status/"):
             return self._status(unquote(caminho[len("/_status/") :]), parse_qs(partes.query))
+        if caminho == "/_vigia":
+            return self._json({"vigias": [v.snapshot() for v in self.server.vigias.todos()]})
+        if caminho == "/_arquivo-teste":
+            return self._arquivo_teste(parse_qs(partes.query))
         if caminho.startswith("/_lote/"):
             resto = unquote(caminho[len("/_lote/") :])
             if resto.endswith("/relatorio.csv"):
@@ -740,6 +748,10 @@ class Handler(BaseHTTPRequestHandler):
             return self._hist_gravar()
         if caminho == "/_historico/favorito":
             return self._hist_favorito()
+        if caminho == "/_vigia/iniciar":
+            return self._vigia_iniciar()
+        if caminho in ("/_vigia/parar", "/_vigia/agora"):
+            return self._vigia_acao(caminho.rsplit("/", 1)[1])
         if caminho == "/_comparar":
             return self._comparar()
         if caminho == "/_roteiro/fumaca":
@@ -803,6 +815,61 @@ class Handler(BaseHTTPRequestHandler):
                 "arquivoConfig": str(self.server.arquivo_config or ""),
             }
         )
+
+    def _vigia_iniciar(self) -> None:
+        dado = self._corpo_json()
+        if dado is None:
+            return
+        alvo = self._perfil_do_corpo(dado)
+        if alvo is None:
+            return
+        nome, perfil = alvo
+        bruto = dado.get("ids", [])
+        pedacos = re.split(r"[\s,;]+", bruto) if isinstance(bruto, str) else list(bruto or [])
+        try:
+            ids = {int(str(p).strip()) for p in pedacos if str(p).strip()}
+            intervalo = int(dado.get("intervaloMin", 10))
+            alerta = int(dado.get("alertaHoras", 48))
+            if any(i <= 0 for i in ids):
+                raise ValueError
+        except (TypeError, ValueError):
+            return self._json(
+                {"ok": False, "erro": "Intervalo, aviso e ids devem ser números."}, 400
+            )
+        try:
+            self.server.vigias.iniciar(
+                self.server.cliente,
+                nome,
+                perfil,
+                intervalo_min=intervalo,
+                alerta_h=alerta,
+                ids=ids,
+            )
+        except ErroVigia as exc:
+            return self._json({"ok": False, "erro": str(exc)}, 400)
+        self._json({"ok": True})
+
+    def _vigia_acao(self, acao: str) -> None:
+        dado = self._corpo_json()
+        if dado is None:
+            return
+        v = self.server.vigias.obter(str(dado.get("perfil", "")))
+        if v is None:
+            return self._json({"ok": False, "erro": "Não há vigia ativo para esse perfil."}, 404)
+        if acao == "parar":
+            v.parar()
+        else:
+            v.agora()
+        self._json({"ok": True})
+
+    def _arquivo_teste(self, query: dict[str, list[str]]) -> None:
+        """PDF válido de teste, com o tamanho (bytes) e o número de páginas pedidos."""
+        try:
+            tamanho = int(query.get("tamanho", ["102400"])[0])
+            paginas = int(query.get("paginas", ["1"])[0])
+        except ValueError:
+            return self._texto(400, "tamanho e paginas devem ser números.")
+        self._enviar(200, gerar_pdf(tamanho, paginas), "application/pdf")
 
     # --- rotina de testes: comparar, lote para escolas, teste de fumaça -----
     def _perfil_do_corpo(

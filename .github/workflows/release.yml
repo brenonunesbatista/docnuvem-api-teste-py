@@ -1,0 +1,31 @@
+name: Executável
+
+# Gera o docnuvem-web.exe (Windows, um arquivo só). Roda quando se publica uma tag "v*" ou sob
+# demanda (Actions > Executável > Run workflow). O arquivo fica em "Artifacts" da execução.
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+jobs:
+  exe:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instalar dependências
+        run: python -m pip install pyinstaller httpx
+      - name: Gerar o executável
+        shell: cmd
+        run: >
+          python -m PyInstaller --noconfirm --onefile --name docnuvem-web --paths src
+          --add-data "%CD%\src\docnuvem_tester\webapp;docnuvem_tester\webapp"
+          --distpath dist --workpath build\pyinstaller --specpath build\pyinstaller
+          packaging\launcher.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docnuvem-web-windows
+          path: dist/docnuvem-web.exe
+          if-no-files-found: error
