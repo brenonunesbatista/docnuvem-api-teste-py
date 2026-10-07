@@ -1895,14 +1895,15 @@ hasEstErro:!!lsn&&!!lsn.erro,estErro:lsn?lsn.erro:'',
 falhas:(lsn&&lsn.falhas||[]).map(x=>({t:'Linha '+x.linha+' · '+x.codigoMatricula,erro:x.erro})),hasFalhas:!!lsn&&lsn.nFalhas>0,nFalhas:lsn?lsn.nFalhas:0};
 // teste de fumaça
 const fmr=s.fm.res,pmF=(PERFIS[perfil]||{}).protegido||'';
-const FMN={ok:['ok',ICON.check,'OK'],erro:['er',ICON.x,'Falhou'],pulado:['mu',ICON.minus,'Pulado']};
+const FMN={ok:['ok',ICON.check,'OK'],aviso:['wn',ICON.alert,'Atenção'],erro:['er',ICON.x,'Falhou'],pulado:['mu',ICON.minus,'Pulado']};
+const fmErro=!!fmr&&fmr.passos.some(p=>p.nivel==='erro');
 const fumaca={
 perfil,bloqueado:pmF==='bloquear',naoBloqueado:pmF!=='bloquear',ok:!!s.forms.fumaca.ok,onOk:e=>this.setF('fumaca',{ok:e.target.checked}),
 rodar:()=>this.fmRodar(),podeRodar:!!s.forms.fumaca.ok&&!s.fm.busy&&pmF!=='bloquear',naoPode:!(!!s.forms.fumaca.ok&&!s.fm.busy&&pmF!=='bloquear'),busy:s.fm.busy,
-hasErr:!!s.fm.erro,err:s.fm.erro,has:!!fmr,cls:fmr?(fmr.sucesso?'ok':'er'):'mu',label:fmr?(fmr.sucesso?'Tudo certo':'Com problema'):'',
+hasErr:!!s.fm.erro,err:s.fm.erro,has:!!fmr,cls:fmr?(fmr.sucesso?'ok':fmErro?'er':'wn'):'mu',label:fmr?(fmr.sucesso?'Tudo certo':fmErro?'Com problema':'Com ressalvas'):'',
 passos:(fmr&&fmr.passos||[]).map(p=>{const k=FMN[p.nivel]||FMN.pulado;return {titulo:p.titulo,cls:k[0],icon:k[1],label:k[2],detalhe:p.detalhe,ms:p.ms+' ms'};}),
 pasta:fmr?fmr.pasta:'',doc:fmr&&fmr.documentoId?String(fmr.documentoId):'',
-copy:()=>this.copy(fmr?['TESTE DE FUMAÇA · Docnuvem API Tester','Perfil: '+perfil+' (instância: '+fmr.instancia+')','Quando: '+new Date(fmr.verificadoEm).toLocaleString('pt-BR'),'Resultado: '+(fmr.sucesso?'tudo certo':'com problema'),''].concat(fmr.passos.map(p=>'['+(FMN[p.nivel]||FMN.pulado)[2]+'] '+p.titulo+': '+p.detalhe)).concat(['','O PDF de teste (documento '+(fmr.documentoId||'—')+') ficou na pasta “'+fmr.pasta+'”.']).join('\n'):'','Relatório copiado.')};
+copy:()=>this.copy(fmr?['TESTE DE FUMAÇA · Docnuvem API Tester','Perfil: '+perfil+' (instância: '+fmr.instancia+')','Quando: '+new Date(fmr.verificadoEm).toLocaleString('pt-BR'),'Resultado: '+(fmr.sucesso?'tudo certo':fmErro?'com problema':'com ressalvas'),''].concat(fmr.passos.map(p=>'['+(FMN[p.nivel]||FMN.pulado)[2]+'] '+p.titulo+': '+p.detalhe)).concat(['','O PDF de teste (documento '+(fmr.documentoId||'—')+') ficou na pasta “'+fmr.pasta+'”.']).join('\n'):'','Relatório copiado.')};
 // gerenciador de perfis
 const fp=s.forms.perfis,ordemP=Object.keys(PERFIS),padraoP=LIVE?LIVE.padrao:'';
 const protTxt={'':'Livre',confirmar:'Produção · confirma',bloquear:'Produção · só leitura'};

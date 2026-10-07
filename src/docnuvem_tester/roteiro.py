@@ -19,6 +19,8 @@ from docnuvem_tester.download import _mensagem
 PASTA_TESTE = "Teste de fumaça Docnuvem API Tester"
 # CPF fictício com dígitos verificadores válidos (o mesmo usado nos exemplos da página).
 CPF_TESTE = "52998224725"
+# example.com é reservado pela IANA: não existe caixa de e-mail de verdade nele.
+EMAIL_TESTE = "fumaca.teste@example.com"
 
 
 def pdf_minimo() -> bytes:
@@ -43,12 +45,18 @@ def pdf_minimo() -> bytes:
     return corpo
 
 
+class Aviso(Exception):
+    """O passo funcionou, mas trouxe algo que merece atenção (o roteiro continua)."""
+
+
 def _passo(passos: list[dict[str, Any]], id_: str, titulo: str, funcao: Callable[[], str]) -> bool:
-    """Roda um passo, mede o tempo e registra ok/erro. Devolve se deu certo."""
+    """Roda um passo, mede o tempo e registra ok/aviso/erro. Devolve se pode seguir."""
     inicio = time.perf_counter()
     try:
         detalhe = funcao()
         nivel = "ok"
+    except Aviso as exc:
+        detalhe, nivel = str(exc), "aviso"
     except AssertionError as exc:
         detalhe, nivel = str(exc), "erro"
     except httpx.HTTPError as exc:
@@ -62,7 +70,7 @@ def _passo(passos: list[dict[str, Any]], id_: str, titulo: str, funcao: Callable
             "ms": round((time.perf_counter() - inicio) * 1000),
         }
     )
-    return nivel == "ok"
+    return nivel in ("ok", "aviso")
 
 
 def _json(resp: httpx.Response) -> dict[str, Any]:
@@ -114,7 +122,7 @@ def rodar_fumaca(cliente: httpx.Client, perfil: PerfilConfig) -> dict[str, Any]:
             "signatarios": [
                 {
                     "nome": "Teste de Fumaça",
-                    "email": "fumaca.teste@exemplo.com.br",
+                    "email": EMAIL_TESTE,
                     "cpf": CPF_TESTE,
                     "ordem": 0,
                 }
@@ -130,7 +138,12 @@ def rodar_fumaca(cliente: httpx.Client, perfil: PerfilConfig) -> dict[str, Any]:
         dado = _json(r)
         assert dado.get("assinaturaId"), "A resposta não trouxe assinaturaId."
         estado["assinatura"] = dado["assinaturaId"]
-        assert dado.get("conviteEnviado") is not True, "Atenção: a API enviou convite por e-mail."
+        if dado.get("conviteEnviado") is True:
+            raise Aviso(
+                f"Solicitação {dado['assinaturaId']} criada, mas a API respondeu conviteEnviado = "
+                f"true mesmo com enviarConvite = false: a instância pode estar enviando e-mail "
+                f"ao signatário ({EMAIL_TESTE}). Vale conferir a configuração dela."
+            )
         return f"Solicitação {dado['assinaturaId']} criada, sem convite por e-mail."
 
     def status() -> str:
@@ -200,10 +213,12 @@ def rodar_fumaca(cliente: httpx.Client, perfil: PerfilConfig) -> dict[str, Any]:
              "detalhe": "Nada a cancelar: a solicitação não foi criada.", "ms": 0}
         )  # fmt: skip
     sucesso = all(p["nivel"] == "ok" for p in passos)
+    avisos = sum(1 for p in passos if p["nivel"] == "aviso")
     return {
         "verificadoEm": int(time.time() * 1000),
         "instancia": perfil.instancia.lower(),
         "sucesso": sucesso,
+        "avisos": avisos,
         "passos": passos,
         "documentoId": estado.get("documento"),
         "assinaturaId": estado.get("assinatura"),

@@ -532,8 +532,20 @@ def test_fumaca_alerta_se_a_api_enviou_convite(app: App, upstream: Upstream) -> 
     _fumaca_ok(upstream)
     upstream.respostas[ASSINAR] = (201, '{"assinaturaId": 5, "conviteEnviado": true}')
     r = _fumaca(app).json()
-    assert _niveis(r)["assinatura"] == "erro"
-    assert _niveis(r)["cancelar"] == "ok"
+    niveis = _niveis(r)
+    assert niveis["assinatura"] == "aviso"  # funcionou, mas merece atenção
+    assert (niveis["status"], niveis["download"], niveis["cancelar"]) == ("ok",) * 3  # segue
+    assert (r["sucesso"], r["avisos"]) == (False, 1)
+    assert "conviteEnviado" in next(p for p in r["passos"] if p["id"] == "assinatura")["detalhe"]
+
+
+def test_fumaca_usa_um_email_de_dominio_reservado(app: App, upstream: Upstream) -> None:
+    _fumaca_ok(upstream)
+    _fumaca(app)
+    corpo = json.loads(
+        next(c for c in upstream.recebidas if c["rota"] == "/api/assinatura")["corpo"]
+    )
+    assert corpo["signatarios"][0]["email"].endswith("@example.com")
 
 
 def test_fumaca_com_token_ruim_nao_escreve_nada(app: App, upstream: Upstream) -> None:
