@@ -7,7 +7,7 @@ from textual.screen import Screen
 from textual.widgets import Static
 
 MARCA = (
-    "[b #58a6ff]DocNuvem[/]\n"
+    "[b #58a6ff]Docnuvem[/]\n"
     "[b]API Tester[/]\n"
     "\n"
     "[#8b949e]Teste manual da API REST  ·  v1.0[/]\n"

@@ -1,4 +1,4 @@
-"""Cliente HTTP assíncrono para a API de Importação de Arquivos do DocNuvem."""
+"""Cliente HTTP assíncrono para a API de Importação de Arquivos do Docnuvem."""
 
 from __future__ import annotations
 
@@ -107,8 +107,8 @@ class CallLogEntry:
     json_body: dict[str, Any] | None = None
 
 
-class DocNuvemAPIError(Exception):
-    """Erro HTTP (4xx/5xx) ou de rede ao chamar a API do DocNuvem."""
+class DocnuvemAPIError(Exception):
+    """Erro HTTP (4xx/5xx) ou de rede ao chamar a API do Docnuvem."""
 
     def __init__(
         self,
@@ -128,7 +128,7 @@ class DocNuvemAPIError(Exception):
         super().__init__(f"{method} {url} -> {status_code}: {body_text}")
 
 
-class DocNuvemClient:
+class DocnuvemClient:
     """Wrapper em torno de httpx.AsyncClient: monta URL/headers, trata erro e loga chamadas."""
 
     def __init__(
@@ -223,7 +223,7 @@ class DocNuvemClient:
                 None,
                 duration_ms,
             )
-            raise DocNuvemAPIError(method, full_url, None, str(exc), chamada=entry) from exc
+            raise DocnuvemAPIError(method, full_url, None, str(exc), chamada=entry) from exc
 
         duration_ms = (datetime.now() - started).total_seconds() * 1000
         ok = resp.status_code < 400
@@ -245,7 +245,7 @@ class DocNuvemClient:
                 parsed = resp.json()
             except ValueError:
                 parsed = None
-            raise DocNuvemAPIError(
+            raise DocnuvemAPIError(
                 method, str(resp.url), resp.status_code, resp.text, parsed, chamada=entry
             )
         self._notificar_documento_id(resp)

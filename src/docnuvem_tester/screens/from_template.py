@@ -16,7 +16,7 @@ from textual.screen import ModalScreen
 from textual.widget import Widget
 from textual.widgets import Button, Input, Select, Static, Switch, TextArea
 
-from docnuvem_tester.client import DocNuvemAPIError, DocumentoFromTemplateResponse
+from docnuvem_tester.client import DocnuvemAPIError, DocumentoFromTemplateResponse
 from docnuvem_tester.config import PerfilConfig
 from docnuvem_tester.formatting import valor_ou_traco
 from docnuvem_tester.models import (
@@ -100,7 +100,7 @@ class CriarDocumentoModeloScreen(FormScreen):
             else:
                 nota = (
                     "Este tipo de campo ainda não é preenchido pela API — "
-                    "preencha depois pela tela do DocNuvem."
+                    "preencha depois pela tela do Docnuvem."
                 )
             linha = Vertical(
                 Static(rotulo, classes="var-label"),
@@ -205,7 +205,7 @@ class CriarDocumentoModeloScreen(FormScreen):
             return erros_pydantic(exc)
         return []
 
-    def ao_erro_api(self, exc: DocNuvemAPIError) -> bool:
+    def ao_erro_api(self, exc: DocnuvemAPIError) -> bool:
         faltantes = set((exc.parsed or {}).get("variaveisFaltantes") or [])
         if not faltantes:
             return False

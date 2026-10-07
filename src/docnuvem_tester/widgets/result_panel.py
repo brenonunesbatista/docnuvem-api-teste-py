@@ -8,7 +8,7 @@ from textual.containers import Container, Horizontal, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import Button, Static, TabbedContent, TabPane, TextArea
 
-from docnuvem_tester.client import CallLogEntry, DocNuvemAPIError, RequisicaoPrevista
+from docnuvem_tester.client import CallLogEntry, DocnuvemAPIError, RequisicaoPrevista
 from docnuvem_tester.formatting import formatar_json, valor_ou_traco
 
 
@@ -128,8 +128,8 @@ class RequisicaoScreen(ModalScreen[None]):
         self.dismiss(None)
 
 
-def erro_para_tela(exc: DocNuvemAPIError) -> ResultScreen:
-    """Formata uma DocNuvemAPIError (com URL completa e corpo bruto) numa ResultScreen."""
+def erro_para_tela(exc: DocnuvemAPIError) -> ResultScreen:
+    """Formata uma DocnuvemAPIError (com URL completa e corpo bruto) numa ResultScreen."""
     linhas = [f"Status HTTP: {exc.status_code if exc.status_code is not None else '(sem resposta)'}"]
     linhas.append(f"URL: {exc.url}")
     linhas.append("")

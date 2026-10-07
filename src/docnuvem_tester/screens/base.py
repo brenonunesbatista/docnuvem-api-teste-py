@@ -8,7 +8,7 @@ from textual.containers import Container, Horizontal, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import Button, Input, LoadingIndicator, Static
 
-from docnuvem_tester.client import DocNuvemAPIError, PreviaCapturada, RequisicaoPrevista
+from docnuvem_tester.client import DocnuvemAPIError, PreviaCapturada, RequisicaoPrevista
 from docnuvem_tester.config import PerfilConfig
 from docnuvem_tester.screens.inline import ValidacaoInlineMixin, caixa_avisos
 from docnuvem_tester.widgets.confirm_dialog import AlertScreen
@@ -49,7 +49,7 @@ class FormScreen(ValidacaoInlineMixin, ModalScreen[None]):
         """Ponto de extensão para ações destrutivas (ex.: cancelar assinatura)."""
         return True
 
-    def ao_erro_api(self, exc: DocNuvemAPIError) -> bool:
+    def ao_erro_api(self, exc: DocnuvemAPIError) -> bool:
         """Ponto de extensão para tratar um erro da API sem sair do formulário
         (ex.: destacar campos citados em `variaveisFaltantes`). Retornar True
         significa que a tela já tratou o erro (mostrou sua própria mensagem
@@ -164,7 +164,7 @@ class FormScreen(ValidacaoInlineMixin, ModalScreen[None]):
         self._set_loading(True)
         try:
             resultado = await self.chamar_api(perfil)
-        except DocNuvemAPIError as exc:
+        except DocnuvemAPIError as exc:
             self._set_loading(False)
             if not self.ao_erro_api(exc):
                 self.app.push_screen(erro_para_tela(exc))

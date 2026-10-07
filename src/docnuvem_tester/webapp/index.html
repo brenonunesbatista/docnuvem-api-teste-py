@@ -2,12 +2,13 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>DocNuvem – Testes de API</title>
+<title>Docnuvem – Testes de API</title>
 <script src="/dc-runtime.js"></script>
 </head>
 <body>
 <x-dc>
 <helmet>
+<link rel="icon" type="image/png" href="/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700&amp;display=swap">
 <style>
@@ -29,8 +30,12 @@ body{margin:0}
 .banner{display:flex;align-items:center;gap:8px;justify-content:center;background:var(--wnb);color:var(--wn);font-size:13px;padding:6px 12px;border-bottom:1px solid var(--ln);text-align:center}
 .shell{display:flex;flex:1;min-width:0}
 .side{width:236px;flex:none;background:var(--sf);border-right:1px solid var(--ln);padding:16px 10px;position:sticky;top:0;align-self:flex-start;max-height:100vh;overflow:auto}
-.brand{display:flex;align-items:center;gap:10px;padding:2px 8px 16px}
-.logo{width:36px;height:36px;border-radius:10px;background:var(--ac);color:var(--onac);display:grid;place-items:center}
+.sidehead{display:flex;align-items:center;gap:6px;padding:2px 0 14px}
+.brand{display:flex;align-items:center;gap:10px;padding:0 8px;flex:1;min-width:0}
+.sidetg{flex:none;width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--ln);background:var(--sf);border-radius:10px;color:var(--mu)}
+.sidetg:hover{background:var(--sf2);color:var(--tx)}
+.logo{width:40px;height:40px;flex:none;background:#190d3f;-webkit-mask:url(/logo.png) center/contain no-repeat;mask:url(/logo.png) center/contain no-repeat}
+.app[data-theme="dark"] .logo{background:var(--tx)}
 .bname{display:flex;flex-direction:column;font-weight:700;font-size:16px;line-height:1.15}
 .bname small{font-weight:400;font-size:12px;color:var(--mu)}
 .grp{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mu);padding:14px 10px 4px;font-weight:700}
@@ -219,6 +224,36 @@ kbd{font-family:inherit;font-size:11px;border:1px solid var(--ln);border-bottom-
 .legend{display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:center;padding:14px 24px 18px;color:var(--mu);font-size:12.5px}
 .legend span{display:inline-flex;gap:5px;align-items:center}
 .tblwrap{display:flex;flex-direction:column;gap:6px}
+/* barras de rolagem: finas, arredondadas e no tom do tema */
+@supports not selector(::-webkit-scrollbar){
+html{scrollbar-width:thin;scrollbar-color:rgba(120,130,150,.55) transparent}
+.app *{scrollbar-width:thin;scrollbar-color:var(--mu) transparent}
+}
+@supports selector(::-webkit-scrollbar){
+html::-webkit-scrollbar-button,.app ::-webkit-scrollbar-button{display:none;width:0;height:0}
+html::-webkit-scrollbar,.app ::-webkit-scrollbar{width:12px;height:12px}
+html::-webkit-scrollbar-track,.app ::-webkit-scrollbar-track{background:transparent}
+html::-webkit-scrollbar-thumb{background:rgba(120,130,150,.45);border-radius:99px;border:3px solid transparent;background-clip:padding-box}
+html::-webkit-scrollbar-thumb:hover{background:rgba(120,130,150,.75);background-clip:padding-box}
+.app ::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--mu) 42%,transparent);border-radius:99px;border:3px solid transparent;background-clip:padding-box}
+.app ::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--mu) 75%,transparent);background-clip:padding-box}
+html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transparent}
+}
+/* menu lateral recolhível (telas largas) */
+.side{transition:width .18s ease,padding .18s ease}
+.sidetg .ic{transition:transform .18s}
+@media (min-width:861px){
+.side.min{width:68px;padding:16px 8px}
+.side.min .sidehead{flex-direction:column;gap:10px}
+.side.min .brand{padding:0;flex:none}
+.side.min .bname{display:none}
+.side.min .grp{display:block;height:1px;margin:8px 10px;padding:0;font-size:0;background:var(--ln)}
+.side.min .navb{justify-content:center;padding:9px 0}
+.side.min .navb span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.side.min .sidetg .ic{transform:scaleX(-1)}
+.shell.min .content{max-width:1500px}
+}
+@media (prefers-reduced-motion:reduce){.side,.sidetg .ic{transition:none}}
 @media (max-width:1100px){
 .split{grid-template-columns:minmax(0,1fr)}
 .sticky{position:static}
@@ -226,7 +261,7 @@ kbd{font-family:inherit;font-size:11px;border:1px solid var(--ln);border-bottom-
 @media (max-width:860px){
 .shell{flex-direction:column}
 .side{position:fixed;left:0;right:0;bottom:0;top:auto;width:100%;max-height:none;padding:6px;border-right:0;border-top:1px solid var(--ln);z-index:30;overflow:visible}
-.brand,.grp{display:none}
+.brand,.grp,.sidetg,.sidehead{display:none}
 .navl{display:flex;gap:2px;overflow-x:auto}
 .navb{flex-direction:column;gap:2px;width:auto;min-width:76px;font-size:11.5px;padding:6px 8px;text-align:center;white-space:nowrap}
 .top{padding:10px 14px;position:static}
@@ -242,13 +277,16 @@ kbd{font-family:inherit;font-size:11px;border:1px solid var(--ln);border-bottom-
 
 <div class="app" data-theme="{{theme}}" tabindex="-1" onKeyDown="{{onKey}}">
   <div class="banner {{bannerCls}}" role="note"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span><strong>{{modeTitle}}</strong> · {{modeText}}</span></div>
-  <div class="shell">
-    <nav class="side" aria-label="Menu principal">
-      <div class="brand"><span class="logo" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><path d="{{ic.cloud}}"/></svg></span><span class="bname">DocNuvem<small>Testes de API</small></span></div>
+  <div class="shell {{sideCls}}">
+    <nav class="side {{sideCls}}" aria-label="Menu principal">
+      <div class="sidehead">
+        <div class="brand"><span class="logo" role="img" aria-label="Logo Docnuvem"></span><span class="bname">Docnuvem<small>Testes de API</small></span></div>
+        <button class="sidetg" type="button" onClick="{{toggleSide}}" aria-label="{{sideLabel}}" aria-expanded="{{sideOpen}}" title="{{sideLabel}} (Ctrl+B)"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.panel}}"/></svg></button>
+      </div>
       <div class="navl">
         <sc-for list="{{nav}}" as="n" hint-placeholder-count="12">
           <sc-if value="{{n.hasGrp}}" hint-placeholder-val="{{ false }}"><div class="grp">{{n.grp}}</div></sc-if>
-          <button class="navb" type="button" aria-current="{{n.cur}}" onClick="{{n.go}}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{n.d}}"/></svg><span>{{n.label}}</span></button>
+          <button class="navb" type="button" title="{{n.label}}" aria-current="{{n.cur}}" onClick="{{n.go}}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{n.d}}"/></svg><span>{{n.label}}</span></button>
         </sc-for>
       </div>
     </nav>
@@ -722,7 +760,8 @@ refresh:'M20 11a8 8 0 10-2.3 5.7M20 4v7h-7',
 chev:'M9 6l6 6-6 6',
 cloud:'M7 18a4 4 0 01-.5-8A6 6 0 0118 10a4 4 0 010 8z',
 cap:'M2 9l10-5 10 5-10 5zM6 11v5c0 1.5 3 3 6 3s6-1.5 6-3v-5M22 9v6',
-user:'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0'
+user:'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0',
+panel:'M3 5h18v14H3zM9 5v14'
 };
 const META={
 inicio:{label:'Início',title:'O que você quer testar hoje?',sub:'Escolha uma tarefa ou continue de onde parou. Tudo aqui é simulado.',d:ICON.home,grp:'Começar'},
@@ -751,7 +790,7 @@ const STATUS=['pendente','assinado','expirado','cancelado','sem_assinatura'];
 const STL={pendente:'Pendente',assinado:'Assinado',expirado:'Expirado',cancelado:'Cancelado',sem_assinatura:'Sem assinatura'};
 const STI={pendente:ICON.clock,assinado:ICON.check,expirado:ICON.alert,cancelado:ICON.x,sem_assinatura:ICON.minus};
 const STC={pendente:'wn',assinado:'ok',expirado:'mu',cancelado:'er',sem_assinatura:'mu'};
-const HTTPT={200:'OK',201:'Criado',400:'Requisição inválida',401:'Não autorizado',404:'Não encontrado',409:'Conflito'};
+const HTTPT={200:'OK',201:'Criado',400:'Requisição inválida',401:'Não autorizado',404:'Não encontrado',409:'Conflito',502:'Falha de conexão'};
 const EXT=['pdf','doc','docx','xls','xlsx','ppt','pptx','odt','png','jpg','jpeg','txt','csv','xml','zip'];
 const TIPOS=[{id:1,nome:'Contrato'},{id:2,nome:'Aditivo'},{id:3,nome:'Proposta'},{id:4,nome:'Nota fiscal'},{id:5,nome:'Documento pessoal'}];
 const V=(chave,rotulo,tipo,obrig,api,dest,opcoes)=>({chave,rotulo,tipo,obrigatorio:!!obrig,aceitaPorApi:api!==false,preenchidoPeloDestinatario:!!dest,opcoes:opcoes||null});
@@ -848,7 +887,7 @@ if(!b.cpf||!cpfOk(b.cpf))return E(400,'cpf inválido.','CPF_INVALIDO');
 if(!b.email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.email))return E(400,'email inválido.','EMAIL_INVALIDO');
 if(b.tipoSolicitacao!==1&&b.tipoSolicitacao!==2)return E(400,'tipoSolicitacao deve ser 1 (Ensino médio) ou 2 (Cursos técnicos).','TIPO_INVALIDO');
 const rp=b.emailResponsavel?String(b.emailResponsavel).toLowerCase():'secretaria@instituicao.example.com.br';
-if(!RESP_OK[rp])return E(400,'emailResponsavel não corresponde a um usuário ativo do DocNuvem.','RESPONSAVEL_NAO_ENCONTRADO');
+if(!RESP_OK[rp])return E(400,'emailResponsavel não corresponde a um usuário ativo do Docnuvem.','RESPONSAVEL_NAO_ENCONTRADO');
 d.alunos=d.alunos||[];
 let al=d.alunos.find(x=>x.codigoMatricula===mt);const novoContato=!al;
 const dirNome='Alunos/'+mt+' - '+nm,dirPath='/Meus documentos/'+dirNome;
@@ -988,7 +1027,7 @@ const url=baseOf(perfil)+req.path+(qs?'?'+qs:'');
 const auth=mask(perfil);
 const hs=[{k:'Authorization',v:auth},{k:'Accept',v:'application/json'}];
 let body='';let curl="curl -X "+req.method+" '"+url+"' \\\n  -H 'Authorization: "+auth+"'";
-if(req.file){hs.push({k:'Content-Type',v:'multipart/form-data; boundary=----DocNuvemSim'});body='------DocNuvemSim\nContent-Disposition: form-data; name="file"; filename="'+req.file.name+'"\nContent-Type: '+(req.file.type||'application/octet-stream')+'\n\n[conteúdo binário do arquivo · '+fmtSize(req.file.size)+']\n------DocNuvemSim--';curl+=" \\\n  -F 'file=@\""+req.file.name+"\"'";}
+if(req.file){hs.push({k:'Content-Type',v:'multipart/form-data; boundary=----DocnuvemSim'});body='------DocnuvemSim\nContent-Disposition: form-data; name="file"; filename="'+req.file.name+'"\nContent-Type: '+(req.file.type||'application/octet-stream')+'\n\n[conteúdo binário do arquivo · '+fmtSize(req.file.size)+']\n------DocnuvemSim--';curl+=" \\\n  -F 'file=@\""+req.file.name+"\"'";}
 else if(req.body){hs.push({k:'Content-Type',v:'application/json'});body=JSON.stringify(req.body,null,2);curl+=" \\\n  -H 'Content-Type: application/json' \\\n  -d '"+JSON.stringify(req.body).replace(/'/g,"'\\''")+"'";}
 return {method:req.method,url,headers:hs,body,hasBody:!!body,curl};
 }
@@ -997,6 +1036,7 @@ function dica(res,req){
 const b=res.body||{},st=res.status;const mt=String(b.erro||b.mensagem||b.message||b.retorno||'');
 const c=b.codigo||(b.variaveisFaltantes?'VARIAVEIS_FALTANTES':b.variaveisNaoAceitas?'VARIAVEL_NAO_ACEITA':(st===400&&/\bstatus\b/i.test(mt)?'STATUS_INVALIDO':null));
 if(c==='TOKEN_REVOGADO')return 'O token deste perfil foi revogado, por isso toda chamada responde 401. Troque para cliente1 ou cliente2 no seletor do topo ou peça um novo token ao responsável pela instância.';
+if(st===502)return 'A chamada nem chegou à API. Se a mensagem citar "servidor local", o programa docnuvem-web parou ou trocou de porta: reinicie-o no terminal (python -m docnuvem_tester.web) e recarregue esta página. Se citar "Falha de conexão com", confira a baseUrl do perfil no config.json e a rede.';
 if(st===401)return 'Confira o cabeçalho Authorization (Bearer) e o parâmetro instancia, sempre em minúsculo.';
 if(c==='STATUS_INVALIDO')return 'O parâmetro status foi enviado vazio ou com valor desconhecido (por exemplo "status="). Omita o parâmetro ou use: '+STATUS.join(', ')+'.';
 if(c==='VALOR_VAZIO')return 'Há parâmetros enviados vazios ('+(b.parametros||[]).join(', ')+'). Parâmetro vazio deve ser omitido da URL. Ligue a “Validação local” para o app fazer isso por você.';
@@ -1074,14 +1114,15 @@ pastas:{diretorioPaiId:'',nome:'',caminho:'',pagina:'0',tamanho:'50'},
 status:{documentoId:''},download:{documentoId:''},modelos:{},
 alunoSolicitar:{codigoMatricula:'',nome:'',cpf:'',email:'',telefone:'',tipoSolicitacao:'1',emailResponsavel:'',confirmEmail:false},alunoStatus:{codigoMatricula:''}},
 results:{},loading:{},lists:{},tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
-paletteOpen:false,paletteQ:'',toast:'',wizStep:0,lastMat:'',openSol:null,
+paletteOpen:false,paletteQ:'',toast:'',wizStep:0,lastMat:'',openSol:null,navMin:false,
 lastDoc:{cliente1:48204,cliente2:61003,cliente3:null},lastAss:{cliente1:7201,cliente2:7001,cliente3:null},
 sort:{documentos:{k:'criadoEm',d:-1},pastas:{k:'caminho',d:1}},openModelo:'',dragging:false,newSg:sg};
 }
 
 class Component extends DCLogic {
 constructor(){super(...arguments);this.state=mkState();this.seq=0;this._p={errs:{},warns:{}};}
-componentDidMount(){this._iv=setInterval(()=>{if(this.state.screen==='download'&&this.state.results.download)this.forceUpdate();},1000);
+componentDidMount(){try{if(localStorage.getItem('docnuvem-nav-min')==='1')this.setState({navMin:true});}catch(e){}
+this._iv=setInterval(()=>{if(this.state.screen==='download'&&this.state.results.download)this.forceUpdate();},1000);
 fetch('/_perfis',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{
 if(!j||!Array.isArray(j.perfis)||!j.perfis.length)return;
 LIVE=j;PERFIS={};const dbs={},lastDoc={},lastAss={};
@@ -1108,9 +1149,12 @@ go(sc){this.goWith(sc,null,false);}
 back(){const s=this.state;this.go(s.prev&&s.prev!==s.screen?s.prev:'inicio');}
 openPalette(){this.setState({paletteOpen:true,paletteQ:''});setTimeout(()=>{const i=document.getElementById('pal-input');if(i)i.focus();},40);}
 
+toggleSide(){const v=!this.state.navMin;this.setState({navMin:v});try{localStorage.setItem('docnuvem-nav-min',v?'1':'0');}catch(e){}}
+
 onKey=(e)=>{
 const s=this.state,t=e.target,tag=(t&&t.tagName||'').toUpperCase(),typing=tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT';
 if((e.ctrlKey||e.metaKey)&&String(e.key).toLowerCase()==='k'){e.preventDefault();this.openPalette();return;}
+if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&String(e.key).toLowerCase()==='b'){e.preventDefault();this.toggleSide();return;}
 if(e.key==='/'&&!typing){e.preventDefault();this.openPalette();return;}
 if(e.key==='Escape'){
 if(s.paletteOpen){this.setState({paletteOpen:false});return;}
@@ -1458,7 +1502,7 @@ T('alunoSolicitar','email',{label:'E-mail do aluno',api:'email',req:true,half:tr
 T('alunoSolicitar','telefone',{label:'Telefone',api:'telefone',tag:'opcional',half:true,placeholder:'(31) 99999-8888',onInput:e=>this.setF('alunoSolicitar',{telefone:maskTel(e.target.value)})})]});
 C({title:'Solicitação',fields:[
 T('alunoSolicitar','tipoSolicitacao',{label:'Tipo de solicitação',api:'tipoSolicitacao',req:true,kind:'select',half:true,hint:'Define o modelo de documentos pedidos ao aluno.',options:[{value:'1',label:'1 — Ensino médio'},{value:'2',label:'2 — Cursos técnicos'}]}),
-T('alunoSolicitar','emailResponsavel',{label:'E-mail do responsável',api:'emailResponsavel',tag:'opcional',half:true,placeholder:'secretaria@instituicao.com.br',hint:'Usuário ativo do DocNuvem que recebe o aviso do envio. Sem isto vale o padrão da instância.'})]});
+T('alunoSolicitar','emailResponsavel',{label:'E-mail do responsável',api:'emailResponsavel',tag:'opcional',half:true,placeholder:'secretaria@instituicao.com.br',hint:'Usuário ativo do Docnuvem que recebe o aviso do envio. Sem isto vale o padrão da instância.'})]});
 if(LIVE)C({title:'Confirmação',fields:[T('alunoSolicitar','confirmEmail',{kind:'switch',label:'Entendo que o aluno receberá um e-mail real',api:'confirmação local',switchText:f.confirmEmail?'Confirmado':'Marque para liberar o envio'})]});
 }
 if(eff==='alunoStatus')C({title:'Qual aluno?',fields:[T('alunoStatus','codigoMatricula',{label:'Matrícula',api:'codigoMatricula',req:true,placeholder:'12345',useLast:true,lastLabel:s.lastMat?'Usar última matrícula ('+s.lastMat+')':'Nenhuma matrícula recente',lastDisabled:!s.lastMat,onLast:()=>this.setF('alunoStatus',{codigoMatricula:s.lastMat})})]});
@@ -1615,7 +1659,7 @@ const sendDisabled=!p.ready||loading;
 const noPrev=!p.req;
 return {
 theme:s.theme,bannerCls:LIVE?'live':'',modeTitle:LIVE?'API real':'Modo simulado',modeText:LIVE?'as chamadas atingem a API de verdade, com os tokens do config.json. O token fica no servidor local e aparece sempre mascarado.':'nenhuma chamada de rede real é feita e nenhum token real é usado.',showForcar:!LIVE,loadText:LIVE?'Chamando a API…':'Chamando a API simulada…',themeIcon:s.theme==='dark'?ICON.sun:ICON.moon,themeLabel:s.theme==='dark'?'Mudar para tema claro':'Mudar para tema escuro',toggleTheme:()=>this.setState({theme:s.theme==='dark'?'light':'dark'}),
-ic:ICON,onKey:this.onKey,openPalette:()=>this.openPalette(),
+ic:ICON,onKey:this.onKey,sideCls:s.navMin?'min':'',sideOpen:!s.navMin,sideLabel:s.navMin?'Expandir menu':'Recolher menu',toggleSide:()=>this.toggleSide(),openPalette:()=>this.openPalette(),
 nav:ORDER.map(id=>({id,label:META[id].label,d:META[id].d,hasGrp:!!META[id].grp,grp:META[id].grp,cur:s.screen===id?'page':'false',go:()=>this.go(id)})),
 perfil,perfilOpts:Object.keys(PERFIS).map(k=>({value:k,label:k,selected:k===perfil})),
 onPerfil:e=>{const v=e.target.value;this.setState({perfil:v,results:{},lists:{},collapsed:{}});setTimeout(()=>{const sc=this.eff();if(AUTO.indexOf(sc)>=0)this.run(sc);if(LIVE&&sc==='template')this.run('modelos');},0);},

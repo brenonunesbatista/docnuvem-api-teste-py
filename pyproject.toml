@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "docnuvem-tester"
 version = "1.0.0"
-description = "TUI (Textual) para testar manualmente a API REST do DocNuvem"
+description = "TUI (Textual) para testar manualmente a API REST do Docnuvem"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -28,7 +28,7 @@ docnuvem-web = "docnuvem_tester.web:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-docnuvem_tester = ["styles/*.tcss", "webapp/*.html", "webapp/*.js"]
+docnuvem_tester = ["styles/*.tcss", "webapp/*.html", "webapp/*.js", "webapp/*.png"]
 
 [tool.mypy]
 python_version = "3.11"

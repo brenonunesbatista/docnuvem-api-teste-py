@@ -6,7 +6,7 @@ from textual.containers import Container
 from textual.screen import ModalScreen
 from textual.widgets import DataTable, LoadingIndicator, Static
 
-from docnuvem_tester.client import DocNuvemAPIError
+from docnuvem_tester.client import DocnuvemAPIError
 from docnuvem_tester.formatting import valor_ou_traco
 from docnuvem_tester.models import ModeloDTO
 from docnuvem_tester.widgets.confirm_dialog import AlertScreen
@@ -56,7 +56,7 @@ class ModelosScreen(ModalScreen[None]):
         table.clear()
         try:
             resposta = await self.app.client.get_modelos(perfil)  # type: ignore[attr-defined]
-        except DocNuvemAPIError as exc:
+        except DocnuvemAPIError as exc:
             loading.display = False
             self.app.push_screen(erro_para_tela(exc))
             return

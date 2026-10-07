@@ -8,7 +8,7 @@ from textual.containers import Container
 from textual.screen import ModalScreen
 from textual.widgets import DataTable, Static
 
-from docnuvem_tester.client import CallLogEntry, DocNuvemAPIError
+from docnuvem_tester.client import CallLogEntry, DocnuvemAPIError
 from docnuvem_tester.formatting import valor_ou_traco
 from docnuvem_tester.widgets.result_panel import ResultScreen, erro_para_tela
 
@@ -119,7 +119,7 @@ class CallLogScreen(ModalScreen[None]):
         client = self.app.client  # type: ignore[attr-defined]
         try:
             resposta = await client.reenviar(entry)
-        except DocNuvemAPIError as exc:
+        except DocnuvemAPIError as exc:
             self._preencher()
             self.app.push_screen(erro_para_tela(exc))
             return

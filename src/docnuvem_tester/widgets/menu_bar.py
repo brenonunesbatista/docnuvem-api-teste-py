@@ -28,7 +28,7 @@ class MenuBar(Horizontal):
         super().__init__()
 
     def compose(self):
-        yield Static("[b #58a6ff]DocNuvem[/] [#8b949e]API Tester[/]", id="menu-brand")
+        yield Static("[b #58a6ff]Docnuvem[/] [#8b949e]API Tester[/]", id="menu-brand")
         for entry in self._entries:
             yield Button(entry.label, id=f"menu-{entry.key}")
 

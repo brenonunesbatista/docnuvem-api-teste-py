@@ -7,7 +7,7 @@ from textual.containers import Container, Horizontal, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import Button, Checkbox, DataTable, Input, LoadingIndicator, Select, Static
 
-from docnuvem_tester.client import DocNuvemAPIError, PreviaCapturada
+from docnuvem_tester.client import DocnuvemAPIError, PreviaCapturada
 from docnuvem_tester.formatting import valor_ou_traco
 from docnuvem_tester.models import STATUS_FILTRO_VALIDOS, DocumentoListaItemDTO, FiltroDocumentos
 from docnuvem_tester.screens.formfields import campo, erros_pydantic
@@ -113,7 +113,7 @@ class DocumentosScreen(ValidacaoInlineMixin, ModalScreen[None]):
             return
         try:
             status = await self.app.client.get_status(perfil, documento_id)  # type: ignore[attr-defined]
-        except DocNuvemAPIError as exc:
+        except DocnuvemAPIError as exc:
             self.app.push_screen(erro_para_tela(exc))
             return
         self.app.push_screen(tela_status(status))
@@ -197,7 +197,7 @@ class DocumentosScreen(ValidacaoInlineMixin, ModalScreen[None]):
         loading.display = True
         try:
             resposta = await self.app.client.listar_documentos(perfil, filtro)  # type: ignore[attr-defined]
-        except DocNuvemAPIError as exc:
+        except DocnuvemAPIError as exc:
             loading.display = False
             self.app.push_screen(erro_para_tela(exc))
             return

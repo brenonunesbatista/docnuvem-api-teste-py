@@ -1,6 +1,6 @@
 """Servidor local da interface web.
 
-Serve a página `webapp/index.html` e repassa as chamadas à API do DocNuvem usando
+Serve a página `webapp/index.html` e repassa as chamadas à API do Docnuvem usando
 os perfis do config.json. O token fica só neste processo: o navegador nunca o
 recebe (a página só vê o token mascarado).
 """
@@ -23,7 +23,12 @@ from docnuvem_tester.client import TIMEOUT, mascarar_token
 from docnuvem_tester.config import AppConfig, ConfigError, load_config
 
 PAGINA = Path(__file__).parent / "webapp" / "index.html"
-RUNTIME = Path(__file__).parent / "webapp" / "dc-runtime.js"
+PASTA_WEB = Path(__file__).parent / "webapp"
+# Arquivos estáticos que a página pede (caminho -> arquivo, tipo).
+ESTATICOS = {
+    "/dc-runtime.js": ("dc-runtime.js", "application/javascript; charset=utf-8"),
+    "/logo.png": ("logo.png", "image/png"),
+}
 PORTA_PADRAO = 8765
 
 # Um segmento de caminho não vazio e que não seja só pontos ("." / ".."), para que
@@ -113,13 +118,14 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(corpo)
             return
-        if caminho == "/dc-runtime.js":
+        if caminho in ESTATICOS:
+            nome, tipo = ESTATICOS[caminho]
             try:
-                corpo = RUNTIME.read_bytes()
+                corpo = (PASTA_WEB / nome).read_bytes()
             except OSError:
-                return self._texto(500, f"Arquivo não encontrado: {RUNTIME}")
+                return self._texto(500, f"Arquivo não encontrado: {nome}")
             self.send_response(200)
-            self.send_header("Content-Type", "application/javascript; charset=utf-8")
+            self.send_header("Content-Type", tipo)
             self.send_header("Content-Length", str(len(corpo)))
             self.send_header("Cache-Control", "no-store")
             self.end_headers()
@@ -213,7 +219,7 @@ class Handler(BaseHTTPRequestHandler):
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(
         prog="docnuvem-web",
-        description="Interface web do DocNuvem API Tester (usa os perfis do config.json).",
+        description="Interface web do Docnuvem API Tester (usa os perfis do config.json).",
     )
     ap.add_argument(
         "--porta",

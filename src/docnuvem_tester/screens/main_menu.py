@@ -27,7 +27,7 @@ class MainMenuScreen(Screen[None]):
     def compose(self):
         yield MenuBar(MENU_ENTRIES)
         with Container(id="home", classes="card"):
-            yield Static("DocNuvem API Tester", id="main-menu-title", classes="card-title")
+            yield Static("Docnuvem API Tester", id="main-menu-title", classes="card-title")
             yield Static(self._texto_perfil(), id="perfil-ativo")
             yield Static(
                 "Escolha uma categoria na barra acima.\n"
@@ -130,7 +130,7 @@ class MainMenuScreen(Screen[None]):
     def _sair(self) -> None:
         async def confirmar() -> None:
             ok = await self.app.push_screen_wait(
-                ConfirmScreen("Sair", "Tem certeza que deseja sair do DocNuvem API Tester?")
+                ConfirmScreen("Sair", "Tem certeza que deseja sair do Docnuvem API Tester?")
             )
             if ok:
                 self.app.exit()

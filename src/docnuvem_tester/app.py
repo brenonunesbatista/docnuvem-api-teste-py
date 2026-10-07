@@ -7,16 +7,16 @@ from pathlib import Path
 from textual.app import App
 from textual.binding import Binding
 
-from docnuvem_tester.client import CallLogEntry, DocNuvemClient
+from docnuvem_tester.client import CallLogEntry, DocnuvemClient
 from docnuvem_tester.config import AppConfig, ConfigError, PerfilConfig, load_config
 from docnuvem_tester.theme import DOCNUVEM_THEME
 
 
-class DocNuvemTesterApp(App[None]):
-    """TUI para testar manualmente a API do DocNuvem."""
+class DocnuvemTesterApp(App[None]):
+    """TUI para testar manualmente a API do Docnuvem."""
 
     CSS_PATH = str(Path(__file__).parent / "styles" / "app.tcss")
-    TITLE = "DocNuvem API Tester"
+    TITLE = "Docnuvem API Tester"
     ENABLE_COMMAND_PALETTE = False
 
     BINDINGS = [
@@ -34,7 +34,7 @@ class DocNuvemTesterApp(App[None]):
         self.perfil_atual: str | None = None
         self.call_log: list[CallLogEntry] = []
         self.ultimo_documento_id: int | None = None
-        self.client = DocNuvemClient(
+        self.client = DocnuvemClient(
             on_call_logged=self.call_log.append,
             on_documento_id=self._guardar_documento_id,
         )
@@ -81,7 +81,7 @@ class DocNuvemTesterApp(App[None]):
         from docnuvem_tester.widgets.confirm_dialog import ConfirmScreen
 
         ok = await self.push_screen_wait(
-            ConfirmScreen("Sair", "Tem certeza que deseja sair do DocNuvem API Tester?")
+            ConfirmScreen("Sair", "Tem certeza que deseja sair do Docnuvem API Tester?")
         )
         if ok:
             await self.client.aclose()
@@ -89,7 +89,7 @@ class DocNuvemTesterApp(App[None]):
 
 
 def main() -> None:
-    DocNuvemTesterApp().run()
+    DocnuvemTesterApp().run()
 
 
 if __name__ == "__main__":

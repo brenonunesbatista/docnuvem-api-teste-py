@@ -1,7 +1,7 @@
 # docnuvem-api-teste
 
 TUI de tela cheia, em Python + [Textual](https://github.com/textualize/textual),
-para testar manualmente a API REST do DocNuvem (importação de arquivos,
+para testar manualmente a API REST do Docnuvem (importação de arquivos,
 modelos, assinatura eletrônica e consulta de documentos). Pensada para
 depurar integrações de clientes: reproduzir bugs relatados, conferir
 comportamento de parâmetros e validar o fluxo de importação + assinatura.
