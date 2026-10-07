@@ -1,0 +1,698 @@
+{
+ "info": {
+  "version": "1.0",
+  "title": "Docnuvem (resumo do contrato em 2026-10-07)"
+ },
+ "paths": {
+  "/importar": {
+   "post": {
+    "parameters": [
+     {
+      "name": "instancia",
+      "in": "query"
+     },
+     {
+      "name": "nomeArquivo",
+      "in": "query"
+     },
+     {
+      "name": "nomePasta",
+      "in": "query"
+     },
+     {
+      "name": "nomePastaPai",
+      "in": "query"
+     },
+     {
+      "name": "tipo",
+      "in": "query"
+     },
+     {
+      "name": "Authorization",
+      "in": "header"
+     }
+    ]
+   }
+  },
+  "/enviarParaEnvioInteligente": {
+   "post": {
+    "parameters": [
+     {
+      "name": "instancia",
+      "in": "query"
+     },
+     {
+      "name": "nomeArquivo",
+      "in": "query"
+     },
+     {
+      "name": "Authorization",
+      "in": "header"
+     }
+    ]
+   }
+  },
+  "/api/sync/uploadDocumento": {
+   "post": {
+    "parameters": [
+     {
+      "name": "instancia",
+      "in": "query"
+     },
+     {
+      "name": "nomeArquivo",
+      "in": "query"
+     },
+     {
+      "name": "diretorioId",
+      "in": "query"
+     },
+     {
+      "name": "Authorization",
+      "in": "header"
+     }
+    ]
+   }
+  },
+  "/api/sync/tree": {
+   "post": {
+    "parameters": [
+     {
+      "name": "instancia",
+      "in": "query"
+     },
+     {
+      "name": "Authorization",
+      "in": "header"
+     }
+    ]
+   }
+  },
+  "/api/sync/treeRoot": {
+   "post": {
+    "parameters": [
+     {
+      "name": "instancia",
+      "in": "query"
+     },
+     {
+      "name": "diretorioRaizId",
+      "in": "query"
+     },
+     {
+      "name": "Authorization",
+      "in": "header"
+     }
+    ]
+   }
+  },
+  "/api/sync/moverRenomearDocumento": {
+   "post": {
+    "parameters": [
+     {
+      "name": "instancia",
+      "in": "query"
+     },
+     {
+      "name": "documentoId",
+      "in": "query"
+     },
+     {
+      "name": "novoDiretorioId",
+      "in": "query"
+     },
+     {
+      "name": "novoNome",
+      "in": "query"
+     },
+     {
+      "name": "Authorization",
+      "in": "header"
+     }
+    ]
+   }
+  },
+  "/api/sync/moverRenomearDiretorio": {
+   "post": {
+    "parameters": [
+     {
+      "name": "instancia",
+      "in": "query"
+     },
+     {
+      "name": "diretorioId",
+      "in": "query"
+     },
+     {
+      "name": "novoDiretorioPaiId",
+      "in": "query"
+     },
+     {
+      "name": "novoNome",
+      "in": "query"
+     },
+     {
+      "name": "Authorization",
+      "in": "header"
+     }
+    ]
+   }
+  },
+  "/api/sync/manifesto": {
+   "post": {
+    "parameters": [
+     {
+      "name": "instancia",
+      "in": "query"
+     },
+     {
+      "name": "diretorioRaizId",
+      "in": "query"
+     },
+     {
+      "name": "versaoConhecida",
+      "in": "query"
+     },
+     {
+      "name": "page",
+      "in": "query"
+     },
+     {
+      "name": "size",
+      "in": "query"
+     },
+     {
+      "name": "Authorization",
+      "in": "header"
+     }
+    ]
+   }
+  },
+  "/api/sync/login": {
+   "post": {
+    "parameters": [
+     {
+      "name": "instancia",
+      "in": "query"
+     },
+     {
+      "name": "login",
+      "in": "query"
+     },
+     {
+      "name": "senha",
+      "in": "query"
+     },
+     {
+      "name": "identificadorDispositivo",
+      "in": "query"
+     },
+     {
+      "name": "nomeMaquina",
+      "in": "query"
+     },
+     {
+      "name": "pastaRaizLocal",
+      "in": "query"
+     },
+     {
+      "name": "versaoCliente",
+      "in": "query"
+     }
+    ]
+   }
+  },
+  "/api/sync/listarDocumentosDiretorio": {
+   "post": {
+    "parameters": [
+     {
+      "name": "instancia",
+      "in": "query"
+     },
+     {
+      "name": "diretorioId",
+      "in": "query"
+     },
+     {
+      "name": "page",
+      "in": "query"
+     },
+     {
+      "name": "size",
+      "in": "query"
+     },
+     {
+      "name": "Authorization",
+      "in": "header"
+     }
+    ]
+   }
+  },
+  "/api/sync/listarDiretoriosFilhos": {
+   "post": {
+    "parameters": [
+     {
+      "name": "instancia",
+      "in": "query"
+     },
+     {
+      "name": "diretorioPaiId",
+      "in": "query"
+     },
+     {
+      "name": "page",
+      "in": "query"
+     },
+     {
+      "name": "size",
+      "in": "query"
+     },
+     {
+      "name": "Authorization",
+      "in": "header"
+     }
+    ]
+   }
+  },
+  "/api/sync/excluirDocumento": {
+   "post": {
+    "parameters": [
+     {
+      "name": "instancia",
+      "in": "query"
+     },
+     {
+      "name": "documentoId",
+      "in": "query"
+     },
+     {
+      "name": "Authorization",
+      "in": "header"
+     }
+    ]
+   }
+  },
+  "/api/sync/excluirDiretorio": {
+   "post": {
+    "parameters": [
+     {
+      "name": "instancia",
+      "in": "query"
+     },
+     {
+      "name": "diretorioId",
+      "in": "query"
+     },
+     {
+      "name": "Authorization",
+      "in": "header"
+     }
+    ]
+   }
+  },
+  "/api/sync/documentoInfo": {
+   "post": {
+    "parameters": [
+     {
+      "name": "instancia",
+      "in": "query"
+     },
+     {
+      "name": "documentoId",
+      "in": "query"
+     },
+     {
+      "name": "Authorization",
+      "in": "header"
+     }
+    ]
+   }
+  },
+  "/api/sync/criarDiretorio": {
+   "post": {
+    "parameters": [
+     {
+      "name": "instancia",
+      "in": "query"
+     },
+     {
+      "name": "diretorioPaiId",
+      "in": "query"
+     },
+     {
+      "name": "nome",
+      "in": "query"
+     },
+     {
+      "name": "Authorization",
+      "in": "header"
+     }
+    ]
+   }
+  },
+  "/api/sync/changes": {
+   "post": {
+    "parameters": [
+     {
+      "name": "instancia",
+      "in": "query"
+     },
+     {
+      "name": "ultimoEventoId",
+      "in": "query"
+     },
+     {
+      "name": "diretorioRaizId",
+      "in": "query"
+     },
+     {
+      "name": "Authorization",
+      "in": "header"
+     }
+    ]
+   }
+  },
+  "/api/sync/atualizarDocumento": {
+   "post": {
+    "parameters": [
+     {
+      "name": "instancia",
+      "in": "query"
+     },
+     {
+      "name": "documentoId",
+      "in": "query"
+     },
+     {
+      "name": "nomeArquivo",
+      "in": "query"
+     },
+     {
+      "name": "Authorization",
+      "in": "header"
+     }
+    ]
+   }
+  },
+  "/api/solicitacaoAluno/solicitarEnvioDocumentos": {
+   "post": {
+    "parameters": [
+     {
+      "name": "instancia",
+      "in": "query"
+     },
+     {
+      "name": "Authorization",
+      "in": "header"
+     }
+    ]
+   }
+  },
+  "/api/documento/from-template": {
+   "post": {
+    "parameters": [
+     {
+      "name": "instancia",
+      "in": "query"
+     },
+     {
+      "name": "Authorization",
+      "in": "header"
+     }
+    ]
+   }
+  },
+  "/api/assinatura": {
+   "post": {
+    "parameters": [
+     {
+      "name": "instancia",
+      "in": "query"
+     },
+     {
+      "name": "Authorization",
+      "in": "header"
+     }
+    ]
+   }
+  },
+  "/api/sync/versao": {
+   "get": {
+    "parameters": [
+     {
+      "name": "instancia",
+      "in": "query"
+     },
+     {
+      "name": "versaoAtual",
+      "in": "query"
+     },
+     {
+      "name": "Authorization",
+      "in": "header"
+     }
+    ]
+   }
+  },
+  "/api/sync/versao/arquivo": {
+   "get": {
+    "parameters": [
+     {
+      "name": "nome",
+      "in": "query"
+     }
+    ]
+   }
+  },
+  "/api/solicitacaoAluno/consultarStatus": {
+   "get": {
+    "parameters": [
+     {
+      "name": "instancia",
+      "in": "query"
+     },
+     {
+      "name": "codigoMatricula",
+      "in": "query"
+     },
+     {
+      "name": "Authorization",
+      "in": "header"
+     }
+    ]
+   }
+  },
+  "/api/modelos": {
+   "get": {
+    "parameters": [
+     {
+      "name": "instancia",
+      "in": "query"
+     },
+     {
+      "name": "Authorization",
+      "in": "header"
+     }
+    ]
+   }
+  },
+  "/api/documentos": {
+   "get": {
+    "parameters": [
+     {
+      "name": "instancia",
+      "in": "query"
+     },
+     {
+      "name": "diretorioId",
+      "in": "query"
+     },
+     {
+      "name": "incluirSubpastas",
+      "in": "query"
+     },
+     {
+      "name": "status",
+      "in": "query"
+     },
+     {
+      "name": "dataInicio",
+      "in": "query"
+     },
+     {
+      "name": "dataFim",
+      "in": "query"
+     },
+     {
+      "name": "pagina",
+      "in": "query"
+     },
+     {
+      "name": "tamanho",
+      "in": "query"
+     },
+     {
+      "name": "Authorization",
+      "in": "header"
+     }
+    ]
+   }
+  },
+  "/api/documento/{documentoId}/status": {
+   "get": {
+    "parameters": [
+     {
+      "name": "documentoId",
+      "in": "path"
+     },
+     {
+      "name": "instancia",
+      "in": "query"
+     },
+     {
+      "name": "Authorization",
+      "in": "header"
+     }
+    ]
+   }
+  },
+  "/api/documento/{documentoId}/download": {
+   "get": {
+    "parameters": [
+     {
+      "name": "documentoId",
+      "in": "path"
+     },
+     {
+      "name": "instancia",
+      "in": "query"
+     },
+     {
+      "name": "Authorization",
+      "in": "header"
+     }
+    ]
+   }
+  },
+  "/api/diretorios": {
+   "get": {
+    "parameters": [
+     {
+      "name": "instancia",
+      "in": "query"
+     },
+     {
+      "name": "diretorioPaiId",
+      "in": "query"
+     },
+     {
+      "name": "nome",
+      "in": "query"
+     },
+     {
+      "name": "caminho",
+      "in": "query"
+     },
+     {
+      "name": "pagina",
+      "in": "query"
+     },
+     {
+      "name": "tamanho",
+      "in": "query"
+     },
+     {
+      "name": "Authorization",
+      "in": "header"
+     }
+    ]
+   }
+  },
+  "/api/assinatura/{assinaturaId}": {
+   "delete": {
+    "parameters": [
+     {
+      "name": "assinaturaId",
+      "in": "path"
+     },
+     {
+      "name": "instancia",
+      "in": "query"
+     },
+     {
+      "name": "motivo",
+      "in": "query"
+     },
+     {
+      "name": "Authorization",
+      "in": "header"
+     }
+    ]
+   }
+  }
+ },
+ "components": {
+  "schemas": {
+   "SolicitacaoAssinaturaRequest": {
+    "properties": {
+     "documentoId": {},
+     "signatarios": {},
+     "consideraOrdem": {},
+     "dataValidade": {},
+     "prazoDias": {},
+     "metodos": {},
+     "textoEmail": {},
+     "loginSolicitante": {},
+     "enviarConvite": {},
+     "referenciaExterna": {},
+     "lembretes": {}
+    }
+   },
+   "SignatarioAssinaturaRequest": {
+    "properties": {
+     "nome": {},
+     "email": {},
+     "cpf": {},
+     "cnpj": {},
+     "telefone": {},
+     "ordem": {},
+     "posicao": {},
+     "solicitarSelfie": {},
+     "otp": {},
+     "semCarimbo": {}
+    }
+   },
+   "PosicaoAssinaturaRequest": {
+    "properties": {
+     "pagina": {},
+     "x": {},
+     "y": {},
+     "largura": {},
+     "altura": {}
+    }
+   },
+   "DocumentoFromTemplateRequest": {
+    "properties": {
+     "modelo": {},
+     "nomeArquivo": {},
+     "nomePasta": {},
+     "nomePastaPai": {},
+     "referenciaExterna": {},
+     "loginSolicitante": {},
+     "variaveis": {}
+    }
+   },
+   "SolicitacaoEnvioDocumentoAlunoRequest": {
+    "properties": {
+     "codigoMatricula": {},
+     "nome": {},
+     "cpf": {},
+     "email": {},
+     "telefone": {},
+     "tipoSolicitacao": {},
+     "emailResponsavel": {}
+    }
+   }
+  }
+ }
+}

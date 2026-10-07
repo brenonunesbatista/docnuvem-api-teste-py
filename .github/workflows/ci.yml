@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 11 * * 1" # segundas, 08h em Brasília: confere se a API mudou
+  workflow_dispatch:
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: mypy
+      - run: pytest
+
+  contrato:
+    # Compara a API real com o que a ferramenta conhece. Só roda na agenda ou à mão.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      DOCNUVEM_SPEC_URL: ${{ vars.DOCNUVEM_SPEC_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - run: |
+          if [ -z "$DOCNUVEM_SPEC_URL" ]; then
+            echo "Defina a variável DOCNUVEM_SPEC_URL do repositório para verificar o contrato."
+            exit 0
+          fi
+          docnuvem-spec --url "$DOCNUVEM_SPEC_URL"
