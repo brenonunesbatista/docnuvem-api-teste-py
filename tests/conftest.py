@@ -79,7 +79,7 @@ def upstream() -> Iterator[Upstream]:
 
     srv = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     estado.base = f"http://127.0.0.1:{srv.server_address[1]}"
-    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    threading.Thread(target=srv.serve_forever, kwargs={"poll_interval": 0.02}, daemon=True).start()
     yield estado
     srv.shutdown()
     srv.server_close()
@@ -97,7 +97,9 @@ def _subir(
     cfg: AppConfig, historico: Historico | None, arquivo_config: Path | None = None
 ) -> Iterator[App]:
     servidor = Servidor(("127.0.0.1", 0), cfg, historico, arquivo_config=arquivo_config)
-    threading.Thread(target=servidor.serve_forever, daemon=True).start()
+    threading.Thread(
+        target=servidor.serve_forever, kwargs={"poll_interval": 0.02}, daemon=True
+    ).start()
     base = f"http://127.0.0.1:{servidor.server_address[1]}"
     with httpx.Client(base_url=base, timeout=15) as http:
         yield App(base, http, servidor, historico)
