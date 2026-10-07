@@ -80,32 +80,31 @@ python -m docnuvem_tester
 
 ### Interface web
 
-Além da TUI, há uma interface web moderna: menu lateral com todas as telas,
-formulário e resultado lado a lado, requisição prevista antes de enviar, JSON
-colapsável, validação por campo, log de chamadas e tema claro/escuro (segue o
-sistema; o botão da barra troca). Ela usa os **mesmos perfis do
-`config.json`**:
+Além da TUI, há uma interface web moderna (menu lateral, requisição prevista,
+resultado em abas Resumo/JSON/Requisição, log em gaveta, tema claro e escuro).
+Ela usa os **mesmos perfis do `config.json`**:
 
 ```bash
 python -m docnuvem_tester.web
 ```
 
 ou, depois de `pip install -e .`, o comando `docnuvem-web`. Abre o navegador em
-`http://127.0.0.1:8765/`. Se essa porta estiver bloqueada (o Windows reserva algumas),
-o servidor escolhe uma livre sozinho e mostra o endereço no terminal. Use `--porta`
-para fixar uma e `--nao-abrir` para não abrir o navegador.
+`http://127.0.0.1:8765/` (use `--porta` para mudar e `--nao-abrir` para não abrir
+o navegador).
 
-- **As chamadas são reais.** O selo vermelho `API real` fica sempre visível na
-  barra superior. Cancelar assinatura e importar arquivo alteram dados de verdade.
+- **As chamadas são reais.** O aviso vermelho "API real" fica sempre no topo.
+  Importar arquivo e cancelar assinatura alteram dados de verdade.
 - **O token nunca vai para o navegador.** O servidor local injeta o `Authorization`
   e o parâmetro `instancia` (minúsculo); a página só recebe o token mascarado.
-- **Só aceita a própria página**, em `127.0.0.1`, e só repassa os 9 endpoints da
+- **Só aceita a própria página**, em `127.0.0.1`, e só repassa os endpoints da
   ferramenta (não é um proxy aberto).
-- Abrindo `index.html` direto no navegador (sem o servidor), a página funciona em
-  modo **simulado**, com dados fictícios e sem rede.
-- **Atalhos:** `Ctrl+Enter` executa, `Ctrl+K` abre o seletor de telas, `/` filtra a
-  tabela, `L` mostra o log, `?` abre a ajuda, `1`–`9` e `0` trocam de tela e `Esc`
-  volta.
+- Telas: importar, envio inteligente, modelos, criar de modelo, solicitar e cancelar
+  assinatura, documentos, pastas (`GET /api/diretorios`), status, download e o
+  fluxo completo.
+- A página foi desenhada no artifact "Design" do Claude e usa o runtime desse
+  formato (`webapp/dc-runtime.js`, servido localmente; não precisa de internet,
+  só das fontes do Google). Abrindo o `index.html` direto no navegador, sem o
+  servidor, o runtime não carrega: use sempre o comando acima.
 
 ### Modo debug
 

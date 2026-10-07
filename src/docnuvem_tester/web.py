@@ -23,6 +23,7 @@ from docnuvem_tester.client import TIMEOUT, mascarar_token
 from docnuvem_tester.config import AppConfig, ConfigError, load_config
 
 PAGINA = Path(__file__).parent / "webapp" / "index.html"
+RUNTIME = Path(__file__).parent / "webapp" / "dc-runtime.js"
 PORTA_PADRAO = 8765
 
 # Um segmento de caminho não vazio e que não seja só pontos ("." / ".."), para que
@@ -39,6 +40,7 @@ ROTAS_PERMITIDAS: list[tuple[str, re.Pattern[str]]] = [
         ("POST", r"^/api/assinatura$"),
         ("DELETE", rf"^/api/assinatura/{_SEG}$"),
         ("GET", r"^/api/documentos$"),
+        ("GET", r"^/api/diretorios$"),
         ("GET", rf"^/api/documento/{_SEG}/status$"),
         ("GET", rf"^/api/documento/{_SEG}/download$"),
     ]
@@ -104,6 +106,18 @@ class Handler(BaseHTTPRequestHandler):
                 return self._texto(500, f"Página não encontrada: {PAGINA}")
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(corpo)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(corpo)
+            return
+        if caminho == "/dc-runtime.js":
+            try:
+                corpo = RUNTIME.read_bytes()
+            except OSError:
+                return self._texto(500, f"Arquivo não encontrado: {RUNTIME}")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/javascript; charset=utf-8")
             self.send_header("Content-Length", str(len(corpo)))
             self.send_header("Cache-Control", "no-store")
             self.end_headers()

@@ -28,7 +28,7 @@ docnuvem-web = "docnuvem_tester.web:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-docnuvem_tester = ["styles/*.tcss", "webapp/*.html"]
+docnuvem_tester = ["styles/*.tcss", "webapp/*.html", "webapp/*.js"]
 
 [tool.mypy]
 python_version = "3.11"
