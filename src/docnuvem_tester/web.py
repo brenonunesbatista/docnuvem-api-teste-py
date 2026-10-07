@@ -434,7 +434,11 @@ def diagnosticar(cliente: httpx.Client, perfil: PerfilConfig) -> dict[str, Any]:
             "Pastas",
             "erro",
             erro or (_http(rp) if rp else "sem resposta"),
-            "Não foi possível listar as pastas da instância.",
+            "O token foi aceito em /api/modelos, mas /api/diretorios o recusou: o problema "
+            "está no lado da API (permissão ou filtro deste endpoint), não no token. "
+            "Avise quem mantém a API."
+            if rp is not None and rp.status_code in (401, 403)
+            else "Não foi possível listar as pastas da instância.",
             ms=ms,
         )
     else:

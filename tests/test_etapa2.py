@@ -323,3 +323,12 @@ def test_export_csv_marca_as_favoritas(app: App) -> None:
     )
     assert linhas[1].endswith(";sim")
     assert linhas[2].endswith(";")
+
+
+def test_diagnostico_pastas_recusadas_com_token_valido_aponta_para_a_api(
+    app: App, upstream: Upstream
+) -> None:
+    upstream.respostas[("GET", "/api/diretorios")] = (401, "")
+    pastas = _por_id(app.http.get("/_diagnostico/cliente1").json())["pastas"]
+    assert pastas["nivel"] == "erro"
+    assert "lado da API" in pastas["causa"]
