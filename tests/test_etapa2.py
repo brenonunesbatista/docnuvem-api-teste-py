@@ -132,7 +132,11 @@ def test_diagnostico_tudo_certo(app: App, upstream: Upstream) -> None:
     assert [i["nivel"] for i in dados["itens"]] == ["ok", "ok", "ok", "ok", "info"]
     assert itens["modelos"]["total"] == 2
     assert itens["modelos"]["geraveis"] == 1
-    assert "CT (Contrato)" in itens["modelos"]["detalhe"]
+    assert itens["modelos"]["detalhe"] == "2 modelo(s), 1 gerável(is) por API."
+    assert itens["modelos"]["lista"] == [
+        {"codigo": "CT", "nome": "Contrato", "geravel": True},
+        {"codigo": "DC", "nome": "Declaração", "geravel": False},
+    ]
     assert "7 pasta(s)" in itens["pastas"]["detalhe"]
     assert "tipo 1 e 2" in itens["escola"]["causa"]
 

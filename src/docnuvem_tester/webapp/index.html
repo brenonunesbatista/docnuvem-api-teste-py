@@ -279,6 +279,10 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
 .dg .ttl{font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .dg .det{grid-column:2;font-size:13.5px;overflow-wrap:anywhere}
 .dg .cause{grid-column:2;font-size:13px;color:var(--mu)}
+.dglist{grid-column:2;display:flex;flex-direction:column;max-height:280px;overflow:auto;border:1px solid var(--ln);border-radius:10px}
+.dglist .mi{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:7px 10px;font-size:13.5px;border-bottom:1px solid var(--ln)}
+.dglist .mi:last-child{border-bottom:0}
+.dglist .mi code{font-size:12.5px;color:var(--mu)}
 .modalb{padding:20px;gap:12px}
 .modalb p{margin:0;font-size:14px}
 .pfr{display:flex;flex-direction:column;gap:6px;border:1px solid var(--ln);border-radius:12px;padding:12px 14px;background:var(--sf)}
@@ -375,6 +379,7 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
                     <span class="pill {{it.cls}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{it.icon}}"/></svg>{{it.label}}</span>
                     <span class="ttl">{{it.titulo}}</span>
                     <span class="det">{{it.detalhe}}</span>
+                    <sc-if value="{{it.hasList}}" hint-placeholder-val="{{ false }}"><div class="dglist"><sc-for list="{{it.lista}}" as="m" hint-placeholder-count="3"><div class="mi"><strong>{{m.nome}}</strong><code>{{m.codigo}}</code><span class="pill {{m.cls}}">{{m.txt}}</span></div></sc-for></div></sc-if>
                     <sc-if value="{{it.hasCause}}" hint-placeholder-val="{{ false }}"><span class="cause"><strong>{{it.causaLabel}}</strong> {{it.causa}}</span></sc-if>
                   </div>
                 </sc-for>
@@ -1592,11 +1597,11 @@ const hist={on:s.hist.ligado,arquivo:s.hist.arquivo,limpar:()=>this.limparHistor
 const dgs=s.diag[perfil]||{};
 const DGN={ok:['ok',ICON.check,'Tudo certo'],aviso:['wn',ICON.alert,'Atenção'],erro:['er',ICON.x,'Com problema']};
 const DGI={ok:['ok',ICON.check,'OK'],aviso:['wn',ICON.alert,'Atenção'],erro:['er',ICON.x,'Falhou'],info:['mu',ICON.clock,'Informação'],pulado:['mu',ICON.minus,'Pulado']};
-const dgItens=(dgs.itens||[]).map(it=>{const k=DGI[it.nivel]||DGI.info;return {titulo:it.titulo,cls:k[0],icon:k[1],label:k[2],detalhe:it.detalhe,causa:it.causa,hasCause:!!it.causa,causaLabel:(it.nivel==='aviso'||it.nivel==='erro')?'Causa provável:':'Observação:'};});
+const dgItens=(dgs.itens||[]).map(it=>{const k=DGI[it.nivel]||DGI.info;return {titulo:it.titulo,cls:k[0],icon:k[1],label:k[2],detalhe:it.detalhe,causa:it.causa,hasCause:!!it.causa,hasList:!!(it.lista&&it.lista.length),lista:(it.lista||[]).map(m=>({codigo:m.codigo,nome:m.nome,cls:m.geravel?'ok':'mu',txt:m.geravel?'gerável por API':'não gerável por API'})),causaLabel:(it.nivel==='aviso'||it.nivel==='erro')?'Causa provável:':'Observação:'};});
 const dgk=dgs.erroLocal?['er',ICON.alert,'Servidor local sem resposta']:dgs.busy&&!dgs.nivel?['mu',ICON.refresh,'Verificando…']:dgs.nivel?DGN[dgs.nivel]:['mu',ICON.minus,'Ainda não verificado'];
 const dg={cls:dgk[0],icon:dgk[1],label:dgk[2],busy:!!dgs.busy,notBusy:!dgs.busy,empty:!dgs.itens&&!dgs.busy&&!dgs.erroLocal,hasErr:!!dgs.erroLocal,err:dgs.erroLocal||'',has:!!dgs.itens,items:dgItens,
 quando:dgs.verificadoEm?fmtT(dgs.verificadoEm):'',run:()=>this.diagnosticar(),
-copy:()=>this.copy(['DIAGNÓSTICO DA INSTÂNCIA · Docnuvem API Tester','Perfil: '+perfil+' (instância: '+(dgs.instancia||'?')+')','Servidor: '+(dgs.baseUrl||'?'),'Quando: '+(dgs.verificadoEm?new Date(dgs.verificadoEm).toLocaleString('pt-BR'):'?'),'Geral: '+dgk[2],''].concat((dgs.itens||[]).map(it=>'['+(DGI[it.nivel]||DGI.info)[2]+'] '+it.titulo+': '+it.detalhe+(it.causa?'\n    Causa provável: '+it.causa:''))).join('\n'),'Diagnóstico copiado.')};
+copy:()=>this.copy(['DIAGNÓSTICO DA INSTÂNCIA · Docnuvem API Tester','Perfil: '+perfil+' (instância: '+(dgs.instancia||'?')+')','Servidor: '+(dgs.baseUrl||'?'),'Quando: '+(dgs.verificadoEm?new Date(dgs.verificadoEm).toLocaleString('pt-BR'):'?'),'Geral: '+dgk[2],''].concat((dgs.itens||[]).map(it=>'['+(DGI[it.nivel]||DGI.info)[2]+'] '+it.titulo+': '+it.detalhe+(it.lista?it.lista.map(m=>'\n    - '+m.nome+' ('+m.codigo+')'+(m.geravel?' [gerável por API]':'')).join(''):'')+(it.causa?'\n    Causa provável: '+it.causa:''))).join('\n'),'Diagnóstico copiado.')};
 // gerenciador de perfis
 const fp=s.forms.perfis,ordemP=Object.keys(PERFIS),padraoP=LIVE?LIVE.padrao:'';
 const protTxt={'':'Livre',confirmar:'Produção · confirma',bloquear:'Produção · só leitura'};

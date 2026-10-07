@@ -405,7 +405,15 @@ def diagnosticar(cliente: httpx.Client, perfil: PerfilConfig) -> dict[str, Any]:
     # 3. Modelos cadastrados e geráveis por API
     modelos = [m for m in _json_dict(rm).get("modelos") or [] if isinstance(m, dict)]
     geraveis = [m for m in modelos if m.get("geravelPorApi")]
-    nomes = ", ".join(f"{m.get('codigo') or m.get('id')} ({m.get('nome', '?')})" for m in geraveis)
+    # Uma linha por modelo, os geráveis por API primeiro (a página mostra como lista).
+    lista = [
+        {
+            "codigo": str(m.get("codigo") or m.get("id") or ""),
+            "nome": str(m.get("nome") or "(sem nome)"),
+            "geravel": bool(m.get("geravelPorApi")),
+        }
+        for m in sorted(modelos, key=lambda m: not m.get("geravelPorApi"))
+    ]
     if not modelos:
         item(
             "modelos",
@@ -427,15 +435,17 @@ def diagnosticar(cliente: httpx.Client, perfil: PerfilConfig) -> dict[str, Any]:
             "liberação na configuração do modelo.",
             total=len(modelos),
             geraveis=0,
+            lista=lista,
         )
     else:
         item(
             "modelos",
             "Modelos de documento",
             "ok",
-            f"{len(modelos)} modelo(s), {len(geraveis)} gerável(is) por API: {nomes}.",
+            f"{len(modelos)} modelo(s), {len(geraveis)} gerável(is) por API.",
             total=len(modelos),
             geraveis=len(geraveis),
+            lista=lista,
         )
 
     # 4. Pastas
