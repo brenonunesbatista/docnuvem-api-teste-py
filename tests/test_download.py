@@ -335,7 +335,6 @@ def test_so_um_download_por_vez(app: App, upstream: Upstream, tmp_path: Path) ->
     [
         ({"diretorioId": ""}, "diretorioId"),
         ({"diretorioId": "abc"}, "diretorioId"),
-        ({"diretorioId": 0}, "diretorioId"),
         ({"diretorioId": -3}, "diretorioId"),
         ({"destino": ""}, "Escolha"),
         ({"destino": "relativo/x"}, "caminho completo"),
@@ -424,3 +423,45 @@ def test_abrir_pasta_so_do_download_concluido(
 def test_perfis_sugere_a_pasta_de_downloads(app: App) -> None:
     dados = app.http.get("/_perfis").json()
     assert dados["pastaDownloads"].endswith("Docnuvem")
+
+
+def test_diretorio_zero_e_a_raiz(app: App, upstream: Upstream, tmp_path: Path) -> None:
+    """0 é a raiz de Meus documentos: vale como pasta e é repassado à API."""
+    _preparar(upstream, (1, "solto.pdf", 0), (2, "a.pdf", 5), (3, "b.pdf", 6))
+    upstream.respostas[("GET", "/api/diretorios")] = (
+        200,
+        json.dumps(
+            {
+                "temMais": False,
+                "diretorios": [
+                    {"diretorioId": 5, "caminho": "/Meus documentos/Clientes"},
+                    {"diretorioId": 6, "caminho": "/Meus documentos/Clientes/2024"},
+                ],
+            }
+        ),
+    )
+    saida = tmp_path / "saida"
+    fim = _baixar(app, saida, diretorioId=0, subpastas=True, estrutura=True)
+    assert (fim["estado"], fim["baixados"]) == ("concluido", 3)
+    listagem = next(c for c in upstream.recebidas if c["rota"] == "/api/documentos")
+    assert "diretorioId=0" in listagem["path"]
+    assert "incluirSubpastas=true" in listagem["path"]
+    # a árvore é refeita a partir de "Meus documentos"
+    assert (saida / "solto.pdf").is_file()
+    assert (saida / "Clientes" / "a.pdf").is_file()
+    assert (saida / "Clientes" / "2024" / "b.pdf").is_file()
+
+
+def test_diretorio_zero_aceita_texto(app: App, upstream: Upstream, tmp_path: Path) -> None:
+    _preparar(upstream, (1, "a.pdf", 0))
+    assert _baixar(app, tmp_path / "saida", diretorioId="0")["baixados"] == 1
+
+
+def test_diretorio_zero_sem_arvore_cai_para_pasta_unica(
+    app: App, upstream: Upstream, tmp_path: Path
+) -> None:
+    _preparar(upstream, (1, "a.pdf", 5))
+    upstream.respostas[("GET", "/api/diretorios")] = (401, "")
+    fim = _baixar(app, tmp_path / "saida", diretorioId=0, subpastas=True, estrutura=True)
+    assert fim["baixados"] == 1
+    assert (tmp_path / "saida" / "a.pdf").is_file()

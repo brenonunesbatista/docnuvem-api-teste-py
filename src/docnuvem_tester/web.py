@@ -30,6 +30,8 @@ from urllib.parse import parse_qs, parse_qsl, unquote, urlsplit
 
 import httpx
 
+from docnuvem_tester.comparar import TIPOS as TIPOS_COMPARACAO
+from docnuvem_tester.comparar import comparar
 from docnuvem_tester.config import (
     AppConfig,
     ConfigError,
@@ -43,6 +45,8 @@ from docnuvem_tester.config import (
     salvar_perfil,
 )
 from docnuvem_tester.download import ErroDownload, GerenciadorDownload, validar_destino
+from docnuvem_tester.lote import ErroLote, GerenciadorLote, preparar
+from docnuvem_tester.roteiro import rodar_fumaca
 
 PASTA_WEB = Path(__file__).parent / "webapp"
 PAGINA = PASTA_WEB / "index.html"
@@ -596,6 +600,7 @@ class Servidor(ThreadingHTTPServer):
         self.arquivo_config = arquivo_config  # None: a página não pode editar os perfis
         self._cfg_lock = threading.Lock()
         self.downloads = GerenciadorDownload()
+        self.lotes = GerenciadorLote()
         self.historico = historico
         self.cliente = cliente or httpx.Client(timeout=TIMEOUT)
         self._cliente_proprio = cliente is None
@@ -712,6 +717,11 @@ class Handler(BaseHTTPRequestHandler):
             return self._perfis()
         if caminho.startswith("/_status/"):
             return self._status(unquote(caminho[len("/_status/") :]), parse_qs(partes.query))
+        if caminho.startswith("/_lote/"):
+            resto = unquote(caminho[len("/_lote/") :])
+            if resto.endswith("/relatorio.csv"):
+                return self._lote_relatorio(resto[: -len("/relatorio.csv")])
+            return self._lote_estado(resto)
         if caminho.startswith("/_baixar/"):
             return self._bx_estado(unquote(caminho[len("/_baixar/") :]))
         if caminho.startswith("/_diagnostico/"):
@@ -730,6 +740,16 @@ class Handler(BaseHTTPRequestHandler):
             return self._hist_gravar()
         if caminho == "/_historico/favorito":
             return self._hist_favorito()
+        if caminho == "/_comparar":
+            return self._comparar()
+        if caminho == "/_roteiro/fumaca":
+            return self._fumaca()
+        if caminho == "/_lote/validar":
+            return self._lote_validar()
+        if caminho == "/_lote/iniciar":
+            return self._lote_iniciar()
+        if caminho.startswith("/_lote/") and caminho.endswith("/cancelar"):
+            return self._lote_cancelar(unquote(caminho[len("/_lote/") : -len("/cancelar")]))
         if caminho == "/_baixar/iniciar":
             return self._bx_iniciar()
         if caminho.startswith("/_baixar/") and caminho.endswith("/cancelar"):
@@ -784,6 +804,158 @@ class Handler(BaseHTTPRequestHandler):
             }
         )
 
+    # --- rotina de testes: comparar, lote para escolas, teste de fumaça -----
+    def _perfil_do_corpo(
+        self, dado: dict[str, Any], campo: str = "perfil"
+    ) -> tuple[str, PerfilConfig] | None:
+        nome = str(dado.get(campo, ""))
+        perfil = self.server.cfg.perfis.get(nome)
+        if perfil is None:
+            self._json({"ok": False, "erro": f'Perfil desconhecido: "{nome}".'}, 404)
+            return None
+        return nome, perfil
+
+    def _comparar(self) -> None:
+        dado = self._corpo_json()
+        if dado is None:
+            return
+        tipo = str(dado.get("tipo", ""))
+        if tipo not in TIPOS_COMPARACAO:
+            return self._json({"ok": False, "erro": "Tipo de comparação desconhecido."}, 400)
+        if dado.get("a") == dado.get("b"):
+            return self._json({"ok": False, "erro": "Escolha dois perfis diferentes."}, 400)
+        a = self._perfil_do_corpo(dado, "a")
+        b = self._perfil_do_corpo(dado, "b") if a else None
+        if a is None or b is None:
+            return
+        self._json({"ok": True, **comparar(self.server.cliente, tipo, a, b)})
+
+    def _fumaca(self) -> None:
+        dado = self._corpo_json()
+        if dado is None:
+            return
+        alvo = self._perfil_do_corpo(dado)
+        if alvo is None:
+            return
+        nome, perfil = alvo
+        if perfil.protecao == "bloquear":
+            return self._json(
+                {
+                    "ok": False,
+                    "erro": "Perfil protegido (só leitura): o teste de fumaça escreve nele.",
+                },
+                403,
+            )
+        if dado.get("confirmar") is not True:
+            return self._json(
+                {"ok": False, "erro": "O teste de fumaça precisa de confirmação."}, 428
+            )
+        self._json({"ok": True, **rodar_fumaca(self.server.cliente, perfil)})
+
+    def _lote_validar(self) -> None:
+        dado = self._corpo_json()
+        if dado is None:
+            return
+        try:
+            r = preparar(str(dado.get("csv", "")))
+        except ErroLote as exc:
+            return self._json({"ok": False, "erro": str(exc)}, 400)
+        self._json(
+            {
+                "ok": True,
+                "linhas": len(r["linhas"]),
+                "validas": len(r["validas"]),
+                "invalidas": r["invalidas"][:200],
+                "nInvalidas": len(r["invalidas"]),
+                "amostra": [
+                    {
+                        "codigoMatricula": v["codigoMatricula"],
+                        "nome": v["nome"],
+                        "email": v["email"],
+                    }
+                    for v in r["validas"][:5]
+                ],
+            }
+        )
+
+    def _lote_iniciar(self) -> None:
+        dado = self._corpo_json()
+        if dado is None:
+            return
+        alvo = self._perfil_do_corpo(dado)
+        if alvo is None:
+            return
+        nome, perfil = alvo
+        modo = str(dado.get("modo", ""))
+        if modo not in ("enviar", "consultar"):
+            return self._json({"ok": False, "erro": "Modo deve ser enviar ou consultar."}, 400)
+        if modo == "enviar":
+            if perfil.protecao == "bloquear":
+                return self._json(
+                    {
+                        "ok": False,
+                        "erro": "Perfil protegido (só leitura): não dá para enviar solicitações.",
+                    },
+                    403,
+                )
+            if dado.get("confirmarEnvio") is not True:
+                return self._json(
+                    {"ok": False, "erro": "O envio de e-mails precisa de confirmação."}, 428
+                )
+            if perfil.protecao == "confirmar" and dado.get("confirmarProtecao") is not True:
+                return self._json(
+                    {
+                        "ok": False,
+                        "erro": "Perfil protegido: confirme que quer enviar em produção.",
+                    },
+                    428,
+                )
+        try:
+            intervalo = int(dado.get("intervaloMs", 500))
+        except (TypeError, ValueError):
+            return self._json({"ok": False, "erro": "Intervalo inválido."}, 400)
+        try:
+            lote = self.server.lotes.iniciar(
+                self.server.cliente,
+                nome,
+                perfil,
+                texto=str(dado.get("csv", "")),
+                modo=modo,
+                intervalo_ms=intervalo,
+            )
+        except ErroLote as exc:
+            return self._json(
+                {"ok": False, "erro": str(exc)}, 409 if "andamento" in str(exc) else 400
+            )
+        self._json({"ok": True, "id": lote.id})
+
+    def _lote_estado(self, id_: str) -> None:
+        lote = self.server.lotes.obter(id_)
+        if lote is None:
+            return self._texto(404, "Lote desconhecido.")
+        self._json(lote.snapshot())
+
+    def _lote_cancelar(self, id_: str) -> None:
+        if not self._origem_ok():
+            return self._texto(403, "Origem não permitida.")
+        lote = self.server.lotes.obter(id_)
+        if lote is None:
+            return self._texto(404, "Lote desconhecido.")
+        lote.cancelar.set()
+        self._json({"ok": True})
+
+    def _lote_relatorio(self, id_: str) -> None:
+        lote = self.server.lotes.obter(id_)
+        if lote is None:
+            return self._texto(404, "Lote desconhecido.")
+        carimbo = datetime.now().strftime("%Y%m%d-%H%M%S")
+        self._enviar(
+            200,
+            lote.relatorio_csv(),
+            "text/csv; charset=utf-8",
+            {"Content-Disposition": f'attachment; filename="docnuvem-lote-{carimbo}.csv"'},
+        )
+
     # --- download de pasta ------------------------------------------------
     def _bx_iniciar(self) -> None:
         dado = self._corpo_json()
@@ -795,10 +967,12 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"ok": False, "erro": "Perfil desconhecido."}, 404)
         try:
             diretorio_id = int(str(dado.get("diretorioId", "")).strip())
-            if diretorio_id <= 0:
+            if diretorio_id < 0:
                 raise ValueError
         except ValueError:
-            return self._json({"ok": False, "erro": "Informe o diretorioId (um número)."}, 400)
+            return self._json(
+                {"ok": False, "erro": "Informe o diretorioId (um número; 0 é a raiz)."}, 400
+            )
         conflito = str(dado.get("conflito", "renomear"))
         if conflito not in ("renomear", "pular"):
             return self._json({"ok": False, "erro": "Conflito deve ser renomear ou pular."}, 400)

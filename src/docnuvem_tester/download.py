@@ -255,7 +255,7 @@ def mapa_pastas(
 
 def _subpasta_relativa(caminho: str | None, raiz: str | None) -> Path:
     """Caminho da pasta do documento em relação à pasta escolhida (vazio = a própria)."""
-    if not caminho or not raiz:
+    if not caminho or raiz is None:
         return Path()
     if caminho == raiz:
         return Path()
@@ -264,6 +264,12 @@ def _subpasta_relativa(caminho: str | None, raiz: str | None) -> Path:
         return Path()
     partes = [p for p in caminho[len(prefixo) :].split("/") if p]
     return Path(*[nome_seguro(p, "pasta") for p in partes])
+
+
+def _raiz_comum(caminhos: Any) -> str:
+    """Caminho da raiz (diretorioId 0): o primeiro nível comum, ex.: /Meus documentos."""
+    primeiros = {c.split("/")[1] for c in caminhos if c.startswith("/") and c.count("/") >= 1}
+    return "/" + primeiros.pop() if len(primeiros) == 1 else ""
 
 
 def _destino_do_arquivo(pasta: Path, nome: str, doc_id: Any, conflito: str) -> Path | None:
@@ -355,6 +361,8 @@ def executar(t: Trabalho, cliente: httpx.Client, perfil: PerfilConfig) -> None:
                         f"{exc}); os arquivos foram salvos todos na mesma pasta."
                     )
         raiz = nomes_pastas.get(t.diretorio_id)
+        if raiz is None and t.diretorio_id == 0 and nomes_pastas:
+            raiz = _raiz_comum(nomes_pastas.values())  # 0 = raiz de "Meus documentos"
         with t.lock:
             t.estado = "baixando"
 
