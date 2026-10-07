@@ -1,4 +1,4 @@
-from docnuvem_tester.app import main
+from docnuvem_tester.web import main
 
 if __name__ == "__main__":
     main()
