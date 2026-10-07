@@ -36,6 +36,12 @@ cp config.example.json config.json
 O `config.json` fica fora do git (`.gitignore`): nunca versione tokens. Por padrão ele é
 lido da pasta atual; para usar outro caminho, defina `DOCNUVEM_TESTER_CONFIG`.
 
+**Gerenciar pelos perfis na tela.** O item **Perfis** do menu cria, edita e remove perfis
+(nome, instância, endereço, token e proteção) e escolhe o padrão. Tudo é gravado no
+próprio `config.json`, que não é publicado; a cada gravação o servidor guarda uma cópia
+em `config.json.bak` (também fora do git). O token nunca volta para a página: ao editar,
+deixe o campo em branco para manter o atual.
+
 **Perfil protegido (produção).** Acrescente `"protegido"` ao perfil para evitar acidentes:
 
 - `"protegido": true` (ou `"confirmar"`): toda chamada que altera dados ou envia e-mail pede

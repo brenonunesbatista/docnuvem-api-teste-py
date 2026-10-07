@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import threading
 from collections.abc import Iterator
 from dataclasses import dataclass, field
@@ -13,7 +14,7 @@ from urllib.parse import urlsplit
 import httpx
 import pytest
 
-from docnuvem_tester.config import AppConfig, PerfilConfig
+from docnuvem_tester.config import AppConfig, PerfilConfig, load_config
 from docnuvem_tester.web import Historico, Servidor
 
 TOKEN_OK = "tok-ok-1234"
@@ -84,8 +85,10 @@ class App:
     historico: Historico | None
 
 
-def _subir(cfg: AppConfig, historico: Historico | None) -> Iterator[App]:
-    servidor = Servidor(("127.0.0.1", 0), cfg, historico)
+def _subir(
+    cfg: AppConfig, historico: Historico | None, arquivo_config: Path | None = None
+) -> Iterator[App]:
+    servidor = Servidor(("127.0.0.1", 0), cfg, historico, arquivo_config=arquivo_config)
     threading.Thread(target=servidor.serve_forever, daemon=True).start()
     base = f"http://127.0.0.1:{servidor.server_address[1]}"
     with httpx.Client(base_url=base, timeout=15) as http:
@@ -116,3 +119,23 @@ def app_sem_historico(upstream: Upstream) -> Iterator[App]:
         perfilPadrao="cliente1",
     )
     yield from _subir(cfg, None)
+
+
+@pytest.fixture
+def app_cfg(upstream: Upstream, tmp_path: Path) -> Iterator[App]:
+    """Servidor cujos perfis vêm de um config.json de verdade (para testar a edição)."""
+    arquivo = tmp_path / "config.json"
+    arquivo.write_text(
+        json.dumps(
+            {
+                "perfis": {
+                    "a": {"instancia": "A", "baseUrl": upstream.base, "token": TOKEN_OK},
+                    "b": {"instancia": "b", "baseUrl": upstream.base, "token": "token-b-9999"},
+                },
+                "perfilPadrao": "a",
+                "extra": {"mantido": True},
+            }
+        ),
+        encoding="utf-8",
+    )
+    yield from _subir(load_config(arquivo), None, arquivo)

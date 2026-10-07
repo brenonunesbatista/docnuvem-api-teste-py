@@ -25,6 +25,7 @@ Legenda: ✅ feito · 🔜 próximo · ⬜ planejado.
 - ✅ **Perfil protegido.** Marcar um perfil como "produção": bloqueia ou pede confirmação em
    chamadas que escrevem ou enviam e-mail.
    *Pronto quando:* a marca fica no `config.json` e vale para toda chamada que altera dados.
+- ✅ **Gerenciador de perfis** na tela (criar, editar, remover, padrão), gravando no `config.json`.
 - ✅ **Favoritos persistentes** no histórico: sobrevivem a reiniciar, à poda e a "Limpar".
 
 ## Etapa 3 — Rotina de testes 🔜

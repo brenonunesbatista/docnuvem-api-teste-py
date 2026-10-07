@@ -1,5 +1,7 @@
 # Segredos e dados locais (nunca versionar)
 config.json
+config.json.bak
+config.json.tmp
 .env
 historico.jsonl
 dados/

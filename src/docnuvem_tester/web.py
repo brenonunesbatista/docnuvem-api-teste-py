@@ -20,6 +20,7 @@ import sys
 import threading
 import time
 import webbrowser
+from collections.abc import Callable
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -28,7 +29,18 @@ from urllib.parse import parse_qs, parse_qsl, unquote, urlsplit
 
 import httpx
 
-from docnuvem_tester.config import AppConfig, ConfigError, PerfilConfig, load_config
+from docnuvem_tester.config import (
+    AppConfig,
+    ConfigError,
+    PerfilConfig,
+    PerfilJaExiste,
+    PerfilNaoEncontrado,
+    config_path,
+    definir_padrao,
+    load_config,
+    remover_perfil,
+    salvar_perfil,
+)
 
 PASTA_WEB = Path(__file__).parent / "webapp"
 PAGINA = PASTA_WEB / "index.html"
@@ -522,9 +534,12 @@ class Servidor(ThreadingHTTPServer):
         cfg: AppConfig,
         historico: Historico | None = None,
         cliente: httpx.Client | None = None,
+        arquivo_config: Path | None = None,
     ) -> None:
         super().__init__(endereco, Handler)
         self.cfg = cfg
+        self.arquivo_config = arquivo_config  # None: a página não pode editar os perfis
+        self._cfg_lock = threading.Lock()
         self.historico = historico
         self.cliente = cliente or httpx.Client(timeout=TIMEOUT)
         self._cliente_proprio = cliente is None
@@ -543,6 +558,15 @@ class Servidor(ThreadingHTTPServer):
         with self._status_lock:
             self._status_cache[nome] = (agora, res)
         return res
+
+    def editar_config(self, acao: Callable[[Path], AppConfig]) -> None:
+        """Aplica uma edição ao config.json e passa a usar a configuração nova."""
+        if self.arquivo_config is None:
+            raise ConfigError("Este servidor foi iniciado sem arquivo de configuração.")
+        with self._cfg_lock:
+            self.cfg = acao(self.arquivo_config)
+        with self._status_lock:
+            self._status_cache.clear()
 
     def server_close(self) -> None:
         super().server_close()
@@ -648,12 +672,18 @@ class Handler(BaseHTTPRequestHandler):
             return self._hist_gravar()
         if caminho == "/_historico/favorito":
             return self._hist_favorito()
+        if caminho == "/_config/perfil":
+            return self._cfg_salvar()
+        if caminho == "/_config/padrao":
+            return self._cfg_padrao()
         self._proxy()
 
     def do_DELETE(self) -> None:  # noqa: N802
         partes = urlsplit(self.path)
         if partes.path == "/_historico":
             return self._hist_limpar(parse_qs(partes.query))
+        if partes.path.startswith("/_config/perfil/"):
+            return self._cfg_remover(unquote(partes.path[len("/_config/perfil/") :]))
         self._proxy()
 
     def _arquivo(self, caminho: Path, tipo: str) -> None:
@@ -682,8 +712,74 @@ class Handler(BaseHTTPRequestHandler):
                 "arquivoHistorico": (
                     str(self.server.historico.arquivo) if self.server.historico else ""
                 ),
+                "editavel": self.server.arquivo_config is not None,
+                "arquivoConfig": str(self.server.arquivo_config or ""),
             }
         )
+
+    # --- edição dos perfis (grava no config.json, que fica fora do git) ----
+    def _cfg_aplicar(self, acao: Callable[[Path], AppConfig]) -> None:
+        try:
+            self.server.editar_config(acao)
+        except PerfilNaoEncontrado as exc:
+            return self._json({"ok": False, "erro": str(exc)}, 404)
+        except PerfilJaExiste as exc:
+            return self._json({"ok": False, "erro": str(exc)}, 409)
+        except ConfigError as exc:
+            return self._json({"ok": False, "erro": str(exc)}, 400)
+        except OSError as exc:
+            return self._json({"ok": False, "erro": f"Não foi possível gravar: {exc}"}, 500)
+        self._json({"ok": True})
+
+    def _cfg_corpo(self) -> dict[str, Any] | None:
+        if not self._origem_ok():
+            self._texto(403, "Origem não permitida.")
+            return None
+        corpo = self._ler_corpo(MAX_ENTRADA)
+        if corpo is None:
+            return None
+        try:
+            dado = json.loads(corpo)
+        except json.JSONDecodeError:
+            self._texto(400, "JSON inválido.")
+            return None
+        if not isinstance(dado, dict):
+            self._texto(400, "Esperava um objeto JSON.")
+            return None
+        return dado
+
+    def _cfg_salvar(self) -> None:
+        dado = self._cfg_corpo()
+        if dado is None:
+            return
+        campos = ("nome", "instancia", "baseUrl", "token", "protecao")
+        if not all(isinstance(dado.get(c, ""), str) for c in (*campos, "original")):
+            return self._json({"ok": False, "erro": "Campos devem ser texto."}, 400)
+        original = dado.get("original") or None
+        nome, instancia, base, token, protecao = (str(dado.get(c, "")) for c in campos)
+        self._cfg_aplicar(
+            lambda arq: salvar_perfil(
+                arq,
+                original=original,
+                nome=nome,
+                instancia=instancia,
+                baseUrl=base,
+                token=token,
+                protecao=protecao,
+            )
+        )
+
+    def _cfg_padrao(self) -> None:
+        dado = self._cfg_corpo()
+        if dado is None:
+            return
+        nome = str(dado.get("nome", ""))
+        self._cfg_aplicar(lambda arq: definir_padrao(arq, nome))
+
+    def _cfg_remover(self, nome: str) -> None:
+        if not self._origem_ok():
+            return self._texto(403, "Origem não permitida.")
+        self._cfg_aplicar(lambda arq: remover_perfil(arq, nome))
 
     def _status(self, nome: str, query: dict[str, list[str]]) -> None:
         perfil = self.server.cfg.perfis.get(nome)
@@ -896,7 +992,7 @@ def main(argv: list[str] | None = None) -> None:
     servidor: Servidor | None = None
     for porta in tentativas:
         try:
-            servidor = Servidor(("127.0.0.1", porta), cfg, historico)
+            servidor = Servidor(("127.0.0.1", porta), cfg, historico, arquivo_config=config_path())
             break
         except OSError as exc:
             sufixo = "; tentando uma porta livre..." if porta != tentativas[-1] else ""

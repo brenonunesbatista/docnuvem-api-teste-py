@@ -281,6 +281,8 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
 .dg .cause{grid-column:2;font-size:13px;color:var(--mu)}
 .modalb{padding:20px;gap:12px}
 .modalb p{margin:0;font-size:14px}
+.pfr{display:flex;flex-direction:column;gap:6px;border:1px solid var(--ln);border-radius:12px;padding:12px 14px;background:var(--sf)}
+.pfr.on{border-color:var(--ac)}
 </style>
 </helmet>
 
@@ -380,6 +382,38 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
               <p class="muted small">Verificado às {{dg.quando}}.</p>
             </sc-if>
           </section>
+        </sc-if>
+
+        <!-- ===== PERFIS ===== -->
+        <sc-if value="{{show.perfis}}" hint-placeholder-val="{{ false }}">
+          <section class="card">
+            <div class="row"><h2>Perfis do config.json</h2><span class="grow"></span><button class="btn pri sm" type="button" onClick="{{pf.novo}}" disabled="{{pf.naoEditavel}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.plus}}"/></svg>Novo perfil</button></div>
+            <p class="muted small">Cada perfil é uma instância com o seu token. As edições são gravadas em <code class="api">{{pf.arquivo}}</code>, um arquivo que fica só neste computador e está fora do git: ele nunca é publicado. A cada gravação o servidor guarda uma cópia em <code class="api">config.json.bak</code> (também fora do git).</p>
+            <sc-if value="{{pf.naoEditavel}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>Este servidor foi iniciado sem arquivo de configuração: a edição pela página está desligada.</span></div></sc-if>
+            <div class="diag">
+              <sc-for list="{{pf.rows}}" as="r" hint-placeholder-count="3">
+                <div class="{{r.card}}">
+                  <div class="row"><strong>{{r.id}}</strong><sc-if value="{{r.isDefault}}" hint-placeholder-val="{{ false }}"><span class="pill ok">padrão</span></sc-if><sc-if value="{{r.active}}" hint-placeholder-val="{{ false }}"><span class="pill mu">em uso</span></sc-if><span class="pill {{r.protCls}}">{{r.protTxt}}</span></div>
+                  <dl class="kvs"><dt>Instância</dt><dd>{{r.instancia}}</dd><dt>Endereço</dt><dd>{{r.baseUrl}}</dd><dt>Token</dt><dd>{{r.mascara}}</dd></dl>
+                  <div class="row"><button class="btn sm" type="button" onClick="{{r.edit}}" disabled="{{pf.naoEditavel}}">Editar</button><sc-if value="{{r.notDefault}}" hint-placeholder-val="{{ false }}"><button class="btn sm" type="button" onClick="{{r.setDefault}}" disabled="{{pf.naoEditavel}}">Tornar padrão</button></sc-if><span class="grow"></span><sc-if value="{{r.canRemove}}" hint-placeholder-val="{{ true }}"><button class="{{r.removeCls}}" type="button" onClick="{{r.remove}}" disabled="{{pf.naoEditavel}}">{{r.removeLabel}}</button></sc-if></div>
+                </div>
+              </sc-for>
+            </div>
+          </section>
+          <sc-if value="{{pf.open}}" hint-placeholder-val="{{ false }}">
+            <section class="card">
+              <h2>{{pf.titulo}}</h2>
+              <div class="fields">
+                <div class="field"><label class="lbl" for="pf-nome"><span>Nome do perfil</span><span class="req">obrigatório</span></label><input id="pf-nome" type="text" value="{{pf.nome}}" autocomplete="off" onInput="{{pf.onNome}}"><span class="hint">Aparece no seletor do topo. Até 40 caracteres: letras, números, espaço, ponto, hífen e sublinhado.</span></div>
+                <div class="field"><label class="lbl" for="pf-inst"><span>Instância</span><code class="api">instancia</code><span class="req">obrigatório</span></label><input id="pf-inst" type="text" value="{{pf.instancia}}" autocomplete="off" onInput="{{pf.onInst}}"><span class="hint">Vai em todas as chamadas, sempre em minúsculo.</span></div>
+                <div class="field"><label class="lbl" for="pf-base"><span>Endereço da API</span><code class="api">baseUrl</code><span class="req">obrigatório</span></label><input id="pf-base" type="text" value="{{pf.baseUrl}}" placeholder="http://servidor-da-api:8083" autocomplete="off" onInput="{{pf.onBase}}"></div>
+                <div class="field"><label class="lbl" for="pf-token"><span>Token</span><code class="api">token</code></label><input id="pf-token" type="password" value="{{pf.token}}" placeholder="{{pf.tokenPh}}" autocomplete="new-password" onInput="{{pf.onToken}}"><span class="hint">{{pf.tokenHint}}</span></div>
+                <div class="field"><label class="lbl" for="pf-prot"><span>Proteção</span><code class="api">protegido</code></label><select id="pf-prot" value="{{pf.protecao}}" onChange="{{pf.onProt}}"><sc-for list="{{pf.protOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.value}}" selected="{{o.selected}}">{{o.label}}</option></sc-for></select></div>
+              </div>
+              <sc-if value="{{pf.hasErr}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{pf.err}}</span></div></sc-if>
+              <div class="row"><button class="btn pri" type="button" onClick="{{pf.save}}" disabled="{{pf.busy}}">Salvar no config.json</button><button class="btn" type="button" onClick="{{pf.cancel}}">Cancelar</button></div>
+            </section>
+          </sc-if>
         </sc-if>
 
         <!-- ===== FORMULÁRIOS + REQUISIÇÃO ===== -->
@@ -811,7 +845,8 @@ user:'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0',
 panel:'M3 5h18v14H3zM9 5v14',
 pulse:'M3 12h4l3-8 4 16 3-8h4',
 shield:'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
-flag:'M5 21V4M5 4h12l-2 4 2 4H5'
+flag:'M5 21V4M5 4h12l-2 4 2 4H5',
+gear:'M12 15a3 3 0 100-6 3 3 0 000 6zM19 12l2-1-2-4-2 .5-1.5-1L15 4h-4l-.5 2.5-1.5 1L7 7 5 11l2 1v2l-2 1 2 4 2-.5 1.5 1L11 20h4l.5-2.5 1.5-1 2 .5 2-4-2-1z'
 };
 const META={
 inicio:{label:'Início',title:'O que você quer testar hoje?',sub:'Escolha uma tarefa ou continue de onde parou. As chamadas são reais.',d:ICON.home,grp:'Começar'},
@@ -828,9 +863,10 @@ status:{label:'Status do documento',title:'Status do documento',method:'GET',pat
 download:{label:'Download',title:'Download',method:'GET',path:'/api/documento/{id}/download',sub:'Gera um link temporário para baixar o arquivo.',d:ICON.download,grp:''},
 alunoSolicitar:{label:'Solicitar documentos',title:'Solicitar documentos do aluno',method:'POST',path:'/api/solicitacaoAluno/solicitarEnvioDocumentos',sub:'Cria o contato e a pasta do aluno, abre a solicitação de envio de documentos e envia o link por e-mail.',d:ICON.cap,grp:'Escola'},
 alunoStatus:{label:'Status do aluno',title:'Status do aluno',method:'GET',path:'/api/solicitacaoAluno/consultarStatus',sub:'Solicitações de envio de documentos do aluno e o que já foi recebido.',d:ICON.user,grp:''},
-diagnostico:{label:'Diagnóstico',title:'Diagnóstico da instância',sub:'Confere, só com leituras, se o perfil está pronto para uso e mostra a causa provável de cada problema.',d:ICON.pulse,grp:'Suporte'}
+diagnostico:{label:'Diagnóstico',title:'Diagnóstico da instância',sub:'Confere, só com leituras, se o perfil está pronto para uso e mostra a causa provável de cada problema.',d:ICON.pulse,grp:'Suporte'},
+perfis:{label:'Perfis',title:'Perfis',sub:'Crie, edite e remova os perfis do config.json: nome, instância, endereço, token e proteção.',d:ICON.gear,grp:''}
 };
-const ORDER=['inicio','fluxo','importar','envio','modelos','template','assinatura','cancelar','documentos','pastas','status','download','alunoSolicitar','alunoStatus','diagnostico'];
+const ORDER=['inicio','fluxo','importar','envio','modelos','template','assinatura','cancelar','documentos','pastas','status','download','alunoSolicitar','alunoStatus','diagnostico','perfis'];
 const AUTO=['documentos','pastas','modelos'];
 let LIVE=null;const FILEBLOB=new WeakMap();
 const BASE='https://api.docnuvem.example';
@@ -946,7 +982,8 @@ cancelar:{assinaturaId:'',motivo:'',confirm:''},
 documentos:{diretorioId:'',incluirSubpastas:false,status:'',dataInicio:'',dataFim:'',pagina:'0',tamanho:'50',q:''},
 pastas:{diretorioPaiId:'',nome:'',caminho:'',pagina:'0',tamanho:'50'},
 status:{documentoId:''},download:{documentoId:''},modelos:{},
-alunoSolicitar:{codigoMatricula:'',nome:'',cpf:'',email:'',telefone:'',tipoSolicitacao:'1',emailResponsavel:'',confirmEmail:false},alunoStatus:{codigoMatricula:''}},
+alunoSolicitar:{codigoMatricula:'',nome:'',cpf:'',email:'',telefone:'',tipoSolicitacao:'1',emailResponsavel:'',confirmEmail:false},alunoStatus:{codigoMatricula:''},
+perfis:{aberto:false,original:'',nome:'',instancia:'',baseUrl:'',token:'',protecao:'',erro:'',salvando:false,rm:''}},
 results:{},loading:{},lists:{},diag:{},protPend:null,tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
 paletteOpen:false,paletteQ:'',toast:'',wizStep:0,lastMat:'',openSol:null,navMin:false,
 lastDoc:{},lastAss:{},
@@ -960,13 +997,42 @@ this._iv=setInterval(()=>{if(this.state.screen==='download'&&this.state.results.
 this._api=setInterval(()=>this.checarApi(false),60000);
 fetch('/_perfis',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{
 if(!j||!Array.isArray(j.perfis)||!j.perfis.length){this.setState({boot:'sem'});return;}
-LIVE=j;PERFIS={};const lastDoc={},lastAss={};
-j.perfis.forEach(p=>{PERFIS[p.id]={mascara:p.tokenMascarado,baseUrl:p.baseUrl,instancia:p.instancia,protegido:p.protegido||''};lastDoc[p.id]=null;lastAss[p.id]=null;});
-const perfil=PERFIS[j.padrao]?j.padrao:j.perfis[0].id;
-this.setState({boot:'ok',perfil,lastDoc,lastAss,results:{},lists:{},hist:{ligado:!!j.historico,arquivo:j.arquivoHistorico||'',confirmar:false}});
-this.checarApi(true);
+this.aplicarPerfis(j,{inicial:true});
 if(j.historico)this.carregarHistorico();
 }).catch(()=>this.setState({boot:'sem'}));}
+aplicarPerfis(j,o){
+o=o||{};LIVE=j;PERFIS={};const st=this.state,lastDoc={},lastAss={};
+j.perfis.forEach(p=>{PERFIS[p.id]={mascara:p.tokenMascarado,baseUrl:p.baseUrl,instancia:p.instancia,protegido:p.protegido||''};lastDoc[p.id]=(st.lastDoc&&st.lastDoc[p.id])||null;lastAss[p.id]=(st.lastAss&&st.lastAss[p.id])||null;});
+const padrao=PERFIS[j.padrao]?j.padrao:j.perfis[0].id;
+if(o.inicial){this.setState({boot:'ok',perfil:padrao,lastDoc,lastAss,results:{},lists:{},hist:{ligado:!!j.historico,arquivo:j.arquivoHistorico||'',confirmar:false}});this.checarApi(true);return;}
+let perfil=st.perfil;
+if(!PERFIS[perfil])perfil=(o.renomeado&&PERFIS[o.renomeado])?o.renomeado:padrao;
+this.setState({perfil,lastDoc,lastAss,results:{},lists:{},apiSt:{},diag:{}});
+setTimeout(()=>{const sc=this.eff();if(AUTO.indexOf(sc)>=0)this.run(sc);if(sc==='diagnostico')this.diagnosticar();this.checarApi(true);},0);
+}
+aviso(m){this.setState({toast:m});clearTimeout(this._tt);this._tt=setTimeout(()=>this.setState({toast:''}),3200);}
+cfgCall(url,method,body){
+return fetch(url,{method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined}).then(r=>r.json().catch(()=>({ok:false,erro:'Resposta inesperada do servidor local (HTTP '+r.status+').'}))).catch(e=>({ok:false,erro:'O servidor local (docnuvem-web) não respondeu: '+e.message}));
+}
+recarregarPerfis(o){return fetch('/_perfis',{cache:'no-store'}).then(r=>r.json()).then(j=>this.aplicarPerfis(j,o)).catch(()=>this.aviso('Salvo, mas não consegui recarregar os perfis. Recarregue a página.'));}
+perfilNovo(){this.setF('perfis',{aberto:true,original:'',nome:'',instancia:'',baseUrl:'',token:'',protecao:'',erro:'',rm:''});}
+perfilEditar(id){const p=PERFIS[id];if(!p)return;this.setF('perfis',{aberto:true,original:id,nome:id,instancia:p.instancia,baseUrl:p.baseUrl,token:'',protecao:p.protegido||'',erro:'',rm:''});}
+perfilSalvar(){
+const f=this.state.forms.perfis;if(f.salvando)return;
+this.setF('perfis',{salvando:true,erro:''});
+this.cfgCall('/_config/perfil','POST',{original:f.original,nome:f.nome,instancia:f.instancia,baseUrl:f.baseUrl,token:f.token,protecao:f.protecao}).then(r=>{
+if(!r.ok){this.setF('perfis',{salvando:false,erro:r.erro||'Não foi possível salvar.'});return;}
+this.setF('perfis',{salvando:false,aberto:false,token:'',erro:''});
+this.recarregarPerfis({renomeado:f.original&&f.original!==f.nome?f.nome:''}).then(()=>this.aviso('Perfil salvo no config.json.'));
+});
+}
+perfilPadrao(id){this.cfgCall('/_config/padrao','POST',{nome:id}).then(r=>{if(!r.ok){this.aviso(r.erro||'Não foi possível alterar o padrão.');return;}this.recarregarPerfis({}).then(()=>this.aviso('Perfil padrão: '+id+'.'));});}
+perfilRemover(id){
+const f=this.state.forms.perfis;
+if(f.rm!==id){this.setF('perfis',{rm:id});clearTimeout(this._rm);this._rm=setTimeout(()=>this.setF('perfis',{rm:''}),4000);return;}
+this.setF('perfis',{rm:''});
+this.cfgCall('/_config/perfil/'+encodeURIComponent(id),'DELETE').then(r=>{if(!r.ok){this.aviso(r.erro||'Não foi possível remover.');return;}this.recarregarPerfis({}).then(()=>this.aviso('Perfil "'+id+'" removido do config.json.'));});
+}
 componentWillUnmount(){clearInterval(this._iv);clearInterval(this._api);}
 
 eff(){const s=this.state;return s.screen==='fluxo'?['importar','assinatura','resultado'][s.wizStep]:s.screen;}
@@ -1053,7 +1119,7 @@ if(t&&(t.type==='file'||t.type==='checkbox'||t.type==='search'))return;
 if(s.logOpen)return;
 e.preventDefault();this.send();}
 };
-send(){const sc=this.eff();if(sc==='inicio'||sc==='resultado'||sc==='diagnostico')return;if(this.state.loading[sc])return;const p=this.plan(sc);if(p.ready)this.run(sc);}
+send(){const sc=this.eff();if(sc==='inicio'||sc==='resultado'||sc==='diagnostico'||sc==='perfis')return;if(this.state.loading[sc])return;const p=this.plan(sc);if(p.ready)this.run(sc);}
 
 plan(sc){
 const s=this.state,f=s.forms[sc]||{},perfil=s.perfil,v=s.validar;
@@ -1283,7 +1349,7 @@ const res0=s.results[eff];
 const loading=!!s.loading[eff];
 const show={};ORDER.concat(['resultado']).forEach(i=>{show[i]=eff===i;});
 show.fluxo=s.screen==='fluxo';
-show.form=eff!=='inicio'&&eff!=='resultado'&&eff!=='diagnostico';
+show.form=eff!=='inicio'&&eff!=='resultado'&&eff!=='diagnostico'&&eff!=='perfis';
 const T=(sc,k,o)=>this.fld(sc,k,o);
 const last=s.lastDoc[perfil],lastA=s.lastAss[perfil];
 const docLast=(sc)=>({useLast:true,lastLabel:last?'Usar último documentoId ('+last+')':'Nenhum documentoId recente',lastDisabled:!last,onLast:()=>this.setF(sc,{documentoId:String(last)})});
@@ -1531,6 +1597,18 @@ const dgk=dgs.erroLocal?['er',ICON.alert,'Servidor local sem resposta']:dgs.busy
 const dg={cls:dgk[0],icon:dgk[1],label:dgk[2],busy:!!dgs.busy,notBusy:!dgs.busy,empty:!dgs.itens&&!dgs.busy&&!dgs.erroLocal,hasErr:!!dgs.erroLocal,err:dgs.erroLocal||'',has:!!dgs.itens,items:dgItens,
 quando:dgs.verificadoEm?fmtT(dgs.verificadoEm):'',run:()=>this.diagnosticar(),
 copy:()=>this.copy(['DIAGNÓSTICO DA INSTÂNCIA · Docnuvem API Tester','Perfil: '+perfil+' (instância: '+(dgs.instancia||'?')+')','Servidor: '+(dgs.baseUrl||'?'),'Quando: '+(dgs.verificadoEm?new Date(dgs.verificadoEm).toLocaleString('pt-BR'):'?'),'Geral: '+dgk[2],''].concat((dgs.itens||[]).map(it=>'['+(DGI[it.nivel]||DGI.info)[2]+'] '+it.titulo+': '+it.detalhe+(it.causa?'\n    Causa provável: '+it.causa:''))).join('\n'),'Diagnóstico copiado.')};
+// gerenciador de perfis
+const fp=s.forms.perfis,ordemP=Object.keys(PERFIS),padraoP=LIVE?LIVE.padrao:'';
+const protTxt={'':'Livre',confirmar:'Produção · confirma',bloquear:'Produção · só leitura'};
+const pfRows=ordemP.map(id=>{const q=PERFIS[id];return {id,isDefault:id===padraoP,instancia:q.instancia,baseUrl:q.baseUrl,mascara:q.mascara,protTxt:protTxt[q.protegido||''],protCls:q.protegido?(q.protegido==='bloquear'?'er':'wn'):'mu',card:id===perfil?'pfr on':'pfr',active:id===perfil,notDefault:id!==padraoP,
+edit:()=>this.perfilEditar(id),setDefault:()=>this.perfilPadrao(id),remove:()=>this.perfilRemover(id),removeLabel:fp.rm===id?'Confirmar remoção':'Remover',removeCls:fp.rm===id?'btn dng sm':'btn sm',canRemove:ordemP.length>1};});
+const pf={editavel:!!(LIVE&&LIVE.editavel),naoEditavel:!(LIVE&&LIVE.editavel),arquivo:(LIVE&&LIVE.arquivoConfig)||'config.json',rows:pfRows,
+open:fp.aberto,novo:()=>this.perfilNovo(),titulo:fp.original?'Editar perfil '+fp.original:'Novo perfil',
+nome:fp.nome,instancia:fp.instancia,baseUrl:fp.baseUrl,token:fp.token,
+onNome:this.hf('perfis','nome'),onInst:this.hf('perfis','instancia'),onBase:this.hf('perfis','baseUrl'),onToken:this.hf('perfis','token'),onProt:e=>this.setF('perfis',{protecao:e.target.value}),
+protOpts:[['','Livre (sem proteção)'],['confirmar','Produção: pede confirmação antes de alterar dados'],['bloquear','Produção: só leituras (bloqueia o resto)']].map(a=>({value:a[0],label:a[1],selected:fp.protecao===a[0]})),
+tokenPh:fp.original?'deixe em branco para manter o token atual':'cole o token Bearer',tokenHint:fp.original?'O token atual nunca é mostrado. Preencha só se quiser trocá-lo.':'Fica só no config.json e no servidor local; a página mostra apenas os 4 últimos caracteres.',
+hasErr:!!fp.erro,err:fp.erro,busy:!!fp.salvando,save:()=>this.perfilSalvar(),cancel:()=>this.setF('perfis',{aberto:false,erro:''})};
 // perfil protegido
 const pmode=(PERFIS[perfil]||{}).protegido||'';
 const prot={on:!!pmode,cls:pmode==='bloquear'?'er':'wn',label:pmode==='bloquear'?'Produção · só leitura':'Produção · confirma antes de alterar',
@@ -1597,7 +1675,7 @@ hasRes:!!res0,noRes:!res0&&!loading,res,tabs,tabResumo:s.tab==='resumo',tabJson:
 jsonCopyAll:()=>this.copy(JSON.stringify(res0?res0.body:{},null,2)),jsonCollapse:()=>this.setState({collapsed:allPaths(res0?res0.body:{},'$',{})}),jsonExpand:()=>this.setState({collapsed:{}}),
 nexts,hasNexts:nexts.length>0,
 hasLinks:links.length>0&&eff==='assinatura',links,linksNote:linkSrc?(linkSrc.conviteEnviado?'Convite enviado por e-mail (conviteEnviado = true). Os links abaixo também valem.':'Nenhum e-mail foi enviado (conviteEnviado = false, padrão). Envie cada link ao signatário.'):'',
-dt,pt,md,stv,dl,wiz,al,asv,api,hist,dg,prot,
+dt,pt,md,stv,dl,wiz,al,asv,api,hist,dg,prot,pf,
 logOpen:s.logOpen,logFav:s.logFav,onLogFav:e=>this.setState({logFav:e.target.checked}),logRows:lrows,logEmpty:lrows.length===0&&!sel,hasLogSel:!!sel,showLogList:!sel,ld,
 paletteOpen:s.paletteOpen,paletteQ:s.paletteQ,onPaletteQ:e=>this.setState({paletteQ:e.target.value}),palItems,palEmpty:palItems.length===0,closePalette:()=>this.setState({paletteOpen:false}),stop:e=>{if(e&&e.stopPropagation)e.stopPropagation();},
 toast:s.toast,toastCls:s.toast?'':'off'

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -26,6 +28,14 @@ class AppConfig:
 
 class ConfigError(Exception):
     """Erro ao localizar ou validar o config.json."""
+
+
+class PerfilNaoEncontrado(ConfigError):
+    """O perfil pedido não existe no config.json."""
+
+
+class PerfilJaExiste(ConfigError):
+    """Já existe um perfil com esse nome."""
 
 
 def config_path() -> Path:
@@ -99,3 +109,109 @@ def load_config(path: Path | None = None) -> AppConfig:
     except json.JSONDecodeError as exc:
         raise ConfigError(f"config.json inválido (JSON malformado): {exc}") from exc
     return parse_config(dados)
+
+
+# --------------------------------------------------------------------------
+# Edição dos perfis pela interface (sempre no config.json, que fica fora do git)
+# --------------------------------------------------------------------------
+
+# O nome vai no endereço local (/_proxy/<nome>/...): letras, números, espaço, _ . -
+NOME_PERFIL = re.compile(r"^\w[\w .-]{0,39}$")
+URL_BASE = re.compile(r"^https?://[^\s/?#]+[^\s]*$")
+
+
+def _ler_bruto(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        raise ConfigError(f"Arquivo de configuração não encontrado: {path}")
+    try:
+        dados = json.loads(path.read_text(encoding="utf-8-sig"))
+    except json.JSONDecodeError as exc:
+        raise ConfigError(f"config.json inválido (JSON malformado): {exc}") from exc
+    if not isinstance(dados, dict) or not isinstance(dados.get("perfis"), dict):
+        raise ConfigError('config.json inválido: "perfis" deve ser um objeto.')
+    return dados
+
+
+def _gravar_bruto(path: Path, dados: dict[str, Any]) -> AppConfig:
+    """Valida, guarda uma cópia (config.json.bak) e troca o arquivo de uma vez."""
+    cfg = parse_config(dados)  # nunca grava um arquivo que a própria ferramenta recusaria
+    texto = json.dumps(dados, ensure_ascii=False, indent=2) + "\n"
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(texto, encoding="utf-8")
+    shutil.copyfile(path, path.with_name(path.name + ".bak"))
+    os.replace(tmp, path)
+    return cfg
+
+
+def salvar_perfil(
+    path: Path,
+    *,
+    original: str | None,
+    nome: str,
+    instancia: str,
+    baseUrl: str,
+    token: str,
+    protecao: str,
+) -> AppConfig:
+    """Cria (original=None) ou altera um perfil. Token vazio, na edição, mantém o atual."""
+    nome, instancia, baseUrl, token = (v.strip() for v in (nome, instancia, baseUrl, token))
+    if not NOME_PERFIL.match(nome):
+        raise ConfigError(
+            "Nome inválido: use até 40 letras, números, espaço, ponto, hífen ou sublinhado."
+        )
+    if not instancia:
+        raise ConfigError("Informe a instância.")
+    if not URL_BASE.match(baseUrl):
+        raise ConfigError("O endereço da API deve começar com http:// ou https://.")
+    if protecao not in ("", "confirmar", "bloquear"):
+        raise ConfigError('A proteção deve ser "", "confirmar" ou "bloquear".')
+    bruto = _ler_bruto(path)
+    perfis: dict[str, Any] = bruto["perfis"]
+    if original is not None and original not in perfis:
+        raise PerfilNaoEncontrado(f'O perfil "{original}" não existe.')
+    if nome != original and nome in perfis:
+        raise PerfilJaExiste(f'Já existe um perfil chamado "{nome}".')
+    antigo = perfis.get(original) if original is not None else None
+    if not token:
+        if not isinstance(antigo, dict) or not antigo.get("token"):
+            raise ConfigError("Informe o token.")
+        token = str(antigo["token"])
+    novo: dict[str, Any] = dict(antigo) if isinstance(antigo, dict) else {}
+    novo.update(instancia=instancia, baseUrl=baseUrl, token=token)
+    if protecao:
+        novo["protegido"] = True if protecao == "confirmar" else "bloquear"
+    else:
+        novo.pop("protegido", None)
+    refeito: dict[str, Any] = {}
+    for chave, valor in perfis.items():
+        if chave == original:
+            refeito[nome] = novo
+        else:
+            refeito[chave] = valor
+    if original is None:
+        refeito[nome] = novo
+    elif bruto.get("perfilPadrao") == original:
+        bruto["perfilPadrao"] = nome
+    bruto["perfis"] = refeito
+    return _gravar_bruto(path, bruto)
+
+
+def remover_perfil(path: Path, nome: str) -> AppConfig:
+    bruto = _ler_bruto(path)
+    perfis: dict[str, Any] = bruto["perfis"]
+    if nome not in perfis:
+        raise PerfilNaoEncontrado(f'O perfil "{nome}" não existe.')
+    if len(perfis) == 1:
+        raise ConfigError("Não dá para remover o último perfil.")
+    del perfis[nome]
+    if bruto.get("perfilPadrao") == nome:
+        bruto["perfilPadrao"] = next(iter(perfis))
+    return _gravar_bruto(path, bruto)
+
+
+def definir_padrao(path: Path, nome: str) -> AppConfig:
+    bruto = _ler_bruto(path)
+    if nome not in bruto["perfis"]:
+        raise PerfilNaoEncontrado(f'O perfil "{nome}" não existe.')
+    bruto["perfilPadrao"] = nome
+    return _gravar_bruto(path, bruto)
