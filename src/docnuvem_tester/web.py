@@ -23,6 +23,7 @@ from docnuvem_tester.client import TIMEOUT, mascarar_token
 from docnuvem_tester.config import AppConfig, ConfigError, load_config
 
 PAGINA = Path(__file__).parent / "webapp" / "index.html"
+PORTA_PADRAO = 8765
 
 # Um segmento de caminho não vazio e que não seja só pontos ("." / ".."), para que
 # o ID de uma rota permitida nunca possa subir de diretório na API.
@@ -51,7 +52,7 @@ class Servidor(ThreadingHTTPServer):
     def __init__(self, endereco: tuple[str, int], cfg: AppConfig) -> None:
         super().__init__(endereco, Handler)
         self.cfg = cfg
-        porta = endereco[1]
+        porta = self.server_address[1]  # a real, mesmo quando se pediu a porta 0
         self.hosts_permitidos = {f"127.0.0.1:{porta}", f"localhost:{porta}", f"[::1]:{porta}"}
 
 
@@ -198,7 +199,12 @@ def main(argv: list[str] | None = None) -> None:
         prog="docnuvem-web",
         description="Interface web do DocNuvem API Tester (usa os perfis do config.json).",
     )
-    ap.add_argument("--porta", type=int, default=8765, help="porta local (padrão: 8765)")
+    ap.add_argument(
+        "--porta",
+        type=int,
+        default=None,
+        help="porta local (padrão: 8765; se estiver bloqueada, usa uma porta livre)",
+    )
     ap.add_argument("--nao-abrir", action="store_true", help="não abre o navegador")
     args = ap.parse_args(argv)
 
@@ -207,13 +213,21 @@ def main(argv: list[str] | None = None) -> None:
     except ConfigError as exc:
         print(exc, file=sys.stderr)
         sys.exit(1)
-    try:
-        servidor = Servidor(("127.0.0.1", args.porta), cfg)
-    except OSError as exc:
-        print(f"Não foi possível abrir a porta {args.porta}: {exc}", file=sys.stderr)
+    # O Windows reserva faixas de portas (WinError 10013). Sem --porta explícita,
+    # tenta a padrão e cai para uma porta livre escolhida pelo sistema.
+    tentativas = [args.porta] if args.porta is not None else [PORTA_PADRAO, 0]
+    servidor: Servidor | None = None
+    for porta in tentativas:
+        try:
+            servidor = Servidor(("127.0.0.1", porta), cfg)
+            break
+        except OSError as exc:
+            sufixo = "; tentando uma porta livre..." if porta != tentativas[-1] else ""
+            print(f"Porta {porta or '(automática)'} indisponível ({exc}){sufixo}", file=sys.stderr)
+    if servidor is None:
         sys.exit(1)
 
-    url = f"http://127.0.0.1:{args.porta}/"
+    url = f"http://127.0.0.1:{servidor.server_address[1]}/"
     print(f"Interface web em {url}  (Ctrl+C para sair)")
     print("Perfis: " + ", ".join(cfg.perfis) + ". Os tokens ficam só neste processo.")
     print("ATENÇÃO: as chamadas são REAIS e usam os tokens do config.json.")

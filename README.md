@@ -91,8 +91,9 @@ python -m docnuvem_tester.web
 ```
 
 ou, depois de `pip install -e .`, o comando `docnuvem-web`. Abre o navegador em
-`http://127.0.0.1:8765/` (use `--porta` para mudar e `--nao-abrir` para não abrir
-o navegador).
+`http://127.0.0.1:8765/`. Se essa porta estiver bloqueada (o Windows reserva algumas),
+o servidor escolhe uma livre sozinho e mostra o endereço no terminal. Use `--porta`
+para fixar uma e `--nao-abrir` para não abrir o navegador.
 
 - **As chamadas são reais.** O selo vermelho `API real` fica sempre visível na
   barra superior. Cancelar assinatura e importar arquivo alteram dados de verdade.
