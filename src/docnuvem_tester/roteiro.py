@@ -199,11 +199,11 @@ def rodar_fumaca(cliente: httpx.Client, perfil: PerfilConfig) -> dict[str, Any]:
             {"id": "cancelar", "titulo": "Cancelar a solicitação de teste", "nivel": "pulado",
              "detalhe": "Nada a cancelar: a solicitação não foi criada.", "ms": 0}
         )  # fmt: skip
-    ok = all(p["nivel"] == "ok" for p in passos)
+    sucesso = all(p["nivel"] == "ok" for p in passos)
     return {
         "verificadoEm": int(time.time() * 1000),
         "instancia": perfil.instancia.lower(),
-        "ok": ok,
+        "sucesso": sucesso,
         "passos": passos,
         "documentoId": estado.get("documento"),
         "assinaturaId": estado.get("assinatura"),

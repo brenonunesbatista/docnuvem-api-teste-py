@@ -479,7 +479,7 @@ def test_pdf_de_teste_e_valido() -> None:
 def test_fumaca_tudo_certo(app: App, upstream: Upstream) -> None:
     _fumaca_ok(upstream)
     r = _fumaca(app).json()
-    assert r["ok"] is True
+    assert r["sucesso"] is True
     assert _niveis(r) == dict.fromkeys(
         ("diagnostico", "importar", "assinatura", "status", "download", "cancelar"), "ok"
     )
@@ -505,7 +505,7 @@ def test_fumaca_falha_ao_assinar_pula_o_resto_e_nao_cancela(app: App, upstream: 
     _fumaca_ok(upstream)
     upstream.respostas[ASSINAR] = (400, '{"retorno": "Signatário inválido"}')
     r = _fumaca(app).json()
-    assert r["ok"] is False
+    assert r["sucesso"] is False
     niveis = _niveis(r)
     assert niveis["importar"] == "ok"
     assert niveis["assinatura"] == "erro"
@@ -520,7 +520,7 @@ def test_fumaca_limpa_a_assinatura_mesmo_se_um_passo_falhar(app: App, upstream: 
     _fumaca_ok(upstream)
     upstream.respostas[STATUS] = (500, "")
     r = _fumaca(app).json()
-    assert r["ok"] is False
+    assert r["sucesso"] is False
     niveis = _niveis(r)
     assert niveis["status"] == "erro"
     assert niveis["download"] == "pulado"
@@ -538,7 +538,7 @@ def test_fumaca_alerta_se_a_api_enviou_convite(app: App, upstream: Upstream) -> 
 
 def test_fumaca_com_token_ruim_nao_escreve_nada(app: App, upstream: Upstream) -> None:
     r = _fumaca(app, "ruim").json()
-    assert r["ok"] is False
+    assert r["sucesso"] is False
     assert _niveis(r)["diagnostico"] == "erro"
     assert [c["method"] for c in upstream.recebidas if c["method"] != "GET"] == []
 
@@ -549,7 +549,9 @@ def test_fumaca_exige_confirmacao_e_respeita_a_protecao(app: App, upstream: Upst
     assert sem.status_code == 428
     assert _fumaca(app, "leitura").status_code == 403
     assert not [c for c in upstream.recebidas if c["method"] != "GET"]
-    assert _fumaca(app, "prod").json()["ok"] is True  # protegido-confirmar aceita a confirmação
+    assert (
+        _fumaca(app, "prod").json()["sucesso"] is True
+    )  # protegido-confirmar aceita a confirmação
 
 
 def test_fumaca_perfil_desconhecido(app: App) -> None:
@@ -564,3 +566,13 @@ def test_fumaca_exige_origem_da_pagina(app: App, upstream: Upstream) -> None:
     )
     assert r.status_code == 403
     assert upstream.recebidas == []
+
+
+def test_fumaca_que_falha_ainda_devolve_os_passos(app: App, upstream: Upstream) -> None:
+    """Regressão: o resultado do roteiro não pode se confundir com o sucesso da chamada."""
+    _fumaca_ok(upstream)
+    upstream.respostas[IMPORTAR] = (500, '{"retorno": "erro ao importar"}')
+    r = _fumaca(app).json()
+    assert r["ok"] is True  # a chamada em si funcionou
+    assert r["sucesso"] is False  # o roteiro é que falhou
+    assert "erro ao importar" in next(p for p in r["passos"] if p["id"] == "importar")["detalhe"]
