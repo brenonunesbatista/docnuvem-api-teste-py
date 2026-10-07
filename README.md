@@ -70,6 +70,10 @@ Opções: `--porta N`, `--nao-abrir`, `--sem-historico`, `--dados PASTA`.
   em abas Resumo, JSON e Requisição, com copiar em um clique.
 - **Status da API** no topo e na Início: online, lenta, token recusado, com erro ou fora do ar.
   Usa só leituras e se atualiza a cada minuto.
+- **Baixar pasta**: salva no computador todos os documentos de uma pasta (com subpastas, se
+  quiser, refazendo a árvore). Você escolhe o destino por uma janela ou digitando o caminho;
+  há "só contar" antes de baixar, andamento, cancelamento e um relatório CSV. Nunca sobrescreve
+  arquivos. Só lê da API, então vale até em perfil protegido.
 - **Diagnóstico da instância** (menu Suporte): só com leituras, confere API, token, modelos
   (e quais são geráveis por API), pastas e o módulo de escola, e explica a causa provável de
   cada falha.

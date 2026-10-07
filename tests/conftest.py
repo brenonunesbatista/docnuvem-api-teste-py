@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import json
 import threading
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 import httpx
 import pytest
@@ -25,6 +25,10 @@ class Upstream:
     base: str
     recebidas: list[dict[str, Any]] = field(default_factory=list)
     respostas: dict[tuple[str, str], tuple[int, str]] = field(default_factory=dict)
+    # Respostas calculadas a partir dos parâmetros da consulta (ex.: paginação).
+    dinamicas: dict[tuple[str, str], Callable[[dict[str, list[str]]], tuple[int, str]]] = field(
+        default_factory=dict
+    )
 
 
 @pytest.fixture
@@ -49,7 +53,11 @@ def upstream() -> Iterator[Upstream]:
                     "corpo": corpo,
                 }
             )
-            if (self.command, rota) in estado.respostas:
+            if (self.command, rota) in estado.dinamicas:
+                status, texto = estado.dinamicas[(self.command, rota)](
+                    parse_qs(urlsplit(self.path).query)
+                )
+            elif (self.command, rota) in estado.respostas:
                 status, texto = estado.respostas[(self.command, rota)]
             elif rota == "/v3/api-docs/swagger-config":
                 status, texto = 200, "{}"

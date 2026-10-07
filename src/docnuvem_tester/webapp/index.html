@@ -146,6 +146,7 @@ kbd{font-family:inherit;font-size:11px;border:1px solid var(--ln);border-bottom-
 .tab:hover{color:var(--tx)}
 .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--ln);background:var(--sf2);border-radius:8px;padding:3px 9px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;max-width:100%;word-break:break-all;text-align:left}
 .chip:hover{border-color:var(--ac);background:var(--acs)}
+.chip.id{white-space:nowrap;word-break:normal;min-width:max-content}
 .rows{display:flex;flex-direction:column}
 .rowkv{display:grid;grid-template-columns:minmax(120px,200px) 1fr;gap:12px;padding:8px 0;border-bottom:1px solid var(--ln);align-items:center}
 .rowkv:last-child{border-bottom:0}
@@ -283,6 +284,9 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
 .dglist .mi{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:7px 10px;font-size:13.5px;border-bottom:1px solid var(--ln)}
 .dglist .mi:last-child{border-bottom:0}
 .dglist .mi code{font-size:12.5px;color:var(--mu)}
+.bar{height:10px;border-radius:99px;background:var(--sf2);overflow:hidden}
+.bar>span{display:block;height:100%;background:var(--ac);border-radius:99px;transition:width .3s}
+.bxn{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px}
 .modalb{padding:20px;gap:12px}
 .modalb p{margin:0;font-size:14px}
 .pfr{display:flex;flex-direction:column;gap:6px;border:1px solid var(--ln);border-radius:12px;padding:12px 14px;background:var(--sf)}
@@ -387,6 +391,44 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
               <p class="muted small">Verificado às {{dg.quando}}.</p>
             </sc-if>
           </section>
+        </sc-if>
+
+        <!-- ===== BAIXAR PASTA ===== -->
+        <sc-if value="{{show.baixarPasta}}" hint-placeholder-val="{{ false }}">
+          <section class="card">
+            <h2>O que baixar</h2>
+            <p class="muted small">O servidor local lista os documentos da pasta, pede o link temporário de cada um à API e grava os arquivos no seu computador. Só faz leituras na API, por isso funciona até em perfil protegido.</p>
+            <div class="fields">
+              <div class="field"><label class="lbl" for="bx-dir"><span>Pasta no Docnuvem</span><code class="api">diretorioId</code><span class="req">obrigatório</span></label><input id="bx-dir" type="text" value="{{bx.diretorioId}}" placeholder="12345" autocomplete="off" disabled="{{bx.ocupado}}" onInput="{{bx.onDir}}"><span class="hint">Número da pasta: veja na tela Pastas ou na coluna de pasta dos Documentos.</span></div>
+              <div class="field"><label class="sw"><input type="checkbox" checked="{{bx.subpastas}}" disabled="{{bx.ocupado}}" onChange="{{bx.onSub}}"><span class="track"></span><span class="swt">Incluir as subpastas</span></label></div>
+              <div class="field"><label class="sw"><input type="checkbox" checked="{{bx.estrutura}}" disabled="{{bx.semEstrutura}}" onChange="{{bx.onEst}}"><span class="track"></span><span class="swt">Refazer as subpastas no computador</span></label><span class="hint">Desligado, tudo é salvo na mesma pasta.</span></div>
+            </div>
+          </section>
+          <section class="card">
+            <h2>Onde salvar</h2>
+            <div class="fields">
+              <div class="field"><label class="lbl" for="bx-dest"><span>Pasta do computador</span><span class="req">obrigatório</span></label>
+                <div class="row" style="flex-wrap:nowrap"><input id="bx-dest" type="text" value="{{bx.destino}}" placeholder="C:\Users\voce\Downloads\Docnuvem" autocomplete="off" disabled="{{bx.ocupado}}" onInput="{{bx.onDestino}}" style="flex:1 1 auto"><button class="btn" type="button" onClick="{{bx.escolher}}" disabled="{{bx.escolherOff}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.folder}}"/></svg>{{bx.escolherLabel}}</button></div>
+                <span class="hint">Escolha pela janela ou digite o caminho completo. A pasta é criada se não existir. O último destino fica lembrado.</span></div>
+              <div class="field"><label class="lbl" for="bx-conf"><span>Se o arquivo já existir</span></label><select id="bx-conf" value="{{bx.conflito}}" disabled="{{bx.ocupado}}" onChange="{{bx.onConflito}}"><sc-for list="{{bx.conflitoOpts}}" as="o" hint-placeholder-count="2"><option value="{{o.value}}" selected="{{o.selected}}">{{o.label}}</option></sc-for></select><span class="hint">Nenhum arquivo existente é sobrescrito.</span></div>
+            </div>
+            <sc-if value="{{bx.hasErr}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{bx.err}}</span></div></sc-if>
+            <div class="row"><button class="btn pri" type="button" onClick="{{bx.baixar}}" disabled="{{bx.ocupado}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.download}}"/></svg>Baixar</button><button class="btn" type="button" onClick="{{bx.contar}}" disabled="{{bx.ocupado}}">Só contar os documentos</button><sc-if value="{{bx.ocupado}}" hint-placeholder-val="{{ false }}"><button class="btn dng" type="button" onClick="{{bx.cancelar}}">Cancelar</button></sc-if></div>
+          </section>
+          <sc-if value="{{bx.has}}" hint-placeholder-val="{{ false }}">
+            <section class="card" aria-live="polite">
+              <div class="row"><h2>Andamento</h2><span class="pill {{bx.cls}}">{{bx.label}}</span><span class="grow"></span><sc-if value="{{bx.isFim}}" hint-placeholder-val="{{ false }}"><button class="btn sm" type="button" onClick="{{bx.abrir}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.folder}}"/></svg>Abrir a pasta</button></sc-if></div>
+              <sc-if value="{{bx.ocupado}}" hint-placeholder-val="{{ false }}"><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{bx.pct}}"><span style="{{bx.barStyle}}"></span></div><div class="muted small">{{bx.progresso}}</div></sc-if>
+              <sc-if value="{{bx.hasAtual}}" hint-placeholder-val="{{ false }}"><div class="muted small" style="overflow-wrap:anywhere">Agora: {{bx.atual}}</div></sc-if>
+              <div class="bxn"><strong>{{bx.resumo}}</strong></div>
+              <sc-if value="{{bx.hasEstErro}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{bx.estErro}}</span></div></sc-if>
+              <sc-if value="{{bx.hasAviso}}" hint-placeholder-val="{{ false }}"><div class="muted small">{{bx.aviso}}</div></sc-if>
+              <sc-if value="{{bx.hasAmostra}}" hint-placeholder-val="{{ false }}"><div class="dglist"><sc-for list="{{bx.amostra}}" as="a" hint-placeholder-count="3"><div class="mi">{{a.n}}</div></sc-for></div><div class="muted small">Primeiros documentos encontrados. Clique em “Baixar” para salvar todos.</div></sc-if>
+              <sc-if value="{{bx.isFim}}" hint-placeholder-val="{{ false }}"><div class="muted small" style="overflow-wrap:anywhere">Salvo em {{bx.destinoAtual}}</div></sc-if>
+              <sc-if value="{{bx.hasRel}}" hint-placeholder-val="{{ false }}"><div class="muted small" style="overflow-wrap:anywhere">Relatório (CSV com o resultado de cada documento): {{bx.relatorio}}</div></sc-if>
+              <sc-if value="{{bx.hasFalhas}}" hint-placeholder-val="{{ false }}"><div class="row"><strong>{{bx.nFalhas}} com falha</strong><span class="grow"></span><button class="btn sm" type="button" onClick="{{bx.copyFalhas}}">Copiar lista</button></div><div class="dglist"><sc-for list="{{bx.falhas}}" as="f" hint-placeholder-count="2"><div class="mi"><strong>{{f.nome}}</strong><code>{{f.id}}</code><span class="pill er">{{f.erro}}</span></div></sc-for></div></sc-if>
+            </section>
+          </sc-if>
         </sc-if>
 
         <!-- ===== PERFIS ===== -->
@@ -606,7 +648,7 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
                 <div class="tw"><table>
                   <thead><tr><sc-for list="{{dt.cols}}" as="c" hint-placeholder-count="5"><th aria-sort="{{c.aria}}"><button class="th" type="button" onClick="{{c.sort}}">{{c.label}}<span aria-hidden="true">{{c.arrow}}</span></button></th></sc-for><th class="plain">Ações</th></tr></thead>
                   <tbody><sc-for list="{{dt.rows}}" as="r" hint-placeholder-count="3"><tr>
-                    <td><button class="chip" type="button" onClick="{{r.copyId}}" title="Copiar documentoId">{{r.documentoId}}</button></td>
+                    <td><button class="chip id" type="button" onClick="{{r.copyId}}" title="Copiar documentoId">{{r.documentoId}}</button></td>
                     <td>{{r.nomeArquivo}}<div class="muted small">{{r.refTxt}}</div></td>
                     <td><span class="pill {{r.stCls}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{r.stIcon}}"/></svg>{{r.stLabel}}</span></td>
                     <td>{{r.criado}}</td><td>{{r.assin}}</td>
@@ -628,7 +670,7 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
                 <div class="tw"><table>
                   <thead><tr><sc-for list="{{pt.cols}}" as="c" hint-placeholder-count="3"><th aria-sort="{{c.aria}}"><button class="th" type="button" onClick="{{c.sort}}">{{c.label}}<span aria-hidden="true">{{c.arrow}}</span></button></th></sc-for><th class="plain">Ações</th></tr></thead>
                   <tbody><sc-for list="{{pt.rows}}" as="r" hint-placeholder-count="3"><tr>
-                    <td><button class="chip" type="button" onClick="{{r.copyId}}" title="Copiar diretorioId">{{r.diretorioId}}</button></td>
+                    <td><button class="chip id" type="button" onClick="{{r.copyId}}" title="Copiar diretorioId">{{r.diretorioId}}</button></td>
                     <td>{{r.nome}}</td>
                     <td><button class="chip" type="button" onClick="{{r.copyPath}}" title="Copiar caminho completo">{{r.caminho}}</button></td>
                     <td><button class="btn sm" type="button" onClick="{{r.use}}">Usar na listagem de documentos</button></td>
@@ -868,10 +910,11 @@ status:{label:'Status do documento',title:'Status do documento',method:'GET',pat
 download:{label:'Download',title:'Download',method:'GET',path:'/api/documento/{id}/download',sub:'Gera um link temporário para baixar o arquivo.',d:ICON.download,grp:''},
 alunoSolicitar:{label:'Solicitar documentos',title:'Solicitar documentos do aluno',method:'POST',path:'/api/solicitacaoAluno/solicitarEnvioDocumentos',sub:'Cria o contato e a pasta do aluno, abre a solicitação de envio de documentos e envia o link por e-mail.',d:ICON.cap,grp:'Escola'},
 alunoStatus:{label:'Status do aluno',title:'Status do aluno',method:'GET',path:'/api/solicitacaoAluno/consultarStatus',sub:'Solicitações de envio de documentos do aluno e o que já foi recebido.',d:ICON.user,grp:''},
+baixarPasta:{label:'Baixar pasta',title:'Baixar pasta',sub:'Salva no computador todos os documentos de uma pasta (e, se quiser, das subpastas). Só lê da API: nada é alterado.',d:ICON.download,grp:''},
 diagnostico:{label:'Diagnóstico',title:'Diagnóstico da instância',sub:'Confere, só com leituras, se o perfil está pronto para uso e mostra a causa provável de cada problema.',d:ICON.pulse,grp:'Suporte'},
 perfis:{label:'Perfis',title:'Perfis',sub:'Crie, edite e remova os perfis do config.json: nome, instância, endereço, token e proteção.',d:ICON.gear,grp:''}
 };
-const ORDER=['inicio','fluxo','importar','envio','modelos','template','assinatura','cancelar','documentos','pastas','status','download','alunoSolicitar','alunoStatus','diagnostico','perfis'];
+const ORDER=['inicio','fluxo','importar','envio','modelos','template','assinatura','cancelar','documentos','pastas','status','download','baixarPasta','alunoSolicitar','alunoStatus','diagnostico','perfis'];
 const AUTO=['documentos','pastas','modelos'];
 let LIVE=null;const FILEBLOB=new WeakMap();
 const BASE='https://api.docnuvem.example';
@@ -988,8 +1031,9 @@ documentos:{diretorioId:'',incluirSubpastas:false,status:'',dataInicio:'',dataFi
 pastas:{diretorioPaiId:'',nome:'',caminho:'',pagina:'0',tamanho:'50'},
 status:{documentoId:''},download:{documentoId:''},modelos:{},
 alunoSolicitar:{codigoMatricula:'',nome:'',cpf:'',email:'',telefone:'',tipoSolicitacao:'1',emailResponsavel:'',confirmEmail:false},alunoStatus:{codigoMatricula:''},
+baixar:{diretorioId:'',subpastas:true,estrutura:true,conflito:'renomear',destino:''},
 perfis:{aberto:false,original:'',nome:'',instancia:'',baseUrl:'',token:'',protecao:'',erro:'',salvando:false,rm:''}},
-results:{},loading:{},lists:{},diag:{},protPend:null,tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
+results:{},loading:{},lists:{},diag:{},bx:{id:'',snap:null,erro:'',escolhendo:false},protPend:null,tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
 paletteOpen:false,paletteQ:'',toast:'',wizStep:0,lastMat:'',openSol:null,navMin:false,
 lastDoc:{},lastAss:{},
 sort:{documentos:{k:'criadoEm',d:-1},pastas:{k:'caminho',d:1}},openModelo:'',dragging:false,newSg:sg};
@@ -1009,12 +1053,45 @@ aplicarPerfis(j,o){
 o=o||{};LIVE=j;PERFIS={};const st=this.state,lastDoc={},lastAss={};
 j.perfis.forEach(p=>{PERFIS[p.id]={mascara:p.tokenMascarado,baseUrl:p.baseUrl,instancia:p.instancia,protegido:p.protegido||''};lastDoc[p.id]=(st.lastDoc&&st.lastDoc[p.id])||null;lastAss[p.id]=(st.lastAss&&st.lastAss[p.id])||null;});
 const padrao=PERFIS[j.padrao]?j.padrao:j.perfis[0].id;
-if(o.inicial){this.setState({boot:'ok',perfil:padrao,lastDoc,lastAss,results:{},lists:{},hist:{ligado:!!j.historico,arquivo:j.arquivoHistorico||'',confirmar:false}});this.checarApi(true);return;}
+if(o.inicial){let dest=j.pastaDownloads||'';try{dest=localStorage.getItem('docnuvem-destino')||dest;}catch(e){}
+this.setState({forms:Object.assign({},st.forms,{baixar:Object.assign({},st.forms.baixar,{destino:dest})}),boot:'ok',perfil:padrao,lastDoc,lastAss,results:{},lists:{},hist:{ligado:!!j.historico,arquivo:j.arquivoHistorico||'',confirmar:false}});this.checarApi(true);return;}
 let perfil=st.perfil;
 if(!PERFIS[perfil])perfil=(o.renomeado&&PERFIS[o.renomeado])?o.renomeado:padrao;
 this.setState({perfil,lastDoc,lastAss,results:{},lists:{},apiSt:{},diag:{}});
 setTimeout(()=>{const sc=this.eff();if(AUTO.indexOf(sc)>=0)this.run(sc);if(sc==='diagnostico')this.diagnosticar();this.checarApi(true);},0);
 }
+bxIniciar(ensaio){
+const s=this.state,f=s.forms.baixar;
+if(s.bx.snap&&(s.bx.snap.estado==='listando'||s.bx.snap.estado==='baixando'))return;
+this.setState({bx:{id:'',snap:null,erro:'',escolhendo:false}});
+this.cfgCall('/_baixar/iniciar','POST',{perfil:s.perfil,diretorioId:f.diretorioId,subpastas:!!f.subpastas,estrutura:!!f.estrutura,conflito:f.conflito,destino:f.destino,ensaio:!!ensaio}).then(r=>{
+if(!r.ok){this.setState({bx:{id:'',snap:null,erro:r.erro||'Não foi possível iniciar.',escolhendo:false}});return;}
+if(!ensaio){try{localStorage.setItem('docnuvem-destino',f.destino);}catch(e){}}
+this.setState({bx:{id:r.id,snap:{estado:'listando',total:0,feitos:0,baixados:0,pulados:0,nFalhas:0,falhas:[],bytes:0,ensaio:!!ensaio,destino:f.destino},erro:'',escolhendo:false}});
+this.bxPoll(r.id);
+});
+}
+bxPoll(id){
+clearInterval(this._bxp);
+const tick=()=>fetch('/_baixar/'+encodeURIComponent(id),{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error('HTTP '+r.status))).then(sn=>{
+if(this.state.bx.id!==id){clearInterval(this._bxp);return;}
+this.setState({bx:Object.assign({},this.state.bx,{snap:sn})});
+if(sn.estado!=='listando'&&sn.estado!=='baixando')clearInterval(this._bxp);
+}).catch(e=>{clearInterval(this._bxp);this.setState({bx:Object.assign({},this.state.bx,{erro:'Perdi o contato com o servidor local: '+e.message})});});
+this._bxp=setInterval(tick,700);tick();
+}
+bxCancelar(){const id=this.state.bx.id;if(id)this.cfgCall('/_baixar/'+encodeURIComponent(id)+'/cancelar','POST',{});}
+bxEscolher(){
+if(this.state.bx.escolhendo)return;
+this.setState({bx:Object.assign({},this.state.bx,{escolhendo:true,erro:''})});
+this.cfgCall('/_pasta/escolher','POST',{inicial:this.state.forms.baixar.destino}).then(r=>{
+const bx=Object.assign({},this.state.bx,{escolhendo:false});
+if(!r.ok){bx.erro=r.erro||'Não foi possível abrir a janela.';this.setState({bx});return;}
+this.setState({bx});
+if(r.caminho)this.setF('baixar',{destino:r.caminho});
+});
+}
+bxAbrir(){const id=this.state.bx.id;if(id)this.cfgCall('/_pasta/abrir','POST',{id}).then(r=>{if(!r.ok)this.aviso(r.erro||'Não consegui abrir a pasta.');});}
 aviso(m){this.setState({toast:m});clearTimeout(this._tt);this._tt=setTimeout(()=>this.setState({toast:''}),3200);}
 cfgCall(url,method,body){
 return fetch(url,{method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined}).then(r=>r.json().catch(()=>({ok:false,erro:'Resposta inesperada do servidor local (HTTP '+r.status+').'}))).catch(e=>({ok:false,erro:'O servidor local (docnuvem-web) não respondeu: '+e.message}));
@@ -1038,7 +1115,7 @@ if(f.rm!==id){this.setF('perfis',{rm:id});clearTimeout(this._rm);this._rm=setTim
 this.setF('perfis',{rm:''});
 this.cfgCall('/_config/perfil/'+encodeURIComponent(id),'DELETE').then(r=>{if(!r.ok){this.aviso(r.erro||'Não foi possível remover.');return;}this.recarregarPerfis({}).then(()=>this.aviso('Perfil "'+id+'" removido do config.json.'));});
 }
-componentWillUnmount(){clearInterval(this._iv);clearInterval(this._api);}
+componentWillUnmount(){clearInterval(this._iv);clearInterval(this._api);clearInterval(this._bxp);}
 
 eff(){const s=this.state;return s.screen==='fluxo'?['importar','assinatura','resultado'][s.wizStep]:s.screen;}
 setF(sc,patch){const s=this.state;this.setState({forms:Object.assign({},s.forms,{[sc]:Object.assign({},s.forms[sc],patch)})});}
@@ -1124,7 +1201,7 @@ if(t&&(t.type==='file'||t.type==='checkbox'||t.type==='search'))return;
 if(s.logOpen)return;
 e.preventDefault();this.send();}
 };
-send(){const sc=this.eff();if(sc==='inicio'||sc==='resultado'||sc==='diagnostico'||sc==='perfis')return;if(this.state.loading[sc])return;const p=this.plan(sc);if(p.ready)this.run(sc);}
+send(){const sc=this.eff();if(sc==='inicio'||sc==='resultado'||sc==='diagnostico'||sc==='perfis'||sc==='baixarPasta')return;if(this.state.loading[sc])return;const p=this.plan(sc);if(p.ready)this.run(sc);}
 
 plan(sc){
 const s=this.state,f=s.forms[sc]||{},perfil=s.perfil,v=s.validar;
@@ -1354,7 +1431,7 @@ const res0=s.results[eff];
 const loading=!!s.loading[eff];
 const show={};ORDER.concat(['resultado']).forEach(i=>{show[i]=eff===i;});
 show.fluxo=s.screen==='fluxo';
-show.form=eff!=='inicio'&&eff!=='resultado'&&eff!=='diagnostico'&&eff!=='perfis';
+show.form=eff!=='inicio'&&eff!=='resultado'&&eff!=='diagnostico'&&eff!=='perfis'&&eff!=='baixarPasta';
 const T=(sc,k,o)=>this.fld(sc,k,o);
 const last=s.lastDoc[perfil],lastA=s.lastAss[perfil];
 const docLast=(sc)=>({useLast:true,lastLabel:last?'Usar último documentoId ('+last+')':'Nenhum documentoId recente',lastDisabled:!last,onLast:()=>this.setF(sc,{documentoId:String(last)})});
@@ -1602,6 +1679,34 @@ const dgk=dgs.erroLocal?['er',ICON.alert,'Servidor local sem resposta']:dgs.busy
 const dg={cls:dgk[0],icon:dgk[1],label:dgk[2],busy:!!dgs.busy,notBusy:!dgs.busy,empty:!dgs.itens&&!dgs.busy&&!dgs.erroLocal,hasErr:!!dgs.erroLocal,err:dgs.erroLocal||'',has:!!dgs.itens,items:dgItens,
 quando:dgs.verificadoEm?fmtT(dgs.verificadoEm):'',run:()=>this.diagnosticar(),
 copy:()=>this.copy(['DIAGNÓSTICO DA INSTÂNCIA · Docnuvem API Tester','Perfil: '+perfil+' (instância: '+(dgs.instancia||'?')+')','Servidor: '+(dgs.baseUrl||'?'),'Quando: '+(dgs.verificadoEm?new Date(dgs.verificadoEm).toLocaleString('pt-BR'):'?'),'Geral: '+dgk[2],''].concat((dgs.itens||[]).map(it=>'['+(DGI[it.nivel]||DGI.info)[2]+'] '+it.titulo+': '+it.detalhe+(it.lista?it.lista.map(m=>'\n    - '+m.nome+' ('+m.codigo+')'+(m.geravel?' [gerável por API]':'')).join(''):'')+(it.causa?'\n    Causa provável: '+it.causa:''))).join('\n'),'Diagnóstico copiado.')};
+// baixar pasta
+const fb=s.forms.baixar,bxs=s.bx.snap;
+const bxAtivo=!!bxs&&(bxs.estado==='listando'||bxs.estado==='baixando');
+const bxTxt={listando:'Listando os documentos…',baixando:'Baixando…',concluido:bxs&&bxs.ensaio?'Contagem concluída':'Concluído',cancelado:'Cancelado',erro:'Erro'};
+const bxCls={listando:'mu',baixando:'mu',concluido:'ok',cancelado:'wn',erro:'er'};
+const bx={
+diretorioId:fb.diretorioId,onDir:this.hf('baixar','diretorioId'),
+subpastas:!!fb.subpastas,onSub:this.hf('baixar','subpastas'),
+estrutura:!!fb.estrutura,onEst:this.hf('baixar','estrutura'),semEstrutura:!fb.subpastas,
+destino:fb.destino,onDestino:this.hf('baixar','destino'),
+conflitoOpts:[['renomear','Manter os dois (acrescenta o número ao nome novo)'],['pular','Pular o arquivo que já existe']].map(a=>({value:a[0],label:a[1],selected:fb.conflito===a[0]})),onConflito:e=>this.setF('baixar',{conflito:e.target.value}),
+escolher:()=>this.bxEscolher(),escolherLabel:s.bx.escolhendo?'Aguardando a janela…':'Escolher pasta…',escolherOff:s.bx.escolhendo||bxAtivo,
+contar:()=>this.bxIniciar(true),baixar:()=>this.bxIniciar(false),parado:!bxAtivo,ocupado:bxAtivo,
+hasErr:!!s.bx.erro,err:s.bx.erro,
+has:!!bxs,cls:bxs?(bxCls[bxs.estado]||'mu'):'mu',label:bxs?(bxTxt[bxs.estado]||bxs.estado):'',
+pct:bxs&&bxs.total?Math.min(100,Math.round(bxs.feitos*100/bxs.total)):0,
+barStyle:'width:'+(bxs&&bxs.total?Math.min(100,Math.round(bxs.feitos*100/bxs.total)):0)+'%',
+cancelar:()=>this.bxCancelar(),abrir:()=>this.bxAbrir(),
+isEnsaio:!!bxs&&!!bxs.ensaio&&!bxAtivo&&bxs.estado==='concluido',
+isFim:!!bxs&&!bxs.ensaio&&!bxAtivo&&(bxs.estado==='concluido'||bxs.estado==='cancelado'),
+hasAviso:!!bxs&&!!bxs.aviso,aviso:bxs?bxs.aviso:'',hasEstErro:!!bxs&&!!bxs.erro,estErro:bxs?bxs.erro:'',
+hasAtual:!!bxs&&!!bxs.atual,atual:bxs?bxs.atual:'',
+resumo:bxs?(bxs.ensaio?(bxs.total+' documento(s) em '+bxs.pastas+' pasta(s). Nada foi baixado.'):(bxs.baixados+' baixado(s) · '+bxs.pulados+' pulado(s) · '+bxs.nFalhas+' com falha · '+fmtSize(bxs.bytes))):'',
+progresso:bxs?(bxs.feitos+' de '+bxs.total):'',
+destinoAtual:bxs?bxs.destino:'',hasRel:!!bxs&&!!bxs.relatorio,relatorio:bxs?bxs.relatorio:'',
+amostra:(bxs&&bxs.amostra||[]).map(n=>({n})),hasAmostra:!!bxs&&!!(bxs.amostra||[]).length&&!!bxs.ensaio,
+falhas:(bxs&&bxs.falhas||[]).map(x=>({id:x.documentoId,nome:x.nome||'(sem nome)',erro:x.erro})),hasFalhas:!!bxs&&bxs.nFalhas>0,nFalhas:bxs?bxs.nFalhas:0,
+copyFalhas:()=>this.copy((bxs?bxs.falhas:[]).map(x=>x.documentoId+' · '+x.nome+' · '+x.erro).join('\n'),'Falhas copiadas.')};
 // gerenciador de perfis
 const fp=s.forms.perfis,ordemP=Object.keys(PERFIS),padraoP=LIVE?LIVE.padrao:'';
 const protTxt={'':'Livre',confirmar:'Produção · confirma',bloquear:'Produção · só leitura'};
@@ -1680,7 +1785,7 @@ hasRes:!!res0,noRes:!res0&&!loading,res,tabs,tabResumo:s.tab==='resumo',tabJson:
 jsonCopyAll:()=>this.copy(JSON.stringify(res0?res0.body:{},null,2)),jsonCollapse:()=>this.setState({collapsed:allPaths(res0?res0.body:{},'$',{})}),jsonExpand:()=>this.setState({collapsed:{}}),
 nexts,hasNexts:nexts.length>0,
 hasLinks:links.length>0&&eff==='assinatura',links,linksNote:linkSrc?(linkSrc.conviteEnviado?'Convite enviado por e-mail (conviteEnviado = true). Os links abaixo também valem.':'Nenhum e-mail foi enviado (conviteEnviado = false, padrão). Envie cada link ao signatário.'):'',
-dt,pt,md,stv,dl,wiz,al,asv,api,hist,dg,prot,pf,
+dt,pt,md,stv,dl,wiz,al,asv,api,hist,dg,prot,pf,bx,
 logOpen:s.logOpen,logFav:s.logFav,onLogFav:e=>this.setState({logFav:e.target.checked}),logRows:lrows,logEmpty:lrows.length===0&&!sel,hasLogSel:!!sel,showLogList:!sel,ld,
 paletteOpen:s.paletteOpen,paletteQ:s.paletteQ,onPaletteQ:e=>this.setState({paletteQ:e.target.value}),palItems,palEmpty:palItems.length===0,closePalette:()=>this.setState({paletteOpen:false}),stop:e=>{if(e&&e.stopPropagation)e.stopPropagation();},
 toast:s.toast,toastCls:s.toast?'':'off'

@@ -16,6 +16,7 @@ import io
 import json
 import os
 import re
+import subprocess
 import sys
 import threading
 import time
@@ -41,6 +42,7 @@ from docnuvem_tester.config import (
     remover_perfil,
     salvar_perfil,
 )
+from docnuvem_tester.download import ErroDownload, GerenciadorDownload, validar_destino
 
 PASTA_WEB = Path(__file__).parent / "webapp"
 PAGINA = PASTA_WEB / "index.html"
@@ -105,6 +107,49 @@ def mascarar_token(token: str) -> str:
     if not token:
         return "Bearer ***"
     return f"Bearer ***...{token[-4:] if len(token) >= 4 else token}"
+
+
+def pasta_downloads_padrao() -> Path:
+    """Sugestão de destino para o download de pastas."""
+    return Path.home() / "Downloads" / "Docnuvem"
+
+
+def escolher_pasta(inicial: str = "") -> str | None:
+    """Abre a janela do Windows para escolher uma pasta (no computador onde o servidor roda).
+
+    Devolve None se o usuário cancelar. Levanta ErroDownload se a janela não puder abrir.
+    """
+    try:
+        import tkinter
+        from tkinter import filedialog
+
+        raiz = tkinter.Tk()
+    except Exception as exc:  # noqa: BLE001 - sem tkinter ou sem tela
+        raise ErroDownload(
+            f"A janela de escolha de pasta não abriu ({exc}). Digite o caminho."
+        ) from exc
+    try:
+        raiz.withdraw()
+        raiz.attributes("-topmost", True)
+        pasta = filedialog.askdirectory(
+            initialdir=inicial if inicial and Path(inicial).is_dir() else None,
+            title="Escolha a pasta onde salvar os documentos",
+            mustexist=False,
+            parent=raiz,
+        )
+    finally:
+        raiz.destroy()
+    return str(Path(pasta)) if pasta else None
+
+
+def abrir_pasta(caminho: Path) -> None:
+    """Abre a pasta no Explorer (ou equivalente)."""
+    if sys.platform == "win32":
+        os.startfile(caminho)  # type: ignore[attr-defined]  # noqa: S606
+    elif sys.platform == "darwin":
+        subprocess.Popen(["open", str(caminho)])  # noqa: S603, S607
+    else:
+        subprocess.Popen(["xdg-open", str(caminho)])  # noqa: S603, S607
 
 
 def dados_dir() -> Path:
@@ -550,6 +595,7 @@ class Servidor(ThreadingHTTPServer):
         self.cfg = cfg
         self.arquivo_config = arquivo_config  # None: a página não pode editar os perfis
         self._cfg_lock = threading.Lock()
+        self.downloads = GerenciadorDownload()
         self.historico = historico
         self.cliente = cliente or httpx.Client(timeout=TIMEOUT)
         self._cliente_proprio = cliente is None
@@ -666,6 +712,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._perfis()
         if caminho.startswith("/_status/"):
             return self._status(unquote(caminho[len("/_status/") :]), parse_qs(partes.query))
+        if caminho.startswith("/_baixar/"):
+            return self._bx_estado(unquote(caminho[len("/_baixar/") :]))
         if caminho.startswith("/_diagnostico/"):
             return self._diagnostico(unquote(caminho[len("/_diagnostico/") :]))
         if caminho == "/_historico":
@@ -682,6 +730,14 @@ class Handler(BaseHTTPRequestHandler):
             return self._hist_gravar()
         if caminho == "/_historico/favorito":
             return self._hist_favorito()
+        if caminho == "/_baixar/iniciar":
+            return self._bx_iniciar()
+        if caminho.startswith("/_baixar/") and caminho.endswith("/cancelar"):
+            return self._bx_cancelar(unquote(caminho[len("/_baixar/") : -len("/cancelar")]))
+        if caminho == "/_pasta/escolher":
+            return self._pasta_escolher()
+        if caminho == "/_pasta/abrir":
+            return self._pasta_abrir()
         if caminho == "/_config/perfil":
             return self._cfg_salvar()
         if caminho == "/_config/padrao":
@@ -722,10 +778,89 @@ class Handler(BaseHTTPRequestHandler):
                 "arquivoHistorico": (
                     str(self.server.historico.arquivo) if self.server.historico else ""
                 ),
+                "pastaDownloads": str(pasta_downloads_padrao()),
                 "editavel": self.server.arquivo_config is not None,
                 "arquivoConfig": str(self.server.arquivo_config or ""),
             }
         )
+
+    # --- download de pasta ------------------------------------------------
+    def _bx_iniciar(self) -> None:
+        dado = self._corpo_json()
+        if dado is None:
+            return
+        nome = str(dado.get("perfil", ""))
+        perfil = self.server.cfg.perfis.get(nome)
+        if perfil is None:
+            return self._json({"ok": False, "erro": "Perfil desconhecido."}, 404)
+        try:
+            diretorio_id = int(str(dado.get("diretorioId", "")).strip())
+            if diretorio_id <= 0:
+                raise ValueError
+        except ValueError:
+            return self._json({"ok": False, "erro": "Informe o diretorioId (um número)."}, 400)
+        conflito = str(dado.get("conflito", "renomear"))
+        if conflito not in ("renomear", "pular"):
+            return self._json({"ok": False, "erro": "Conflito deve ser renomear ou pular."}, 400)
+        ensaio = dado.get("ensaio") is True
+        try:
+            texto = str(dado.get("destino", ""))
+            destino = Path(texto.strip() or ".") if ensaio else validar_destino(texto)
+            t = self.server.downloads.iniciar(
+                self.server.cliente,
+                nome,
+                perfil,
+                diretorio_id=diretorio_id,
+                destino=destino,
+                subpastas=dado.get("subpastas") is True,
+                estrutura=dado.get("estrutura") is True,
+                conflito=conflito,
+                ensaio=ensaio,
+            )
+        except ErroDownload as exc:
+            return self._json(
+                {"ok": False, "erro": str(exc)}, 409 if "andamento" in str(exc) else 400
+            )
+        self._json({"ok": True, "id": t.id})
+
+    def _bx_estado(self, id_: str) -> None:
+        t = self.server.downloads.obter(id_)
+        if t is None:
+            return self._texto(404, "Download desconhecido.")
+        self._json(t.snapshot())
+
+    def _bx_cancelar(self, id_: str) -> None:
+        if not self._origem_ok():
+            return self._texto(403, "Origem não permitida.")
+        t = self.server.downloads.obter(id_)
+        if t is None:
+            return self._texto(404, "Download desconhecido.")
+        t.cancelar.set()
+        self._json({"ok": True})
+
+    def _pasta_escolher(self) -> None:
+        dado = self._corpo_json()
+        if dado is None:
+            return
+        try:
+            pasta = escolher_pasta(str(dado.get("inicial", "")))
+        except ErroDownload as exc:
+            return self._json({"ok": False, "erro": str(exc)}, 501)
+        self._json({"ok": True, "caminho": pasta or "", "cancelado": pasta is None})
+
+    def _pasta_abrir(self) -> None:
+        """Só abre a pasta de destino de um download feito por este servidor."""
+        dado = self._corpo_json()
+        if dado is None:
+            return
+        t = self.server.downloads.obter(str(dado.get("id", "")))
+        if t is None or t.ensaio or not t.destino.is_dir():
+            return self._json({"ok": False, "erro": "Pasta não encontrada."}, 404)
+        try:
+            abrir_pasta(t.destino)
+        except OSError as exc:
+            return self._json({"ok": False, "erro": f"Não consegui abrir a pasta: {exc}"}, 500)
+        self._json({"ok": True})
 
     # --- edição dos perfis (grava no config.json, que fica fora do git) ----
     def _cfg_aplicar(self, acao: Callable[[Path], AppConfig]) -> None:
@@ -741,7 +876,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"ok": False, "erro": f"Não foi possível gravar: {exc}"}, 500)
         self._json({"ok": True})
 
-    def _cfg_corpo(self) -> dict[str, Any] | None:
+    def _corpo_json(self) -> dict[str, Any] | None:
         if not self._origem_ok():
             self._texto(403, "Origem não permitida.")
             return None
@@ -759,7 +894,7 @@ class Handler(BaseHTTPRequestHandler):
         return dado
 
     def _cfg_salvar(self) -> None:
-        dado = self._cfg_corpo()
+        dado = self._corpo_json()
         if dado is None:
             return
         campos = ("nome", "instancia", "baseUrl", "token", "protecao")
@@ -780,7 +915,7 @@ class Handler(BaseHTTPRequestHandler):
         )
 
     def _cfg_padrao(self) -> None:
-        dado = self._cfg_corpo()
+        dado = self._corpo_json()
         if dado is None:
             return
         nome = str(dado.get("nome", ""))
