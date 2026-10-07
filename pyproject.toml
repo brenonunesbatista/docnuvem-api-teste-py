@@ -22,12 +22,13 @@ dev = [
 
 [project.scripts]
 docnuvem-tester = "docnuvem_tester.app:main"
+docnuvem-web = "docnuvem_tester.web:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-docnuvem_tester = ["styles/*.tcss"]
+docnuvem_tester = ["styles/*.tcss", "webapp/*.html"]
 
 [tool.mypy]
 python_version = "3.11"

@@ -78,6 +78,29 @@ ou
 python -m docnuvem_tester
 ```
 
+### Interface web
+
+Além da TUI, há uma interface web com o mesmo visual de terminal DOS (painéis,
+log, JSON colapsável, validação por campo). Ela usa os **mesmos perfis do
+`config.json`**:
+
+```bash
+python -m docnuvem_tester.web
+```
+
+ou, depois de `pip install -e .`, o comando `docnuvem-web`. Abre o navegador em
+`http://127.0.0.1:8765/` (use `--porta` para mudar e `--nao-abrir` para não abrir
+o navegador).
+
+- **As chamadas são reais.** A bandeira vermelha `⚠ API REAL` fica sempre visível
+  na barra de menu. Cancelar assinatura e importar arquivo alteram dados de verdade.
+- **O token nunca vai para o navegador.** O servidor local injeta o `Authorization`
+  e o parâmetro `instancia` (minúsculo); a página só recebe o token mascarado.
+- **Só aceita a própria página**, em `127.0.0.1`, e só repassa os 9 endpoints da
+  ferramenta (não é um proxy aberto).
+- Abrindo `index.html` direto no navegador (sem o servidor), a página funciona em
+  modo **simulado**, com dados fictícios e sem rede.
+
 ### Modo debug
 
 Console de logs do Textual (em outro terminal, antes de rodar o app):
@@ -166,6 +189,8 @@ src/docnuvem_tester/
   client.py                 wrapper httpx.AsyncClient + log de chamadas
   models.py                  schemas pydantic de request/response
   formatting.py                helpers de formatação (json, valor-ou-traço)
+  web.py                         servidor local da interface web (docnuvem-web)
+  webapp/index.html               a página da interface web (arquivo único)
   screens/                      uma tela por endpoint + banner, menu, log etc.
   widgets/                       menu bar, listas dinâmicas, diálogos, resultado
   theme.py + styles/app.tcss       tema escuro e layout

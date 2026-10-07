@@ -1,0 +1,1484 @@
+<title>DocNuvem API Tester</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: barra de menu no topo, [menu lateral | formulário + resultado], dock de log, barra de teclas de função. Tema único, azul DOS. */
+:root{
+  --bg:#0000aa; --bg2:#000088; --bg3:#00005c; --ink:#ffffff; --dim:#b9b9f0;
+  --yel:#ffff55; --cyn:#55ffff; --grn:#55ff55; --mag:#ff88ff; --red:#ff8585; --redbg:#aa0000; --redline:#ff5555;
+  --gray:#aaaaaa; --teal:#00aaaa; --blk:#000000;
+  --mono:'IBM Plex Mono',Consolas,'Cascadia Mono','Courier New',monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--mono);overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+kbd{font:inherit;font-size:11px;background:#000;color:var(--gray);padding:0 5px;margin-left:8px;border:1px solid #555}
+code{color:var(--cyn)}
+.dim{color:var(--dim)}
+h1,h2,h3{margin:0;font-weight:700}
+[hidden]{display:none!important}
+:focus-visible{outline:2px solid var(--yel);outline-offset:2px}
+
+#app{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr) auto auto}
+
+/* barra de menu */
+.menubar{background:var(--gray);color:#000;display:flex;align-items:center;gap:2px;padding:0 10px;position:relative;z-index:30;flex-wrap:wrap}
+.menubar .brand{font-weight:700;padding:2px 10px 2px 6px;border-right:2px solid #000;margin-right:6px;white-space:nowrap}
+.mi{position:relative}
+.mb{background:transparent;border:0;color:#000;padding:2px 10px;cursor:pointer}
+.mb:hover,.mb.on{background:#00aa00;color:#000}
+.mb:focus-visible{outline-color:#000}
+.dd{position:absolute;top:100%;left:0;min-width:270px;background:var(--gray);color:#000;border:2px solid #000;box-shadow:6px 6px 0 #000;padding:2px 0}
+.dd button{display:flex;width:100%;justify-content:space-between;gap:20px;background:transparent;border:0;text-align:left;padding:2px 12px;color:#000;cursor:pointer;white-space:nowrap}
+.dd button:hover,.dd button:focus-visible{background:#00aa00;outline:0}
+.dd hr{border:0;border-top:1px solid #555;margin:3px 0}
+.dd .k{color:#333}
+.sp{flex:1}
+.chip-prof{background:#000;color:var(--yel);border:0;padding:1px 10px;cursor:pointer;display:flex;gap:10px;align-items:center;margin:2px 0}
+.chip-prof:hover{background:#222}
+.chip-prof .tk{color:var(--cyn)}
+.flag{background:var(--redbg);color:#fff;padding:0 8px;font-weight:700;margin:2px 4px 2px 0;font-size:12px}
+.flag.w{background:var(--yel);color:#000}
+.spin{display:inline-block;width:1ch}
+
+/* corpo */
+.body{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:0}
+.side{border-right:3px double var(--cyn);padding:14px 12px;overflow:auto;display:flex;flex-direction:column;gap:2px}
+.side h3{font-size:12px;letter-spacing:.14em;color:var(--cyn);margin:12px 0 4px 4px}
+.side h3:first-child{margin-top:0}
+.nav{display:block;width:100%;text-align:left;background:transparent;border:0;padding:3px 8px;cursor:pointer;color:var(--ink)}
+.nav small{display:block;color:var(--dim);font-size:11px;line-height:1.3;overflow-wrap:anywhere}
+.nav .n{color:var(--yel);display:inline-block;min-width:3ch}
+.nav:hover{background:var(--bg2)}
+.nav.on{background:var(--ink);color:var(--bg)}
+.nav.on small,.nav.on .n{color:#000066}
+.main{overflow:auto;padding:18px 20px 32px;min-width:0}
+
+/* janelas com borda dupla */
+.win{position:relative;border:3px double var(--cyn);padding:20px 16px 12px;margin-top:12px;background:var(--bg);min-width:0}
+.win>.wt{position:absolute;top:-.85em;left:12px;background:var(--bg);color:var(--yel);padding:0 8px;font-weight:700;letter-spacing:.06em;font-size:13px}
+.win.sub{border-style:solid;border-width:1px;padding-top:16px}
+.screen{display:flex;flex-direction:column;gap:6px}
+.sh h1{color:var(--yel);font-size:20px;letter-spacing:.04em;text-transform:uppercase}
+.sh .ep{display:flex;gap:10px;align-items:center;margin:6px 0 4px;flex-wrap:wrap;overflow-wrap:anywhere}
+.sh .desc{margin:2px 0 0;max-width:80ch;color:var(--dim)}
+.mb-m{display:inline-block;padding:0 8px;color:#000;font-weight:700;font-size:12px}
+.m-GET{background:var(--cyn)}.m-POST{background:var(--grn)}.m-DELETE{background:var(--redline)}.m-FLUXO{background:var(--yel)}
+.split{display:grid;grid-template-columns:minmax(0,1fr);gap:22px;margin-top:6px}
+.one{display:grid;grid-template-columns:minmax(0,1fr);gap:22px;margin-top:6px}
+.col{min-width:0;display:flex;flex-direction:column}
+@media(min-width:1320px){.split{grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)}}
+
+/* campos */
+.fld{display:grid;gap:3px;margin:0 0 12px;min-width:0}
+.fld label{display:flex;flex-wrap:wrap;gap:2px 8px;align-items:baseline}
+.fld .lb{color:var(--cyn)}
+.fld .rq{color:var(--yel);font-weight:700}
+.fld .pn{color:var(--dim);font-size:12px}
+.fld input[type=text],.fld input[type=search],.fld select,.fld textarea,.dtq,.mi-in{width:100%;background:var(--bg3);border:1px solid var(--cyn);color:var(--ink);padding:5px 8px;border-radius:0}
+.fld textarea{resize:vertical}
+.fld input:focus,.fld select:focus,.fld textarea:focus,.dtq:focus,.mi-in:focus{outline:0;border-color:var(--yel);box-shadow:0 0 0 2px var(--yel);background:#000040}
+.fld input::placeholder,.fld textarea::placeholder{color:#8a8ad0}
+.fld select option{background:#00005c}
+.fld.bad input,.fld.bad select,.fld.bad textarea{border-color:var(--redline);box-shadow:0 0 0 1px var(--redline)}
+.fld.warned input{border-color:var(--yel)}
+.fld .help{color:var(--dim);font-size:12px}
+.fld .note{color:var(--yel);font-size:12px}
+.fld.dis input,.fld.dis select,.fld.dis textarea{background:#1c1c88;border:1px dashed #7777cc;color:#9a9ae0;cursor:not-allowed}
+.fld.dis .lb{color:#8fb6c6;text-decoration:line-through}
+.fld.dis .lb,.fld.dis .pn{opacity:.85}
+.fld.chk .chkrow{display:flex;gap:10px;align-items:center;cursor:pointer}
+.fld input[type=checkbox],.chkline input,.radio input{accent-color:var(--yel);width:16px;height:16px}
+.msg{font-size:12.5px;min-height:0}
+.msg.err{color:var(--red);font-weight:500}
+.msg.warn{color:var(--yel)}
+.msg:empty{display:none}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:0 16px}
+.chkline{display:flex;gap:10px;align-items:center;margin:0 0 10px;cursor:pointer}
+.radio{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:8px}
+.radio label{display:flex;gap:8px;align-items:center;cursor:pointer}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
+
+/* botões */
+.btn{background:var(--gray);color:#000;border:0;padding:4px 14px;cursor:pointer;box-shadow:3px 3px 0 #000;white-space:nowrap}
+.btn kbd{background:#333;color:#ddd;border-color:#333}
+.btn:hover{background:#fff}
+.btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 #000}
+.btn.pri{background:var(--yel);font-weight:700}
+.btn.pri:hover{background:#ffffaa}
+.btn.danger{background:var(--redbg);color:#fff;font-weight:700}
+.btn.danger:hover{background:#cc2222}
+.btn.sm{padding:0 8px;font-size:12px;box-shadow:2px 2px 0 #000}
+.btn:disabled{background:#4a4a9a;color:#9a9ad0;box-shadow:none;cursor:not-allowed}
+.btn.copied{background:var(--grn)}
+.acts{display:flex;gap:12px;flex-wrap:wrap;margin:6px 0 4px}
+.lnk{background:none;border:0;color:var(--cyn);text-decoration:underline;cursor:pointer;padding:0}
+.lnk:hover{color:var(--yel)}
+
+/* sinalização */
+.errbox{background:var(--redbg);border:3px double var(--redline);color:#fff;padding:10px 14px;margin:10px 0;overflow-wrap:anywhere}
+.errbox h4{margin:0 0 4px;color:#fff;font-size:14px;letter-spacing:.04em}
+.errbox .row{margin-top:6px}
+.errbox .hint{background:#000;color:var(--yel);padding:6px 10px;margin-top:8px}
+.okbox{border:3px double var(--grn);padding:8px 14px;margin:10px 0;color:var(--grn)}
+.warnbox{border:1px dashed var(--yel);color:var(--yel);padding:6px 12px;margin:8px 0}
+.st{display:inline-block;padding:0 8px;color:#000;font-weight:700}
+.st.ok{background:var(--grn)}.st.err{background:var(--redline)}.st.warn{background:var(--yel)}
+.pill{display:inline-block;padding:0 6px;font-weight:700;white-space:nowrap;font-size:12.5px}
+.pill.pendente{background:var(--yel);color:#000}.pill.assinado{background:var(--grn);color:#000}
+.pill.expirado{background:var(--gray);color:#000}.pill.cancelado{background:var(--redline);color:#000}
+.pill.sem_assinatura{border:1px solid var(--cyn);color:var(--cyn)}
+.empty{color:var(--dim);padding:8px 2px}
+.empty b{color:var(--yel)}
+.chip{display:inline-flex;gap:10px;align-items:baseline;background:#000;border:1px solid var(--cyn);padding:2px 10px;cursor:copy;max-width:100%;overflow-wrap:anywhere;text-align:left}
+.chip .cl{color:var(--cyn);font-size:12px}
+.chip b{color:var(--yel)}
+.chip:hover{border-color:var(--yel)}
+.chip.copied::after,.jl.copied::after,.jc.copied::after{content:" ✓ Copiado!";color:var(--grn);font-weight:700}
+.chiprow{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0}
+.loading{padding:6px 0}
+.loadbar{display:block;margin:6px 0;color:var(--yel);letter-spacing:2px;overflow:hidden;white-space:nowrap;animation:lb 1s steps(8) infinite}
+@keyframes lb{0%{opacity:.35}50%{opacity:1}100%{opacity:.35}}
+.blink{animation:bl 1s steps(1) infinite}
+@keyframes bl{50%{opacity:0}}
+@media(prefers-reduced-motion:reduce){.loadbar,.blink{animation:none}}
+
+/* resultado */
+.tabs{display:flex;gap:2px;border-bottom:2px double var(--cyn);margin:10px 0 8px;flex-wrap:wrap}
+.tab{background:transparent;border:0;padding:2px 12px;cursor:pointer;color:var(--cyn)}
+.tab.on{background:var(--cyn);color:#000;font-weight:700}
+.tab:hover:not(.on){background:var(--bg2)}
+.reshead{display:flex;gap:10px 14px;align-items:baseline;flex-wrap:wrap}
+.url{overflow-wrap:anywhere;word-break:break-all;color:var(--ink)}
+.urlbar{background:#000;border:1px solid var(--cyn);padding:6px 10px;overflow-wrap:anywhere;word-break:break-all;margin:6px 0}
+.urlbar .qk{color:var(--cyn)}.urlbar .qv{color:var(--yel)}
+pre.prev{margin:6px 0 0;background:#000;color:var(--ink);padding:8px 10px;overflow:auto;max-height:260px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12.5px}
+details.det{margin-top:10px;border:1px solid #5555cc;padding:4px 10px}
+details.det summary{cursor:pointer;color:var(--cyn)}
+.jv{font-size:13px;line-height:1.55}
+.jtools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.jn{margin-left:16px;padding-left:10px;border-left:1px dotted #7777cc}
+.jr{overflow-wrap:anywhere;word-break:break-word}
+.jk{color:var(--cyn)}
+.jl{cursor:copy;padding:0 2px}
+.jl:hover{background:#000;outline:1px solid var(--yel)}
+.jstr{color:var(--yel)}.jnum{color:var(--grn)}.jbool{color:var(--mag)}
+.jt{background:none;border:0;color:var(--cyn);cursor:pointer;padding:0 4px;width:2.2ch}
+.jc{background:none;border:0;color:var(--dim);cursor:copy;padding:0 6px;font-size:12px}
+.jc:hover{color:var(--yel)}
+.jsum{color:var(--dim)}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 14px;margin:6px 0}
+.kv dt{color:var(--cyn)}.kv dd{margin:0;overflow-wrap:anywhere}
+.card{border:1px solid var(--cyn);padding:10px 14px;margin:10px 0}
+
+/* tabelas */
+.dt .bar{display:flex;gap:12px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+.dtq{max-width:340px}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;color:var(--yel);border-bottom:2px double var(--cyn);padding:0;white-space:nowrap}
+.thb{background:none;border:0;color:var(--yel);padding:4px 10px;cursor:pointer;font-weight:700}
+.thb:hover{background:var(--bg2)}
+td{padding:4px 10px;vertical-align:top;border-bottom:1px dotted #5555bb;overflow-wrap:anywhere}
+td.nw{white-space:nowrap}
+tr.clk{cursor:pointer}
+tr.clk:hover td,tr.clk:focus-visible td{background:var(--bg2)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.bigtime{font-size:46px;line-height:1.1;color:var(--yel);font-weight:700;font-variant-numeric:tabular-nums;text-shadow:3px 3px 0 #000}
+.bigtime.low{color:var(--red)}
+.meter{letter-spacing:0;color:var(--grn);word-break:break-all}
+.pager{display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap}
+
+/* assinantes */
+.sigs{display:flex;flex-direction:column;gap:10px}
+.srow{border:1px solid #6666cc;padding:8px 12px 2px}
+.srow-h{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+.srow-h b{color:var(--yel);flex:1}
+.stepper{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 4px}
+.stp{padding:2px 10px;border:1px solid #7777cc;color:var(--dim)}
+.stp.on{background:var(--yel);color:#000;border-color:var(--yel);font-weight:700}
+.stp.done{border-color:var(--grn);color:var(--grn)}
+.linkrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;border-bottom:1px dotted #5555bb;padding:8px 0}
+.linkrow .nm{color:var(--cyn)}
+.linkrow .lk{color:var(--yel);overflow-wrap:anywhere;word-break:break-all;font-size:13px}
+.biglinks .lk{font-size:15px}
+
+/* log */
+.logdock{border-top:3px double var(--cyn);background:var(--bg)}
+.logbar{display:flex;gap:12px;align-items:center;background:var(--teal);color:#000;padding:1px 16px;cursor:pointer;border:0;width:100%;text-align:left;flex-wrap:wrap}
+.logbar b{font-weight:700}
+.logbody{max-height:230px;overflow:auto;padding:6px 16px 10px}
+.logtabs{display:flex;gap:6px;margin-bottom:6px;align-items:center;flex-wrap:wrap}
+.logtabs .btn{box-shadow:none}
+.logtabs .btn.on{background:var(--cyn)}
+.lrow td{font-size:12.5px}
+.star{background:none;border:0;cursor:pointer;color:var(--dim);font-size:15px;padding:0 4px}
+.star.on{color:var(--yel)}
+
+/* teclas de função */
+.fkeys{display:flex;background:#000;overflow-x:auto;white-space:nowrap;padding-bottom:env(safe-area-inset-bottom,0px)}
+.fkeys button{display:flex;gap:6px;border:0;background:transparent;cursor:pointer;padding:0 0 0 12px;color:var(--gray);align-items:center}
+.fkeys button b{color:#fff;font-weight:700}
+.fkeys button span{background:var(--teal);color:#000;padding:0 8px}
+.fkeys button:hover span{background:var(--cyn)}
+.fkeys .leg{margin-left:auto;padding:0 16px;color:var(--dim);display:flex;align-items:center;gap:14px}
+.fkeys .leg b{color:var(--yel)}
+
+/* modal */
+.ov{position:fixed;inset:0;background:rgba(0,0,50,.78);z-index:60;display:flex;align-items:flex-start;justify-content:center;padding:6vh 16px;overflow:auto}
+.dlg{width:min(680px,100%);box-shadow:10px 10px 0 #000;background:var(--bg);margin-top:0}
+.dlg.wide{width:min(1000px,100%)}
+.dbody{max-height:70vh;overflow:auto;padding-right:4px}
+.dact{display:flex;gap:12px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+.dbody h3{color:var(--yel);margin:12px 0 4px}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:3px 18px}
+.keys b{color:var(--yel);white-space:nowrap}
+.plist{list-style:none;margin:0;padding:0}
+.plist button{display:grid;grid-template-columns:3ch minmax(8ch,auto) 1fr auto;gap:10px;width:100%;text-align:left;background:transparent;border:0;padding:5px 8px;cursor:pointer;color:var(--ink)}
+.plist button:hover,.plist button.on{background:var(--ink);color:var(--bg)}
+.plist .tk{color:var(--cyn)}
+.plist button:hover .tk,.plist button.on .tk{color:#003}
+
+/* toast */
+#toast{position:fixed;right:18px;bottom:56px;z-index:90;display:flex;flex-direction:column;gap:6px;align-items:flex-end;pointer-events:none}
+.toast{background:#000;border:2px solid var(--grn);color:var(--grn);padding:3px 14px;box-shadow:4px 4px 0 #000;font-weight:700}
+.toast.err{border-color:var(--redline);color:var(--red)}
+
+/* drop */
+.drop{border:2px dashed var(--cyn);padding:14px;text-align:center;background:var(--bg3)}
+.drop.drag{background:var(--bg2);border-color:var(--yel)}
+.drop .finfo{margin:6px 0;color:var(--yel);overflow-wrap:anywhere}
+.drop .acts{justify-content:center}
+
+/* abertura */
+#splash{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px 16px;text-align:center;cursor:pointer;overflow:auto}
+#splash pre{margin:0;font-family:Consolas,'Cascadia Mono','DejaVu Sans Mono','Courier New',monospace;line-height:1.05;font-size:clamp(7px,2.1vw,15px);text-shadow:3px 3px 0 #000;text-align:left}
+#splash .l1{color:var(--yel)}#splash .l2{color:var(--cyn)}
+#splash .box{border:3px double var(--cyn);padding:12px 22px;max-width:640px;text-align:left}
+#splash .box div{overflow-wrap:anywhere}
+#splash .go{color:var(--yel);font-weight:700}
+
+@media(max-width:900px){
+  .body{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+  .side{flex-direction:row;border-right:0;border-bottom:3px double var(--cyn);padding:6px 10px;gap:2px;overflow-x:auto}
+  .side h3,.nav small{display:none}
+  .nav{white-space:nowrap;width:auto}
+  .main{padding:14px 16px 28px}
+  .fkeys .leg{display:none}
+  .menubar .brand{display:none}
+}
+</style>
+
+<div id="app"></div>
+<div id="toast" aria-live="polite"></div>
+<datalist id="dl-docs"></datalist>
+<datalist id="dl-status"><option value="pendente"><option value="assinado"><option value="expirado"><option value="cancelado"><option value="sem_assinatura"></datalist>
+<div id="splash" role="button" tabindex="0" aria-label="Entrar na ferramenta">
+  <pre class="l1" id="ban1"></pre>
+  <pre class="l2" id="ban2"></pre>
+  <div class="box">
+    <div><span class="dim">Ferramenta de teste manual da API REST do DocNuvem (GED)</span></div>
+    <div>Versão web · <span id="mode" class="dim">todas as chamadas são simuladas, sem rede e sem token real</span></div>
+    <div id="splprof">Perfil inicial: <b style="color:var(--yel)">cliente1</b> <span class="dim">· 3 perfis de exemplo</span></div>
+  </div>
+  <div class="go">Pressione qualquer tecla ou clique para entrar<span class="blink">_</span></div>
+</div>
+
+<script>
+(()=>{'use strict';
+/* ============ utilitários ============ */
+const API_BASE='https://api.docnuvem.example';
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const clone=o=>{try{return structuredClone(o)}catch{try{return JSON.parse(JSON.stringify(o))}catch{return o}}};
+const pad=n=>String(n).padStart(2,'0');
+const fmtDate=d=>`${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
+const fmtDT=d=>`${fmtDate(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const fmtTime=d=>`${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+const isoDate=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const fmtAny=s=>{if(!s)return '—';const d=new Date(s);return isNaN(d)?String(s):fmtDT(d);};
+const digits=s=>String(s||'').replace(/\D/g,'');
+let UID=0;const uid=()=>'i'+(++UID);
+function h(tag,props,...kids){
+  const el=document.createElement(tag);
+  for(const [k,v] of Object.entries(props||{})){
+    if(v==null||v===false)continue;
+    if(k==='class')el.className=v;
+    else if(k==='style'&&typeof v==='object')Object.assign(el.style,v);
+    else if(k.startsWith('on'))el.addEventListener(k.slice(2),v);
+    else if(k in el&&k!=='list'&&k!=='for'&&k!=='form'){try{el[k]=v}catch{el.setAttribute(k,v)}}
+    else el.setAttribute(k,v===true?'':v);
+  }
+  for(const kid of kids.flat(Infinity)){if(kid==null||kid===false)continue;el.append(kid.nodeType?kid:document.createTextNode(kid));}
+  return el;
+}
+const $=(s,r=document)=>r.querySelector(s);
+function parseDate(s){
+  const m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(s).trim());if(!m)return null;
+  const d=+m[1],mo=+m[2],y=+m[3];const dt=new Date(y,mo-1,d);
+  return dt.getFullYear()===y&&dt.getMonth()===mo-1&&dt.getDate()===d?dt:null;
+}
+function parseIsoDT(s){const m=/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}):(\d{2}))?$/.exec(String(s).trim());if(!m)return null;const [y,mo,d,hh=0,mi=0,ss=0]=m.slice(1).map(x=>x===undefined?undefined:+x);const dt=new Date(y,mo-1,d,hh,mi,ss);return dt.getFullYear()===y&&dt.getMonth()===mo-1&&dt.getDate()===d?dt:null;}
+function parseIsoDate(s){return /^\d{4}-\d{2}-\d{2}$/.test(String(s).trim())?parseIsoDT(s):null;}
+function cpfValid(s){
+  const c=digits(s);if(c.length!==11||/^(\d)\1+$/.test(c))return false;
+  for(const t of [9,10]){let sum=0;for(let i=0;i<t;i++)sum+=+c[i]*(t+1-i);if((sum*10)%11%10!==+c[t])return false;}
+  return true;
+}
+function cpfMake(b9){let c=String(b9).padStart(9,'0').slice(0,9);for(const t of [9,10]){let sum=0;for(let i=0;i<t;i++)sum+=+c[i]*(t+1-i);c+=(sum*10)%11%10;}return c;}
+function cpfFmt(s){const c=digits(s).slice(0,11);return c.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');}
+const NUM_BR=/^(\d{1,3}(\.\d{3})+|\d+)(,\d+)?$/;
+const EXT=['pdf','doc','docx','xls','xlsx','ppt','pptx','odt','ods','txt','rtf','csv','xml','jpg','jpeg','png','tif','tiff','zip'];
+const METODOS=['eletronica','digital','birdid'];
+const STATUS=['pendente','assinado','expirado','cancelado','sem_assinatura'];
+const EMAIL_RE=/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+/* ============ perfis ============ */
+let LIVE=null;
+let PROFILES=[
+  {id:'cliente1',token:'dnk_5e0b7a91d3f24c68a7b1e9051234'},
+  {id:'cliente2',token:'dnk_a94c20de17b3588f0c26b7d19f07'},
+  {id:'cliente3',token:'dnk_00d1f5e8c3a74b2d9e60aa51e5d0',revogado:true},
+];
+const mask=p=>p.mascara||'Bearer ***...'+p.token.slice(-4);
+const state={profile:PROFILES[0],localVal:true,forced:null,pending:0,lastDocId:null,lastAssId:null,lastDirId:null,catalog:null,seenDocs:new Map(),seenAss:new Map(),logOpen:false,logTab:'all',log:[],logSeq:0};
+
+/* ============ dados mock ============ */
+const NOMES=[['Mariana Alves Prado','mariana.prado'],['Rafael Souza Lima','rafael.lima'],['Camila Ferreira Dias','camila.dias'],['Eduardo Matos Ribeiro','eduardo.ribeiro'],['Patrícia Gomes Nunes','patricia.nunes'],['Lucas Barbosa Teixeira','lucas.teixeira'],['Fernanda Carvalho Moura','fernanda.moura'],['Thiago Rocha Cardoso','thiago.cardoso']];
+const SEEDCPF=NOMES.map((_,i)=>cpfMake(String(123456780+i*7919)));
+const V=(nome,rotulo,tipo,obr,x={})=>({nome,rotulo,tipo,obr:!!obr,...x});
+const FOROS=['São Paulo/SP','Rio de Janeiro/RJ','Belo Horizonte/MG','Curitiba/PR','Porto Alegre/RS'];
+const DIS_REC='Preenchida pelo destinatário no momento da assinatura.';
+const DIS_API='Variável não aceita pela API (campo manual do modelo).';
+const MODELOS=[
+ {codigo:'CTR-PS-001',nome:'Contrato de Prestação de Serviços',descricao:'Contrato padrão para serviços recorrentes, com reajuste anual.',geravelPorApi:true,variaveis:[
+  V('contratante','Razão social do contratante','texto',1),V('cnpjContratante','CNPJ do contratante','texto',1),
+  V('objeto','Objeto do contrato','textolongo',1),V('valorMensal','Valor mensal (R$)','numerico',1),V('dataInicio','Data de início','data',1),
+  V('renovacaoAutomatica','Renovação automática','checkbox',0),V('foro','Foro','selecao',1,{opcoes:FOROS}),
+  V('dataAssinaturaLocal','Data e local da assinatura','data',0,{dis:DIS_REC}),V('testemunha1','Testemunha 1','texto',0,{dis:DIS_API})]},
+ {codigo:'NDA-002',nome:'Acordo de Confidencialidade (NDA)',descricao:'Sigilo bilateral para troca de informações entre parceiros.',geravelPorApi:true,variaveis:[
+  V('parteReveladora','Parte reveladora','texto',1),V('parteReceptora','Parte receptora','texto',1),V('finalidade','Finalidade','textolongo',1),
+  V('vigenciaInicio','Início da vigência','data',1),V('prazoMeses','Prazo de sigilo (meses)','numerico',1),V('multaPrevista','Multa prevista (R$)','numerico',0),
+  V('assinaturaReceptor','Assinatura do receptor','texto',0,{dis:DIS_REC})]},
+ {codigo:'ADM-003',nome:'Termo de Admissão',descricao:'Formaliza a admissão de colaborador e as condições iniciais.',geravelPorApi:true,variaveis:[
+  V('colaborador','Nome do colaborador','texto',1),V('cargo','Cargo','texto',1),V('salario','Salário (R$)','numerico',1),V('dataAdmissao','Data de admissão','data',1),
+  V('regime','Regime de contratação','selecao',1,{opcoes:['CLT','Estágio','PJ']}),V('valeTransporte','Optante por vale-transporte','checkbox',0),V('observacoes','Observações','textolongo',0)]},
+ {codigo:'PRC-004',nome:'Procuração Simples',descricao:'Outorga de poderes específicos a um procurador.',geravelPorApi:true,variaveis:[
+  V('outorgante','Outorgante','texto',1),V('outorgado','Outorgado','texto',1),V('poderes','Poderes concedidos','textolongo',1),V('validadeAte','Válida até','data',0),V('cidade','Cidade','texto',0)]},
+ {codigo:'ACE-006',nome:'Termo de Aceite de Entrega',descricao:'Registro de aceite de entrega de produto ou serviço.',geravelPorApi:true,variaveis:[
+  V('cliente','Cliente','texto',1),V('descricaoEntrega','Descrição da entrega','textolongo',1),V('dataEntrega','Data da entrega','data',1),V('entregaParcial','Entrega parcial','checkbox',0)]},
+ {codigo:'LOC-005',nome:'Contrato de Locação Comercial',descricao:'Exige revisão jurídica; a geração é feita só pela interface web.',geravelPorApi:false,variaveis:[
+  V('locador','Locador','texto',1),V('locatario','Locatário','texto',1),V('valorAluguel','Valor do aluguel (R$)','numerico',1)]},
+];
+const DB={};
+const db=inst=>DB[inst]||(DB[inst]=seedInstance(inst));
+function ensureFolder(D,path){
+  const segs=path.split('/').map(s=>s.trim()).filter(Boolean);let cur='',id=null;
+  for(const s of segs){cur=cur?cur+'/'+s:s;if(!D.folders.has(cur))D.folders.set(cur,D.nextDir++);id=D.folders.get(cur);}
+  return id;
+}
+const mkToken=(id,i)=>(Math.imul(id,2654435761)>>>0).toString(36)+(i+1).toString(36)+((id*31+i*17)>>>0).toString(36)+'x'+(Math.imul(id+i,40503)>>>0).toString(36);
+const linkOf=(D,tok)=>`https://${D.inst}.docnuvem.example/assinar/${tok}`;
+function addSeedDoc(D,[nome,pasta,status,dias,ref,idx,considera]){
+  const id=D.nextDoc++;const dirId=ensureFolder(D,pasta);
+  const criado=new Date(Date.now()-dias*864e5-(id%7)*36e5);
+  const doc={id,nome,pasta,dirId,status,criadoEm:criado,ref,assin:null};
+  if(idx.length){
+    const sigs=idx.map((n,i)=>{
+      const st=status==='assinado'?'assinado':status==='pendente'?(i===0&&idx.length>1?'assinado':'pendente'):status;
+      return {nome:NOMES[n][0],email:NOMES[n][1]+'@exemplo.com.br',cpf:SEEDCPF[n],telefone:'',ordem:i,status:st,visualizou:st!=='pendente'||(id+i)%2===0,
+        dataAssinatura:st==='assinado'?new Date(criado.getTime()+(i+1)*7.2e6):null,token:mkToken(id,i)};
+    });
+    doc.assin={id:D.nextAss++,considera:!!considera,validade:new Date(criado.getTime()+30*864e5),sigs};
+  }
+  D.docs.push(doc);
+}
+function seedInstance(inst){
+  const D={inst,folders:new Map(),docs:[],nextDoc:inst==='cliente1'?48120:51030,nextDir:210,nextAss:inst==='cliente1'?7700:9100};
+  const c1=inst==='cliente1';
+  (c1?['Contratos/2026','Contratos/2025','RH/Admissões','Financeiro/Notas','Jurídico','Envio Inteligente']:['Contratos','Propostas','Envio Inteligente']).forEach(p=>ensureFolder(D,p));
+  const rows=c1?[
+   ['Contrato_Prestacao_Servicos_0412.pdf','Contratos/2026','pendente',2,'PED-2026-0412',[0,1,2],true],
+   ['Aditivo_Contratual_017.pdf','Contratos/2026','assinado',9,'PED-2026-0388',[3,4],false],
+   ['NDA_Fornecedor_Alfa.docx','Jurídico','pendente',1,'NDA-0231',[5],false],
+   ['Termo_Admissao_Lucas.pdf','RH/Admissões','assinado',14,'RH-ADM-089',[5,6],true],
+   ['Procuracao_Simples_0077.pdf','Jurídico','expirado',40,'',[7],false],
+   ['Contrato_Locacao_Sala12.pdf','Contratos/2025','cancelado',60,'LOC-2025-012',[0,3],true],
+   ['Nota_Fiscal_88231.pdf','Financeiro/Notas','sem_assinatura',3,'',[],false],
+   ['Nota_Fiscal_88232.pdf','Financeiro/Notas','sem_assinatura',3,'',[],false],
+   ['Relatorio_Auditoria_T3.xlsx','Financeiro','sem_assinatura',5,'',[],false],
+   ['Contrato_Prestacao_Servicos_0399.pdf','Contratos/2026','assinado',21,'PED-2026-0399',[1,2],true],
+   ['Politica_Privacidade_v3.pdf','Jurídico','pendente',6,'POL-003',[0,1,4,6],true],
+   ['Termo_Rescisao_Marcos.pdf','RH','sem_assinatura',8,'',[],false],
+   ['Proposta_Comercial_1180.pdf','Contratos/2026','expirado',33,'PROP-1180',[2,3],false],
+   ['Digitalizacao_Lote_77.pdf','Envio Inteligente','sem_assinatura',0,'',[],false],
+  ]:[
+   ['Contrato_Social_Alteracao.pdf','Contratos','assinado',12,'CS-014',[0,1],false],
+   ['Proposta_Servicos_P9.pdf','Propostas','pendente',2,'PROP-P9',[2,4],true],
+   ['Proposta_Servicos_P8.pdf','Propostas','cancelado',20,'PROP-P8',[2],false],
+   ['Contrato_Manutencao_2026.pdf','Contratos','sem_assinatura',4,'',[],false],
+   ['Termo_Aceite_Entrega.pdf','Contratos','expirado',45,'TAE-31',[5],false],
+  ];
+  rows.forEach(r=>addSeedDoc(D,r));
+  return D;
+}
+
+/* ============ API simulada ============ */
+const ERR={400:'Requisição inválida',401:'Não autorizado',404:'Não encontrado',409:'Conflito',500:'Erro interno',502:'Falha de conexão'};
+const SDESC={pendente:'Pendente',assinado:'Assinado',expirado:'Expirado',cancelado:'Cancelado',sem_assinatura:'Sem assinatura'};
+const E=(s,msg,extra={})=>[s,{status:s,erro:ERR[s],mensagem:msg,...extra,timestamp:new Date().toISOString()}];
+const TIPO_API={texto:'TEXTO',textolongo:'TEXTO_LONGO',data:'DATA',numerico:'NUMERICO',checkbox:'CHECKBOX',selecao:'SELECT'};
+const TIPO_IN={TEXTO:'texto',TEXTO_LONGO:'textolongo',PARAGRAFO:'textolongo',DATA:'data',DATA_VENCIMENTO:'data',NUMERICO:'numerico',CHECKBOX:'checkbox',SELECT:'selecao'};
+const modeloOut=m=>({id:Number(m.codigo.replace(/\D/g,''))||null,codigo:m.codigo,nome:m.nome,descricao:m.descricao,geravelPorApi:m.geravelPorApi,variaveis:m.variaveis.map(v=>({chave:v.nome,rotulo:v.rotulo,tipo:TIPO_API[v.tipo],obrigatorio:v.obr,aceitaPorApi:!v.dis,preenchidoPeloDestinatario:v.dis===DIS_REC,...(v.opcoes?{opcoes:v.opcoes}:{})}))});
+function normModelo(m){return {...m,codigo:m.codigo||String(m.id||''),geravelPorApi:!!m.geravelPorApi,variaveis:(m.variaveis||[]).map(v=>{const t=TIPO_IN[String(v.tipo||'TEXTO').toUpperCase()];return {nome:v.chave,rotulo:v.rotulo||v.chave,tipo:t||'texto',obr:!!v.obrigatorio,opcoes:v.opcoes||undefined,dis:v.preenchidoPeloDestinatario?DIS_REC:!v.aceitaPorApi?DIS_API:(!t?'Este tipo de campo ainda não é preenchido pela API.':null)};})};}
+const cat=()=>state.catalog||[];
+function hImport(D,b,file){
+  if(!file)return E(400,'Arquivo não enviado. Envie o conteúdo na parte "arquivo" do multipart.',{campo:'arquivo'});
+  const nome=(b.nomeArquivo||'').trim();
+  if(!nome)return E(400,'O campo nomeArquivo é obrigatório e deve conter a extensão.',{campo:'nomeArquivo'});
+  const ext=((/\.([A-Za-z0-9]+)$/.exec(nome)||[])[1]||'').toLowerCase();
+  if(!ext)return E(400,`nomeArquivo "${nome}" não possui extensão.`,{campo:'nomeArquivo'});
+  if(!EXT.includes(ext))return E(400,`Extensão ".${ext}" não é permitida.`,{campo:'nomeArquivo',extensoesAceitas:EXT});
+  if(!(b.nomePasta||'').trim())return E(400,'O campo nomePasta é obrigatório.',{campo:'nomePasta'});
+  const pasta=b.nomePasta.trim(),pai=(b.nomePastaPai||'').trim();
+  const path=pai?pai.replace(/^\/+|\/+$/g,'')+'/'+pasta:pasta;
+  if(D.docs.some(d=>d.pasta===path&&d.nome.toLowerCase()===nome.toLowerCase()))return E(409,`Já existe um documento chamado "${nome}" na pasta "${path}".`,{documentoExistente:D.docs.find(d=>d.pasta===path&&d.nome.toLowerCase()===nome.toLowerCase()).id});
+  const dirId=ensureFolder(D,path);const id=D.nextDoc++;
+  D.docs.push({id,nome,pasta:path,dirId,status:'sem_assinatura',criadoEm:new Date(),ref:'',assin:null});
+  return [201,{retorno:'Arquivo importado com sucesso.',documentoId:id,diretorioId:dirId}];
+}
+function hSmart(D,b,file){
+  if(!file)return E(400,'Arquivo não enviado. Envie o conteúdo na parte "arquivo" do multipart.',{campo:'arquivo'});
+  const nome=(b.nomeArquivo||'').trim();
+  if(!nome)return E(400,'O campo nomeArquivo é obrigatório.',{campo:'nomeArquivo'});
+  const ext=((/\.([A-Za-z0-9]+)$/.exec(nome)||[])[1]||'').toLowerCase();
+  if(!EXT.includes(ext))return E(400,ext?`Extensão ".${ext}" não é permitida.`:`nomeArquivo "${nome}" não possui extensão.`,{campo:'nomeArquivo'});
+  const dirId=ensureFolder(D,'Envio Inteligente');const id=D.nextDoc++;
+  D.docs.push({id,nome,pasta:'Envio Inteligente',dirId,status:'sem_assinatura',criadoEm:new Date(),ref:'',assin:null});
+  return [201,{retorno:'Documento recebido para classificação automática.',documentoId:id,diretorioId:dirId}];
+}
+function hTpl(D,b){
+  if(!b.modelo)return E(400,'O campo modelo (código) é obrigatório.',{campo:'modelo'});
+  const m=MODELOS.find(x=>x.codigo===b.modelo);
+  if(!m)return E(404,`Modelo "${b.modelo}" não encontrado nesta instância.`);
+  if(!m.geravelPorApi)return E(400,`O modelo ${m.codigo} não pode ser gerado por API. Use a interface web.`,{campo:'modelo'});
+  if(!(b.nomePasta||'').trim())return E(400,'O campo nomePasta é obrigatório.',{campo:'nomePasta'});
+  const pai=(b.nomePastaPai||'').trim().replace(/^\/+|\/+$/g,'');const path=pai?pai+'/'+b.nomePasta.trim():b.nomePasta.trim();
+  if(!D.folders.has(path))return E(404,`Pasta não encontrada: "${path}". Este endpoint não cria pastas; crie-a antes (por exemplo, via /importar).`,{campo:'nomePasta'});
+  if((b.referenciaExterna||'').length>64)return E(400,`referenciaExterna excede 64 caracteres (recebido: ${b.referenciaExterna.length}).`,{campo:'referenciaExterna'});
+  const env=b.variaveis||{};
+  const recusadas=Object.keys(env).filter(k=>{const v=m.variaveis.find(x=>x.nome===k);return !v||v.dis;});
+  if(recusadas.length)return E(400,'Variáveis não aceitas pela API: '+recusadas.join(', ')+'.',{variaveisNaoAceitas:recusadas});
+  const falt=m.variaveis.filter(v=>v.obr&&!v.dis&&(env[v.nome]==null||String(env[v.nome]).trim()==='')).map(v=>v.nome);
+  if(falt.length)return E(400,'Variáveis obrigatórias não informadas.',{variaveisFaltantes:falt});
+  const inv=[];
+  for(const v of m.variaveis){const x=env[v.nome];if(x==null||v.dis)continue;
+    if(v.tipo==='data'&&!parseDate(x))inv.push({nome:v.nome,motivo:'Data inválida; use dd/MM/aaaa.'});
+    if(v.tipo==='numerico'&&!NUM_BR.test(String(x)))inv.push({nome:v.nome,motivo:'Número inválido; use o formato 1.234,56.'});
+    if(v.tipo==='selecao'&&!v.opcoes.includes(x))inv.push({nome:v.nome,motivo:'Valor fora das opções: '+v.opcoes.join(' | ')});
+    if(v.tipo==='checkbox'&&!['sim','não'].includes(x))inv.push({nome:v.nome,motivo:'Use "sim" ou "não".'});}
+  if(inv.length)return E(400,'Variáveis com valor inválido.',{variaveisInvalidas:inv});
+  if(b.referenciaExterna&&D.docs.some(d=>d.ref===b.referenciaExterna))return E(409,`A referenciaExterna "${b.referenciaExterna}" já está em uso por outro documento.`,{documentoExistente:D.docs.find(d=>d.ref===b.referenciaExterna).id});
+  const nome=(b.nomeArquivo||'').trim()||(m.nome.replace(/\s+/g,'_')+'.pdf');const dirId=D.folders.get(path);const id=D.nextDoc++;
+  D.docs.push({id,nome,pasta:path,dirId,status:'sem_assinatura',criadoEm:new Date(),ref:b.referenciaExterna||'',assin:null});
+  return [201,{documentoId:id,referenciaExterna:b.referenciaExterna||null,nomeArquivo:nome,diretorioId:dirId}];
+}
+function hSign(D,b){
+  if(b.documentoId==null||b.documentoId==='')return E(400,'O campo documentoId é obrigatório.',{campo:'documentoId'});
+  const id=Number(b.documentoId);if(!Number.isInteger(id))return E(400,'documentoId deve ser numérico.',{campo:'documentoId'});
+  const doc=D.docs.find(d=>d.id===id);if(!doc)return E(404,`Documento ${id} não encontrado nesta instância.`);
+  if(doc.status==='pendente')return E(409,'Já existe uma solicitação de assinatura em andamento para este documento.',{assinaturaId:doc.assin.id});
+  if(doc.status==='assinado')return E(409,'O documento já foi assinado por todos os signatários.',{assinaturaId:doc.assin.id});
+  const s=b.signatarios;if(!Array.isArray(s)||!s.length)return E(400,'Informe ao menos um signatário.',{campo:'signatarios'});
+  const erros=[];
+  s.forEach((x,i)=>{
+    if(!x.nome||!String(x.nome).trim())erros.push({indice:i,campo:'nome',motivo:'Nome obrigatório.'});
+    if(!x.email||!EMAIL_RE.test(x.email))erros.push({indice:i,campo:'email',motivo:'E-mail inválido.'});
+    if(!x.cpf||!cpfValid(x.cpf))erros.push({indice:i,campo:'cpf',motivo:'CPF inválido (dígito verificador).'});
+  });
+  if(erros.length)return E(400,'Há signatários com dados inválidos.',{errosSignatarios:erros});
+  if(b.consideraOrdem){
+    const o=s.map(x=>x.ordem).sort((a,c)=>a-c);
+    if(!o.every((v,i)=>Number.isInteger(v)&&v===i))return E(400,'Com consideraOrdem=true, a ordem dos signatários deve ser 0-based e contígua (0, 1, 2, ...).',{ordensRecebidas:s.map(x=>x.ordem)});
+  }
+  const met=b.metodos||['eletronica'];const mi=met.filter(x=>!METODOS.includes(x));
+  if(!Array.isArray(met)||!met.length||mi.length)return E(400,`Método inválido: ${mi.join(', ')||'(vazio)'}. Aceitos: ${METODOS.join(', ')}.`,{campo:'metodos'});
+  if(b.dataValidade&&b.prazoDias!=null)return E(400,'Informe dataValidade ou prazoDias, não ambos.');
+  let val=new Date(Date.now()+30*864e5);
+  if(b.dataValidade){const d=parseIsoDT(b.dataValidade);if(!d)return E(400,'dataValidade inválida; use yyyy-MM-ddTHH:mm:ss.',{campo:'dataValidade'});if(d<=new Date())return E(400,'dataValidade deve ser uma data futura.',{campo:'dataValidade'});val=d;}
+  else if(b.prazoDias!=null){const n=Number(b.prazoDias);if(!Number.isInteger(n)||n<1||n>365)return E(400,'prazoDias deve ser um inteiro entre 1 e 365.',{campo:'prazoDias'});val=new Date(Date.now()+n*864e5);}
+  if(b.lembretes&&(!Array.isArray(b.lembretes)||b.lembretes.some(n=>!Number.isInteger(n)||n<1)))return E(400,'lembretes deve ser uma lista de inteiros positivos (dias).',{campo:'lembretes'});
+  const aid=D.nextAss++;
+  const sigs=s.map((x,i)=>({nome:String(x.nome).trim(),email:x.email,cpf:digits(x.cpf),telefone:x.telefone||'',ordem:x.ordem,status:'pendente',visualizou:false,dataAssinatura:null,token:Math.random().toString(36).slice(2,10)+Math.random().toString(36).slice(2,8)+i}));
+  doc.assin={id:aid,considera:!!b.consideraOrdem,validade:val,sigs};doc.status='pendente';if(b.referenciaExterna)doc.ref=b.referenciaExterna;
+  return [201,{...statusBody(D,doc),lembretes:b.lembretes||[]}];
+}
+function hCancel(D,sid){
+  if(!/^\d+$/.test(sid))return E(400,'assinaturaId inválido: informe somente dígitos na URL.',{campo:'assinaturaId'});
+  const n=+sid;const doc=D.docs.find(d=>d.assin&&d.assin.id===n);if(!doc)return E(404,`Solicitação de assinatura ${n} não encontrada nesta instância.`);
+  if(doc.status==='cancelado')return E(409,'Esta solicitação já foi cancelada.',{assinaturaId:n});
+  if(doc.status==='expirado')return E(409,'Esta solicitação já expirou e não pode ser cancelada.',{assinaturaId:n});
+  const total=doc.assin.sigs.length,ja=doc.assin.sigs.filter(x=>x.status==='assinado').length;
+  doc.assin.sigs.forEach(x=>x.status='cancelado');doc.status='cancelado';
+  return [200,statusBody(D,doc)];
+}
+function hList(D,q){
+  for(const k of ['diretorioId','status','dataInicio','dataFim','incluirSubpastas','pagina','tamanho'])
+    if(k in q&&q[k]==='')return E(400,`O parâmetro "${k}" foi enviado sem valor.`,{parametro:k});
+  if('status' in q&&!STATUS.includes(q.status))return E(400,`Status inválido: "${q.status}". Aceitos: ${STATUS.join(', ')}.`,{parametro:'status'});
+  if('incluirSubpastas' in q&&!['true','false'].includes(q.incluirSubpastas))return E(400,'incluirSubpastas deve ser true ou false.',{parametro:'incluirSubpastas'});
+  let di=null,df=null;
+  if(q.dataInicio){di=parseIsoDate(q.dataInicio);if(!di)return E(400,'dataInicio inválida; use yyyy-MM-dd.',{parametro:'dataInicio'});}
+  if(q.dataFim){df=parseIsoDate(q.dataFim);if(!df)return E(400,'dataFim inválida; use yyyy-MM-dd.',{parametro:'dataFim'});df=new Date(df.getTime()+864e5-1);}
+  if(di&&df&&di>df)return E(400,'dataInicio não pode ser posterior a dataFim.');
+  const pag=q.pagina!=null?+q.pagina:0,tam=q.tamanho!=null?+q.tamanho:50;
+  if(!Number.isInteger(pag)||pag<0)return E(400,'pagina deve ser um inteiro >= 0 (0-based).',{parametro:'pagina'});
+  if(!Number.isInteger(tam)||tam<1||tam>200)return E(400,'tamanho deve estar entre 1 e 200.',{parametro:'tamanho'});
+  let dirPath=null;
+  if(q.diretorioId!=null){
+    if(!/^\d+$/.test(q.diretorioId))return E(400,'diretorioId deve ser numérico.',{parametro:'diretorioId'});
+    const f=[...D.folders].find(([,id])=>id===+q.diretorioId);if(!f)return E(404,`Diretório ${q.diretorioId} não encontrado.`,{parametro:'diretorioId'});dirPath=f[0];
+  }
+  const r=D.docs.filter(d=>{
+    if(dirPath){const sub=q.incluirSubpastas==='true';if(!(d.pasta===dirPath||(sub&&d.pasta.startsWith(dirPath+'/'))))return false;}
+    if(q.status&&d.status!==q.status)return false;
+    if(di&&d.criadoEm<di)return false;if(df&&d.criadoEm>df)return false;return true;
+  }).sort((a,b)=>b.criadoEm-a.criadoEm);
+  const total=r.length;
+  return [200,{total,pagina:pag,tamanho:tam,temMais:(pag+1)*tam<total,documentos:r.slice(pag*tam,pag*tam+tam).map(d=>({documentoId:d.id,nomeArquivo:d.nome,diretorioId:d.dirId,assinaturaId:d.assin?d.assin.id:null,referenciaExterna:d.ref||null,status:d.status,statusDescricao:SDESC[d.status],dataSolicitacao:d.criadoEm.toISOString(),dataUltimaAlteracao:d.criadoEm.toISOString()}))}];
+}
+function statusBody(D,d){
+  const a=d.assin;
+  return {documentoId:d.id,nomeArquivo:d.nome,diretorioId:d.dirId,assinaturaId:a?a.id:null,referenciaExterna:d.ref||null,status:d.status,statusDescricao:SDESC[d.status],dataSolicitacao:d.criadoEm.toISOString(),dataValidade:a?a.validade.toISOString():null,dataUltimaAlteracao:d.criadoEm.toISOString(),consideraOrdem:a?a.considera:null,lembretes:[],
+    signatarios:(a?a.sigs:[]).map(x=>({nome:x.nome,email:x.email,telefone:x.telefone||null,cpf:x.cpf,ordem:x.ordem,status:x.status,statusDescricao:SDESC[x.status],dataAssinatura:x.dataAssinatura?x.dataAssinatura.toISOString():null,visualizou:x.visualizou,dataVisualizacao:null,linkAssinatura:x.status==='pendente'?linkOf(D,x.token):null}))};
+}
+function hStatus(D,sid){
+  if(!/^\d+$/.test(sid))return E(400,'documentoId inválido: informe somente dígitos na URL.',{campo:'documentoId'});
+  const d=D.docs.find(x=>x.id===+sid);if(!d)return E(404,`Documento ${sid} não encontrado nesta instância.`);
+  return [200,statusBody(D,d)];
+}
+function hDownload(D,sid,inst){
+  if(!/^\d+$/.test(sid))return E(400,'documentoId inválido: informe somente dígitos na URL.',{campo:'documentoId'});
+  const d=D.docs.find(x=>x.id===+sid);if(!d)return E(404,`Documento ${sid} não encontrado nesta instância.`);
+  const exp=new Date(Date.now()+15*60000);const sig=Math.random().toString(36).slice(2,14)+Math.random().toString(36).slice(2,14);
+  return [200,{documentoId:d.id,nomeArquivo:d.nome,urlDownload:`https://storage.docnuvem.example/${inst}/dl/${d.id}/${encodeURIComponent(d.nome)}?X-Expires=900&X-Signature=${sig}`,expiraEm:exp.toISOString(),extensao:d.nome.split('.').pop(),statusAssinatura:d.status,relatorioAssinatura:null}];
+}
+function route(m,path,q,b,file,inst){
+  const D=db(inst);let x;
+  if(m==='POST'&&path==='/importar')return hImport(D,b,file);
+  if(m==='POST'&&path==='/enviarParaEnvioInteligente')return hSmart(D,b,file);
+  if(m==='GET'&&path==='/api/modelos')return [200,{total:MODELOS.length,modelos:MODELOS.map(modeloOut)}];
+  if(m==='POST'&&path==='/api/documento/from-template')return hTpl(D,b);
+  if(m==='POST'&&path==='/api/assinatura')return hSign(D,b);
+  if(m==='DELETE'&&(x=/^\/api\/assinatura\/([^/]*)$/.exec(path)))return hCancel(D,x[1]);
+  if(m==='GET'&&path==='/api/documentos')return hList(D,q);
+  if(m==='GET'&&(x=/^\/api\/documento\/([^/]*)\/status$/.exec(path)))return hStatus(D,x[1]);
+  if(m==='GET'&&(x=/^\/api\/documento\/([^/]*)\/download$/.exec(path)))return hDownload(D,x[1],inst);
+  return E(404,`Rota não encontrada: ${m} ${path}`);
+}
+function forcedError(s){
+  const msg={400:'Parâmetro inválido.',401:'Token inválido ou expirado.',404:'Recurso não encontrado.',409:'Conflito com o estado atual do recurso.'}[s];
+  return E(s,msg+' (erro simulado pelo menu Ferramentas)',{simulado:true});
+}
+function hintFor(st,b){
+  if(st<400)return '';
+  if(b&&b.simulado)return 'Erro forçado pelo menu Ferramentas. A próxima chamada volta ao comportamento normal.';
+  if(st===401)return 'Token ausente, revogado ou de outra instância. O token é fixo por instância: confira o perfil ativo e se o parâmetro instancia está em minúsculas.';
+  if(b&&b.parametro&&/sem valor/.test(b.mensagem))return `O parâmetro "${b.parametro}=" foi enviado vazio. Omita o parâmetro quando não houver filtro.`;
+  if(b&&b.variaveisFaltantes)return 'Preencha as variáveis listadas em variaveisFaltantes; elas estão destacadas no formulário.';
+  if(b&&b.variaveisInvalidas)return 'Corrija o formato: datas dd/MM/aaaa, números 1.234,56, checkbox "sim"/"não".';
+  if(b&&b.variaveisNaoAceitas)return 'Variáveis desabilitadas (preenchidas pelo destinatário ou fora da API) não devem ir no payload.';
+  if(b&&b.errosSignatarios)return 'Veja errosSignatarios: o campo "indice" é a posição (0-based) na lista enviada.';
+  if(b&&b.ordensRecebidas)return 'Com consideraOrdem=true a ordem precisa ser 0-based e contígua. Use "Renumerar" ou deixe a ordem automática ligada.';
+  if(st===409)return b&&b.documentoExistente?'Já existe um registro com o mesmo nome ou referência. Altere nomeArquivo/referenciaExterna ou use o documento existente.':'Já há solicitação em andamento para este documento. Cancele-a (DELETE /api/assinatura/{id}) antes de criar outra.';
+  if(st===404&&b&&/Pasta/.test(b.mensagem))return 'A pasta não existe. A criação de documento por modelo não cria pastas; crie-a antes ou informe nomePastaPai corretamente.';
+  if(st===404)return 'O ID não existe nesta instância. Cada instância tem documentos próprios; confira o perfil ativo.';
+  if(st===400&&b&&b.campo)return `Revise o campo "${b.campo}" na aba Requisição.`;
+  return 'Compare o corpo enviado (aba Requisição) com os campos documentados.';
+}
+const urlPairs=spec=>[['instancia',(state.profile.instancia||state.profile.id).toLowerCase()],...(spec.query||[]),...Object.entries(spec.multipart?spec.multipart.fields:{})];
+const fullUrl=spec=>{const base=(LIVE&&state.profile.baseUrl)||API_BASE;return base.replace(/\/$/,'')+spec.path+'?'+urlPairs(spec).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');};
+async function call(spec){
+  const prof=state.profile,t0=performance.now();
+  const q=urlPairs(spec);const url=fullUrl(spec);
+  const qo={};q.forEach(([k,v])=>qo[k]=v);
+  const reqHeaders={Authorization:mask(prof),Accept:'application/json'};
+  let reqBody=null,bodyArg={},file=null;
+  if(spec.json){reqHeaders['Content-Type']='application/json';reqBody=spec.json;bodyArg=spec.json;}
+  if(spec.multipart){file=spec.multipart.file;reqHeaders['Content-Type']='multipart/form-data; boundary=----dnboundary';
+    reqBody={file:file?{nomeOriginal:file.name,tamanhoBytes:file.size,tipo:file.type||'application/octet-stream'}:null};bodyArg=spec.multipart.fields;}
+  const snap=spec.screen&&FS[spec.screen]?clone(FS[spec.screen]):null;
+  state.pending++;renderMenubar();
+  await sleep(240+Math.random()*560);
+  let out;
+  if(LIVE)out=await liveCall(spec,prof,file);
+  else if(state.forced){out=forcedError(state.forced);state.forced=null;}
+  else if(prof.revogado)out=E(401,'Token inválido, revogado ou não pertence à instância informada.');
+  else{try{out=route(spec.method,spec.path,qo,bodyArg,file,prof.id);}catch(e){out=E(500,'Falha interna simulada: '+e.message);}}
+  state.pending--;
+  const [status,body,realUrl,realHeaders]=out;
+  const res={method:spec.method,url:realUrl||url,status,ok:status<400,ms:Math.round(performance.now()-t0),ts:new Date(),profile:prof.id,reqHeaders,reqBody,body,
+    resHeaders:realHeaders||{'Content-Type':'application/json; charset=utf-8','X-Request-Id':Math.random().toString(16).slice(2,14),...(body.simulado?{'X-Simulado':'true'}:{})},
+    hint:hintFor(status,body),screen:spec.screen||null,snap,fav:false,n:++state.logSeq};
+  learn(res);if(spec.path==='/api/modelos'&&res.ok&&Array.isArray(body.modelos))state.catalog=body.modelos.map(normModelo);
+  if(res.ok&&spec.method!=='GET'){if(body.documentoId)state.lastDocId=body.documentoId;if(body.assinaturaId)state.lastAssId=body.assinaturaId;}
+  state.log.unshift(res);if(state.log.length>200)state.log.pop();
+  refreshDatalists();renderLog();renderMenubar();
+  return res;
+}
+async function liveCall(spec,prof,file){
+  const qs=urlPairs(spec).slice(1).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
+  const url='/_proxy/'+encodeURIComponent(prof.id)+spec.path+(qs?'?'+qs:'');
+  const init={method:spec.method,headers:{}};
+  if(spec.json){init.headers['Content-Type']='application/json';init.body=JSON.stringify(spec.json);}
+  if(spec.multipart&&file){const fd=new FormData();fd.append('file',file,(spec.multipart.fields&&spec.multipart.fields.nomeArquivo)||file.name);init.body=fd;}
+  try{
+    const r=await fetch(url,init);const env=await r.json();let body;
+    try{body=JSON.parse(env.body);}catch{body=env.body?{retorno:env.body}:{};}
+    if(body===null||typeof body!=='object')body={valor:body};
+    return [env.status,body,env.url,env.headers];
+  }catch(e){return [502,{retorno:'Falha ao falar com o servidor local (docnuvem-web): '+e.message}];}
+}
+function learn(res){
+  const b=res.body;if(!res.ok||!b||typeof b!=='object')return;
+  const doc=(id,nome)=>{if(id!=null)state.seenDocs.set(String(id),nome||state.seenDocs.get(String(id))||'');};
+  const ass=(id,docId,nome,st)=>{if(id!=null)state.seenAss.set(String(id),{id,doc:docId,nome:nome||'',status:String(st||'').toLowerCase()});};
+  if(b.documentoId!=null)doc(b.documentoId,b.nomeArquivo);
+  if(b.diretorioId!=null)state.lastDirId=b.diretorioId;
+  if(b.assinaturaId!=null)ass(b.assinaturaId,b.documentoId,b.nomeArquivo,b.status);
+  (b.documentos||[]).forEach(d=>{doc(d.documentoId,d.nomeArquivo);ass(d.assinaturaId,d.documentoId,d.nomeArquivo,d.status);});
+}
+const curl=r=>{
+  const hd=Object.entries(r.reqHeaders).filter(([k])=>k!=='Content-Type'||!/multipart/.test(r.reqHeaders[k])).map(([k,v])=>`-H '${k}: ${v}'`).join(' ');
+  let body='';
+  if(/json/.test(r.reqHeaders['Content-Type']||''))body=` -d '${JSON.stringify(r.reqBody)}'`;
+  else if(r.reqBody&&r.reqHeaders['Content-Type']){body=Object.entries(r.reqBody).map(([k,v])=>k==='file'&&v?`-F 'file=@${v.nomeOriginal}'`:`-F '${k}=${v}'`).join(' ');body=' '+body;}
+  return `curl -X ${r.method} '${r.url}' ${hd}${body}`;
+};
+
+/* ============ estado das telas ============ */
+const FS={};const RS={};
+const S=(id,def)=>FS[id]||(FS[id]=typeof def==='function'?def():clone(def));
+
+/* ============ UI base ============ */
+function toast(msg,kind){const t=h('div',{class:'toast'+(kind==='err'?' err':'')},msg);$('#toast').append(t);setTimeout(()=>t.remove(),1800);}
+async function copyText(t,node){
+  let ok=false;
+  try{await navigator.clipboard.writeText(t);ok=true;}catch{
+    try{const ta=h('textarea',{value:t,style:{position:'fixed',opacity:'0',top:'0'}});document.body.append(ta);ta.select();ok=document.execCommand('copy');ta.remove();}catch{}
+  }
+  if(node){node.classList.add('copied');setTimeout(()=>node.classList.remove('copied'),1500);}
+  toast(ok?'Copiado!':'Não foi possível copiar. Selecione o texto manualmente.',ok?'':'err');
+}
+function CopyBtn(label,getText,cls='btn sm'){
+  const b=h('button',{type:'button',class:cls,onclick:async()=>{await copyText(getText());const o=b.textContent;b.textContent='Copiado!';b.classList.add('copied');setTimeout(()=>{b.textContent=o;b.classList.remove('copied')},1500);}},label);
+  return b;
+}
+const Chip=(label,value)=>{const c=h('button',{type:'button',class:'chip',title:'Clique para copiar o valor completo',onclick:()=>copyText(String(value),c)},h('span',{class:'cl'},label),h('b',{},String(value)));return c;};
+const pill=s=>{const k=String(s==null?'—':s).toLowerCase();return h('span',{class:'pill '+k},({pendente:'◐ ',assinado:'✔ ',expirado:'⌛ ',cancelado:'✖ ',sem_assinatura:'○ '}[k]||'')+k.toUpperCase().replace('_',' '));};
+const methodBadge=m=>h('span',{class:'mb-m m-'+m},m);
+
+const modals=[];
+function Modal({title,body,actions,wide,onClose}){
+  const ov=h('div',{class:'ov',onmousedown:e=>{if(e.target===ov)close();}});
+  const win=h('div',{class:'win dlg'+(wide?' wide':''),role:'dialog','aria-modal':'true','aria-label':title},h('span',{class:'wt'},title),h('div',{class:'dbody'},body),actions&&h('div',{class:'dact'},actions));
+  ov.append(win);document.body.append(ov);const prev=document.activeElement;const m={el:ov,win,close};
+  function close(){if(!ov.isConnected)return;ov.remove();modals.splice(modals.indexOf(m),1);prev&&prev.focus&&prev.focus();onClose&&onClose();}
+  modals.push(m);setTimeout(()=>{const f=win.querySelector('input,select,textarea')||win.querySelector('.dact button')||win.querySelector('button');f&&f.focus();},0);
+  return m;
+}
+
+/* campo de formulário com validação inline */
+function Field(st,o){
+  const id=uid(),type=o.type||'text';let inp;
+  if(type==='select')inp=h('select',{id},h('option',{value:''},o.blank||'— selecione —'),(o.opts||[]).map(x=>{const [v,l]=Array.isArray(x)?x:[x,x];return h('option',{value:v},l);}));
+  else if(type==='textarea')inp=h('textarea',{id,rows:o.rows||3,placeholder:o.ph});
+  else if(type==='checkbox')inp=h('input',{id,type:'checkbox'});
+  else{inp=h('input',{id,type:'text',placeholder:o.ph,autocomplete:'off',list:o.list});inp.setAttribute('spellcheck','false');}
+  if(o.dis){inp.disabled=true;}
+  const labelBits=[h('span',{class:'lb'},o.label),o.req&&!o.dis&&h('span',{class:'rq',title:'obrigatório'},'*'),o.param&&h('span',{class:'pn'},o.param)];
+  const msg=h('div',{class:'msg',role:'status'});
+  const wrap=h('div',{class:'fld'+(o.dis?' dis':'')+(type==='checkbox'?' chk':'')});
+  if(type==='checkbox')wrap.append(h('label',{for:id,class:'chkrow'},inp,h('span',{},labelBits)));
+  else wrap.append(h('label',{for:id},labelBits),inp);
+  if(o.help)wrap.append(h('div',{class:'help'},o.help));
+  if(o.dis)wrap.append(h('div',{class:'note'},'⊘ '+o.dis+' Não vai no payload.'));
+  wrap.append(msg);
+  let touched=false;
+  const get=()=>type==='checkbox'?inp.checked:inp.value;
+  const set=v=>{if(type==='checkbox')inp.checked=!!v;else inp.value=v==null?'':v;st[o.key]=type==='checkbox'?!!v:(v==null?'':v);};
+  set(st[o.key]);
+  function paint(e){
+    wrap.classList.toggle('bad',!!(e&&e.err));wrap.classList.toggle('warned',!!(e&&e.warn));
+    msg.className='msg'+(e?(e.err?' err':' warn'):'');msg.textContent=e?(e.err?'▲ '+e.err:'! '+e.warn):'';
+    inp.setAttribute('aria-invalid',e&&e.err?'true':'false');
+  }
+  function validate(show=true){
+    if(o.dis)return true;
+    const v=get();let e=null;
+    if(o.req&&type!=='checkbox'&&String(v).trim()==='')e={err:'Campo obrigatório.'};
+    else if(o.check){const r=o.check(v);e=typeof r==='string'?{err:r}:r;}
+    if(show)paint(e);
+    return !(e&&e.err);
+  }
+  inp.addEventListener('input',()=>{
+    let v=get();if(o.fmt){const f=o.fmt(v);if(f!==v){inp.value=f;v=f;}}
+    st[o.key]=type==='checkbox'?inp.checked:v;o.onInput&&o.onInput(v);if(touched)validate();o.change&&o.change();
+  });
+  inp.addEventListener('blur',()=>{touched=true;validate();});
+  return {key:o.key,el:wrap,inp,get,set,validate,refresh(){if(touched)validate();},setErr(m){touched=true;paint(m?{err:m}:null);},focus(){inp.focus();}};
+}
+function validateAll(list){let ok=true,first=null;for(const f of list){if(!f.validate(true)){ok=false;first=first||f;}}if(first){first.el.scrollIntoView({block:'center',behavior:'smooth'});first.focus();}return ok;}
+
+/* árvore JSON */
+function JsonView(data){
+  const root=h('div',{class:'jv'});const nodes=[];
+  function leaf(key,val){
+    const isS=typeof val==='string';
+    const cls=isS?'jstr':typeof val==='number'?'jnum':'jbool';
+    const txt=isS?JSON.stringify(val):String(val);const raw=isS?val:String(val);
+    const l=h('span',{class:'jl '+cls,tabindex:0,role:'button',title:'Clique para copiar o valor completo',onclick:()=>copyText(raw,l),onkeydown:e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();copyText(raw,l);}}},txt);
+    return h('div',{class:'jr'},key!=null?h('span',{class:'jk'},key+': '):null,l);
+  }
+  function build(key,val,depth){
+    if(val===null||typeof val!=='object')return leaf(key,val===undefined?null:val);
+    const arr=Array.isArray(val);const ent=arr?val.map((v,i)=>[i,v]):Object.entries(val);
+    const box=h('div',{class:'jr'});const kids=h('div',{class:'jn'});
+    const t=h('button',{type:'button',class:'jt','aria-expanded':'true',title:'Recolher/expandir'},'▼');
+    const cp=h('button',{type:'button',class:'jc',title:'Copiar este trecho como JSON',onclick:()=>copyText(JSON.stringify(val,null,2),cp)},'⧉');
+    const set=open=>{kids.hidden=!open;t.textContent=open?'▼':'►';t.setAttribute('aria-expanded',String(open));};
+    t.addEventListener('click',()=>set(kids.hidden));
+    ent.forEach(([k,v])=>kids.append(build(arr?`[${k}]`:`"${k}"`,v,depth+1)));
+    box.append(t,key!=null?h('span',{class:'jk'},key+': '):null,h('span',{class:'jsum'},arr?`[ ${ent.length} ]`:`{ ${ent.length} }`),cp,kids);
+    nodes.push({depth,set});set(depth<2);
+    return box;
+  }
+  root.append(build(null,data,0));
+  const setDepth=n=>nodes.forEach(x=>x.set(x.depth<n));
+  return h('div',{},h('div',{class:'jtools'},h('button',{type:'button',class:'btn sm',onclick:()=>setDepth(99)},'Expandir tudo'),h('button',{type:'button',class:'btn sm',onclick:()=>setDepth(0)},'Recolher tudo'),h('button',{type:'button',class:'btn sm',onclick:()=>setDepth(1)},'Nível 1'),h('button',{type:'button',class:'btn sm',onclick:()=>setDepth(2)},'Nível 2'),CopyBtn('Copiar JSON',()=>JSON.stringify(data,null,2))),root);
+}
+
+/* painel de resultado */
+function ResultPanel(o={}){
+  const el=h('section',{class:'win'},h('span',{class:'wt'},'RESULTADO'));const body=h('div');el.append(body);
+  const P={el,busy:false,last:null};let tab=null;
+  const idle=()=>body.replaceChildren(h('div',{class:'empty'},o.empty||h('span',{},'Nenhuma chamada ainda. Preencha o formulário e pressione ',h('b',{},'F5'),' ou ',h('b',{},'Enter'),'.')));
+  P.loading=spec=>{P.busy=true;body.replaceChildren(h('div',{class:'loading'},h('div',{},'Aguardando resposta… você pode navegar: a chamada continua e fica no log.'),h('span',{class:'loadbar','aria-hidden':'true'},'▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒'),h('div',{class:'url dim'},spec.method+' '+fullUrl(spec))));};
+  P.show=res=>{
+    P.busy=false;P.last=res;const hasV=!!(o.visual&&res.ok);
+    if(!tab||(tab==='visual'&&!hasV))tab=hasV?'visual':'json';
+    if(!res.ok)tab=tab==='visual'?'json':tab;
+    draw();
+  };
+  function draw(){
+    const res=P.last;if(!res)return idle();
+    const hasV=!!(o.visual&&res.ok);
+    const head=h('div',{class:'reshead'},h('span',{class:'st '+(res.ok?'ok':'err')},`${res.status} ${res.ok?'OK':ERR[res.status]||'ERRO'}`),h('span',{class:'dim'},`${res.ms} ms · ${fmtTime(res.ts)}`),h('span',{class:'dim'},'perfil '+res.profile));
+    const urlLine=h('div',{class:'urlbar'},h('b',{},res.method+' '),h('span',{class:'url'},res.url),' ',CopyBtn('copiar URL',()=>res.url),' ',CopyBtn('copiar cURL',()=>curl(res)));
+    const parts=[head,urlLine];
+    if(!res.ok){
+      const b=res.body||{};
+      parts.push(h('div',{class:'errbox',role:'alert'},h('h4',{},`✖ ERRO ${res.status} · ${b.erro||''}`),h('div',{},b.mensagem||b.retorno||b.message||b.erro||JSON.stringify(b)),h('div',{class:'row'},h('span',{class:'dim'},'URL efetivamente chamada: '),res.url),res.hint&&h('div',{class:'hint'},'DICA: '+res.hint)));
+    }
+    if(o.highlights&&res.ok){const hl=o.highlights(res);if(hl&&hl.length)parts.push(h('div',{class:'chiprow'},hl.map(([l,v])=>Chip(l,v))));}
+    const tabs=[hasV&&['visual','Visual'],['json','JSON'],['req','Requisição']].filter(Boolean);
+    parts.push(h('div',{class:'tabs',role:'tablist'},tabs.map(([k,l])=>h('button',{type:'button',role:'tab','aria-selected':String(tab===k),class:'tab'+(tab===k?' on':''),onclick:()=>{tab=k;draw();}},l))));
+    if(tab==='visual'&&hasV){const v=o.visual(res);parts.push(v||JsonView(res.body));}
+    else if(tab==='req')parts.push(ReqView(res));
+    else parts.push(JsonView(res.body));
+    if(res.screen&&res.snap)parts.push(h('div',{class:'acts'},h('button',{type:'button',class:'btn sm',onclick:()=>reuse(res)},'↻ Reenviar com os mesmos dados')));
+    body.replaceChildren(...parts);
+  }
+  P.redraw=draw;
+  if(o.key&&RS[o.key]){P.last=RS[o.key];tab=null;P.show(RS[o.key]);}else idle();
+  return P;
+}
+function ReqView(res){
+  return h('div',{},h('h3',{class:'dim'},'Cabeçalhos'),JsonView(res.reqHeaders),h('h3',{class:'dim'},'Corpo'),res.reqBody?JsonView(res.reqBody):h('div',{class:'empty'},'Sem corpo (requisição sem payload).'));
+}
+function reuse(res){go(res.screen,{snapshot:res.snap,run:true});}
+
+/* tabela ordenável e filtrável */
+function DataTable(cols,rows,o={}){
+  let sk=o.sort||null,dir=1,q='';
+  const info=h('span',{class:'dim'});const tw=h('div',{class:'tw'});
+  const search=h('input',{type:'search',class:'dtq','data-search':'1',placeholder:'/  filtrar nesta tabela…','aria-label':'Filtrar tabela',oninput:e=>{q=e.target.value.toLowerCase();draw();}});
+  const val=(c,x)=>c.get?c.get(x):x[c.k];
+  function draw(){
+    let r=rows.filter(x=>!q||cols.some(c=>String(val(c,x)).toLowerCase().includes(q)));
+    if(sk){const c=cols.find(c=>c.k===sk);r=[...r].sort((a,b)=>{const A=val(c,a),B=val(c,b);return (typeof A==='number'&&typeof B==='number'?A-B:String(A).localeCompare(String(B),'pt-BR',{numeric:true}))*dir;});}
+    info.textContent=`${r.length} de ${rows.length} linha(s)`;
+    tw.replaceChildren(h('table',{},
+      h('thead',{},h('tr',{},cols.map(c=>h('th',{class:c.num?'num':'','aria-sort':sk===c.k?(dir>0?'ascending':'descending'):'none'},c.nosort?h('span',{class:'thb'},c.h):h('button',{type:'button',class:'thb',onclick:()=>{if(sk===c.k)dir=-dir;else{sk=c.k;dir=1;}draw();}},c.h,sk===c.k?(dir>0?' ▲':' ▼'):''))))),
+      h('tbody',{},r.length?r.map(row=>h('tr',{class:o.onRow?'clk':'',tabindex:o.onRow?0:null,onclick:o.onRow?()=>o.onRow(row):null,onkeydown:o.onRow?e=>{if(e.key==='Enter'&&e.target.tagName==='TR')o.onRow(row);}:null},cols.map(c=>h('td',{class:(c.cls||'')+(c.num?' num':'')},c.render?c.render(row):val(c,row)))))
+        :h('tr',{},h('td',{colspan:cols.length,class:'empty'},o.empty||'Nenhuma linha corresponde ao filtro.')))));
+  }
+  draw();
+  return h('div',{class:'dt'},h('div',{class:'bar'},search,info),tw);
+}
+
+/* ============ shell de tela / botões ============ */
+function Shell(meta,single){
+  const left=h('div',{class:'col'}),right=h('div',{class:'col'});
+  const ep=h('div',{class:'ep'},meta.method?methodBadge(meta.method):null,h('code',{},meta.path));
+  const el=h('div',{class:'screen'},h('header',{class:'sh'},h('h1',{},meta.title),ep,h('p',{class:'desc'},meta.desc)),h('div',{class:single?'one':'split'},left,right));
+  return {el,left,right};
+}
+const Win=(t,...k)=>h('section',{class:'win'},h('span',{class:'wt'},t),...k);
+function Actions(run,example,reset,label){
+  return h('div',{class:'acts'},
+    h('button',{class:'btn pri',type:'button',onclick:run},'▶ '+(label||'Executar'),h('kbd',{},'F5')),
+    example&&h('button',{class:'btn',type:'button',onclick:example},'Preencher exemplo',h('kbd',{},'F6')),
+    reset&&h('button',{class:'btn',type:'button',onclick:reset},'Limpar'));
+}
+function ReqPreview(build){
+  const pre=h('pre',{class:'prev'});
+  const det=h('details',{class:'det'},h('summary',{},'Requisição prevista (o que será enviado)'),pre,h('div',{class:'acts'},CopyBtn('copiar',()=>pre.textContent)));
+  const api={el:det,update(){try{const s=build();let t=`${s.method} ${fullUrl(s)}\nAuthorization: ${mask(state.profile)}`;
+    if(s.json)t+=`\nContent-Type: application/json\n\n${JSON.stringify(s.json,null,2)}`;
+    else if(s.multipart){const f=s.multipart.file;t+=`\nContent-Type: multipart/form-data\n\nfile: ${f?`${f.name} (${f.size} bytes)`:'(nenhum)'}`;}
+    pre.textContent=t;}catch(e){pre.textContent='(formulário incompleto)';}}};
+  api.update();return api;
+}
+async function execute(id,spec,RP,after){
+  if(RP.busy)return;spec.screen=spec.screen||id;RP.loading(spec);
+  const res=await call(spec);RS[id]=res;RP.show(res);after&&after(res);return res;
+}
+function gate(list){if(!state.localVal)return true;const ok=validateAll(list);if(!ok)toast('Corrija os campos destacados.','err');return ok;}
+const resetScreen=id=>{delete FS[id];delete RS[id];go(id);};
+function DocActions(id){
+  return h('div',{class:'acts'},
+    h('button',{type:'button',class:'btn pri',onclick:()=>go('sign',{prefill:{documentoId:String(id)}})},'Solicitar assinatura →'),
+    h('button',{type:'button',class:'btn',onclick:()=>go('status',{prefill:{documentoId:String(id)},run:true})},'Ver status'),
+    h('button',{type:'button',class:'btn',onclick:()=>go('download',{prefill:{documentoId:String(id)},run:true})},'Baixar'));
+}
+function DocIdField(st,key,chg,o={}){
+  const f=Field(st,{key,label:o.label||'documentoId',param:o.param||'documentoId',req:true,list:'dl-docs',ph:'ex.: '+(state.lastDocId||48120),change:chg,check:v=>/^\d+$/.test(v.trim())?null:'O documentoId é numérico (somente dígitos).',help:o.help});
+  const chip=h('button',{type:'button',class:'btn sm',onclick:()=>{f.set(String(state.lastDocId));chg&&chg();f.validate();}},'usar último: '+state.lastDocId);
+  chip.hidden=!state.lastDocId;if(o.lock){f.inp.readOnly=true;chip.hidden=true;}
+  f.el.insertBefore(h('div',{},chip),f.el.querySelector('.msg'));
+  return f;
+}
+
+/* ============ telas: upload ============ */
+const uploadDefaults=()=>({file:null,nomeArquivo:'',_touched:false,nomePasta:'',nomePastaPai:''});
+function UploadForm(st,o){
+  const chg=()=>o.onChange&&o.onChange();const fl=[];
+  const msgFile=h('div',{class:'msg'});const finfo=h('div',{class:'finfo'});
+  const input=h('input',{type:'file',id:uid(),hidden:true,onchange:e=>setFile(e.target.files[0])});
+  let nome;
+  function showInfo(){finfo.textContent=st.file?`📄 ${st.file.name} · ${st.file.size.toLocaleString('pt-BR')} bytes · ${st.file.type||'tipo desconhecido'}`:'Nenhum arquivo selecionado.';if(st.file){msgFile.textContent='';msgFile.className='msg';}}
+  function setFile(f){if(!f)return;st.file=f;if(!st._touched){st.nomeArquivo=f.name;nome.set(f.name);}showInfo();nome.refresh();chg();}
+  const sample=()=>setFile(new File(['%PDF-1.4\n% arquivo de exemplo (mock)\n'],'contrato_exemplo.pdf',{type:'application/pdf'}));
+  const drop=h('div',{class:'drop'},h('div',{},'Arraste um arquivo para cá'),finfo,h('div',{class:'acts'},
+    h('button',{type:'button',class:'btn',onclick:()=>input.click()},'Escolher arquivo…'),h('button',{type:'button',class:'btn',onclick:sample},'Usar arquivo de exemplo')),msgFile,input);
+  drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('drag');});
+  drop.addEventListener('dragleave',()=>drop.classList.remove('drag'));
+  drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('drag');setFile(e.dataTransfer.files[0]);});
+  nome=Field(st,{key:'nomeArquivo',label:'Nome do arquivo',param:'nomeArquivo',req:true,ph:'contrato.pdf',change:chg,
+    help:'Com extensão. Preenchido pelo arquivo escolhido; se você editar, não será sobrescrito.',
+    onInput:v=>{st._touched=v.trim()!=='';},
+    check:v=>{
+      if(/[\\/:*?"<>|]/.test(v))return 'Caracteres inválidos: \\ / : * ? " < > |';
+      const m=/\.([A-Za-z0-9]{1,5})$/.exec(v.trim());if(!m)return 'Falta a extensão (ex.: .pdf).';
+      if(!EXT.includes(m[1].toLowerCase()))return `Extensão .${m[1]} não é aceita. Aceitas: ${EXT.join(', ')}.`;
+      if(st.file){const fe=(/\.([^.]+)$/.exec(st.file.name)||[])[1];if(fe&&fe.toLowerCase()!==m[1].toLowerCase())return {warn:`A extensão difere do arquivo escolhido (.${fe}).`};}
+      return null;}});
+  fl.push(nome);
+  const parts=[h('div',{class:'fld'},h('label',{},h('span',{class:'lb'},'Arquivo'),h('span',{class:'rq'},'*'),h('span',{class:'pn'},'arquivo (multipart)')),drop),nome.el];
+  if(o.folders){
+    const pasta=Field(st,{key:'nomePasta',label:'Pasta de destino',param:'nomePasta',req:true,ph:'Contratos',change:chg,help:'Obrigatória. Criada se não existir.'});
+    const pai=Field(st,{key:'nomePastaPai',label:'Pasta pai',param:'nomePastaPai',ph:'Jurídico/2026',change:chg,help:'Opcional. Se informada, a árvore pai/pasta é criada quando não existir.',check:v=>/^\/|\/$/.test(v.trim())?{warn:'Remova barras no início ou no fim.'}:null});
+    fl.push(pasta,pai);parts.push(h('div',{class:'grid2'},pasta.el,pai.el));
+  }
+  showInfo();
+  return {el:h('div',{},parts),fields:{nome},validate(){
+    let ok=true;if(!st.file){ok=false;msgFile.className='msg err';msgFile.textContent='▲ Selecione um arquivo ou arraste-o para a área acima.';}
+    return validateAll(fl)&&ok;},
+    example(){sample();if(o.folders){fl[1].set('Contratos');fl[2].set('2026');}chg();}};
+}
+function UploadScreen(id){
+  const smart=id==='smart';const st=S(id,uploadDefaults);
+  const sh=Shell(smart?{title:'Envio inteligente',method:'POST',path:'/enviarParaEnvioInteligente',desc:'Envia um arquivo para classificação automática. Retorna o documentoId.'}:{title:'Importar arquivo',method:'POST',path:'/importar',desc:'Importa um arquivo para uma pasta. Se a pasta (ou a pasta pai) não existir, a árvore é criada. Retorna documentoId e diretorioId.'});
+  const RP=ResultPanel({key:id,visual:res=>h('div',{},h('div',{class:'okbox'},res.body.retorno||(smart?'Documento recebido.':'Arquivo importado com sucesso.')),res.body.caminho?h('dl',{class:'kv'},h('dt',{},'Caminho'),h('dd',{},res.body.caminho),h('dt',{},'Arquivo'),h('dd',{},res.body.nomeArquivo)):null,DocActions(res.body.documentoId)),
+    highlights:res=>[['documentoId',res.body.documentoId],...(res.body.diretorioId?[['diretorioId',res.body.diretorioId]]:[])]});
+  const fields=(smart?{nomeArquivo:()=>st.nomeArquivo.trim()}:null);
+  const build=()=>({method:'POST',path:smart?'/enviarParaEnvioInteligente':'/importar',multipart:{file:st.file,fields:smart?{nomeArquivo:st.nomeArquivo.trim()}:{nomeArquivo:st.nomeArquivo.trim(),nomePasta:st.nomePasta.trim(),...(st.nomePastaPai.trim()?{nomePastaPai:st.nomePastaPai.trim()}:{})}}});
+  const prev=ReqPreview(build);const form=UploadForm(st,{folders:!smart,onChange:()=>prev.update()});
+  const run=()=>{if(RP.busy||!gate([{validate:()=>form.validate(),el:sh.left,focus(){}}]))return;execute(id,build(),RP);};
+  sh.left.append(Win(smart?'ENVIO':'IMPORTAÇÃO',form.el,Actions(run,()=>{form.example();prev.update();},()=>resetScreen(id)),prev.el),);
+  sh.right.append(RP.el);
+  return {el:sh.el,run,example:()=>{form.example();prev.update();}};
+}
+
+/* ============ modelos ============ */
+function ModelsScreen(){
+  const sh=Shell({title:'Modelos',method:'GET',path:'/api/modelos',desc:'Lista os modelos de documento disponíveis. Clique em um modelo para criar um documento a partir dele.'},true);
+  const RP=ResultPanel({key:'models',empty:'Carregando lista de modelos…',visual:res=>DataTable([
+    {k:'codigo',h:'Código',cls:'nw',get:m=>m.codigo||String(m.id||''),render:m=>h('b',{style:{color:'var(--yel)'}},m.codigo||m.id)},{k:'nome',h:'Nome'},{k:'descricao',h:'Descrição'},
+    {k:'geravelPorApi',h:'Gerável por API',cls:'nw',get:m=>m.geravelPorApi?'SIM':'NÃO',render:m=>h('span',{class:'pill '+(m.geravelPorApi?'assinado':'cancelado')},m.geravelPorApi?'✔ SIM':'✖ NÃO')},
+    {k:'nv',h:'Variáveis',num:true,get:m=>m.variaveis.length}],res.body.modelos,{sort:'codigo',onRow:m=>go('from',{prefill:{modelo:m.codigo||String(m.id)}})})});
+  const build=()=>({method:'GET',path:'/api/modelos'});const prev=ReqPreview(build);
+  const run=()=>execute('models',build(),RP);
+  sh.left.append(Win('CONSULTA',h('div',{class:'dim'},'Sem parâmetros além de instancia.'),Actions(run,null,null,'Listar modelos'),prev.el));sh.right.append(RP.el);
+  if(!RS.models)setTimeout(run,0);
+  return {el:sh.el,run};
+}
+
+/* ============ criar de modelo ============ */
+function TemplateScreen(){
+  const st=S('from',()=>({modelo:'',nomePasta:'',nomePastaPai:'',nomeArquivo:'',referenciaExterna:'',loginSolicitante:'',vars:{}}));
+  const sh=Shell({title:'Documento a partir de modelo',method:'POST',path:'/api/documento/from-template',desc:'Gera um documento preenchendo as variáveis do modelo. O formulário muda conforme o modelo escolhido.'});
+  const RP=ResultPanel({key:'from',visual:res=>h('div',{},h('div',{class:'okbox'},'Documento criado a partir do modelo '+st.modelo+'.'),h('dl',{class:'kv'},h('dt',{},'Arquivo'),h('dd',{},res.body.nomeArquivo||'—'),h('dt',{},'Referência externa'),h('dd',{},res.body.referenciaExterna||'—')),DocActions(res.body.documentoId)),
+    highlights:res=>[['documentoId',res.body.documentoId],['diretorioId',res.body.diretorioId]]});
+  const build=()=>{
+    const m=cat().find(x=>x.codigo===st.modelo);const vars={};
+    if(m)for(const v of m.variaveis){if(v.dis)continue;const x=st.vars[v.nome];
+      if(v.tipo==='checkbox')vars[v.nome]=x?'sim':'não';else if(x!=null&&String(x).trim()!=='')vars[v.nome]=String(x).trim();}
+    const t=k=>(st[k]||'').trim();
+    return {method:'POST',path:'/api/documento/from-template',json:{modelo:st.modelo,nomePasta:t('nomePasta'),...(t('nomePastaPai')?{nomePastaPai:t('nomePastaPai')}:{}),...(t('nomeArquivo')?{nomeArquivo:t('nomeArquivo')}:{}),...(t('referenciaExterna')?{referenciaExterna:t('referenciaExterna')}:{}),...(t('loginSolicitante')?{loginSolicitante:t('loginSolicitante')}:{}),variaveis:vars}};
+  };
+  const prev=ReqPreview(build);const chg=()=>prev.update();
+  const fMod=Field(st,{key:'modelo',type:'select',label:'Modelo',param:'modelo',req:true,opts:cat().map(m=>[m.codigo,`${m.codigo} · ${m.nome}`]),change:chg,onInput:()=>drawVars()});
+  const info=h('div');
+  const fx={pasta:Field(st,{key:'nomePasta',label:'Pasta',param:'nomePasta',req:true,ph:'Contratos',change:chg,help:'Deve já existir: este endpoint não cria pasta.'}),
+    pai:Field(st,{key:'nomePastaPai',label:'Pasta pai',param:'nomePastaPai',ph:'(opcional)',change:chg}),
+    nome:Field(st,{key:'nomeArquivo',label:'Nome do arquivo',param:'nomeArquivo',ph:'(opcional)',change:chg,help:'Sem valor, a API usa o nome do modelo.'}),
+    ref:Field(st,{key:'referenciaExterna',label:'Referência externa',param:'referenciaExterna',ph:'PED-2026-0500',change:chg,help:'Até 64 caracteres.',check:v=>v.length>64?`Máximo de 64 caracteres (atual: ${v.length}).`:v.length>56?{warn:`${v.length}/64 caracteres.`}:null}),
+    login:Field(st,{key:'loginSolicitante',label:'Login do solicitante',param:'loginSolicitante',ph:'suporte.docnuvem',change:chg})};
+  const varBox=h('div'),banner=h('div');let varF={};
+  function varField(v){
+    const tag={texto:'texto',textolongo:'texto longo',data:'data dd/MM/aaaa',numerico:'numérico 1.234,56',checkbox:'checkbox → sim/não',selecao:'seleção'}[v.tipo];
+    return Field(st.vars,{key:v.nome,label:v.rotulo,param:`${v.nome} · ${tag}`,type:{textolongo:'textarea',selecao:'select',checkbox:'checkbox'}[v.tipo]||'text',opts:v.opcoes,req:v.obr&&!v.dis,dis:v.dis,change:chg,
+      ph:v.tipo==='data'?'31/12/2026':v.tipo==='numerico'?'1.234,56':undefined,
+      check:v.tipo==='data'?x=>x&&!parseDate(x)?'Data inválida; use dd/MM/aaaa (ex.: 31/12/2026).':null:v.tipo==='numerico'?x=>x&&!NUM_BR.test(x.trim())?'Formato numérico inválido; use 1.234,56.':null:null});
+  }
+  function drawVars(){
+    varF={};banner.replaceChildren();const m=cat().find(x=>x.codigo===st.modelo);
+    if(!m){varBox.replaceChildren(h('div',{class:'empty'},'Escolha um modelo acima. Os campos aparecem aqui. Você também pode escolher um na tela ',h('button',{type:'button',class:'lnk',onclick:()=>go('models')},'Modelos'),'.'));info.replaceChildren();chg();return;}
+    info.replaceChildren(h('div',{class:'dim'},m.descricao),h('div',{style:{margin:'4px 0'}},h('span',{class:'pill '+(m.geravelPorApi?'assinado':'cancelado')},m.geravelPorApi?'✔ GERÁVEL POR API':'✖ NÃO GERÁVEL POR API')),
+      m.geravelPorApi?null:h('div',{class:'warnbox'},'A API vai recusar este modelo com 400. Execute para ver a resposta.'));
+    const fs=m.variaveis.map(v=>{const f=varField(v);varF[v.nome]=f;return f;});
+    const nObr=m.variaveis.filter(v=>v.obr&&!v.dis).length,nDis=m.variaveis.filter(v=>v.dis).length;
+    varBox.replaceChildren(h('div',{class:'dim',style:{marginBottom:'8px'}},`${m.variaveis.length} variáveis · ${nObr} obrigatórias · ${nDis} desabilitadas`),h('div',{class:'grid2'},fs.map(f=>f.el)));
+    chg();
+  }
+  function afterRes(res){
+    if(res.ok||!res.body)return;const b=res.body;let n=0,first=null;
+    (b.variaveisFaltantes||[]).forEach(k=>{if(varF[k]){varF[k].setErr('A API informou esta variável como obrigatória e faltante.');n++;first=first||varF[k];}});
+    (b.variaveisInvalidas||[]).forEach(x=>{if(varF[x.nome]){varF[x.nome].setErr(x.motivo);n++;first=first||varF[x.nome];}});
+    (b.variaveisNaoAceitas||[]).forEach(k=>{if(varF[k]){varF[k].setErr('Esta variável não é aceita pela API.');n++;first=first||varF[k];}});
+    if(b.campo&&fx[{nomePasta:'pasta',nomePastaPai:'pai',nomeArquivo:'nome',referenciaExterna:'ref',loginSolicitante:'login'}[b.campo]])fx[{nomePasta:'pasta',nomePastaPai:'pai',nomeArquivo:'nome',referenciaExterna:'ref',loginSolicitante:'login'}[b.campo]].setErr(b.mensagem);
+    if(/Pasta não encontrada/.test(b.mensagem||''))fx.pasta.setErr(b.mensagem);
+    if(n){banner.replaceChildren(h('div',{class:'errbox'},`✖ A API apontou ${n} variável(is). Os campos em vermelho foram marcados abaixo.`));first.el.scrollIntoView({block:'center',behavior:'smooth'});}
+  }
+  const all=()=>[fMod,...Object.values(fx),...Object.values(varF)];
+  const run=()=>{if(RP.busy)return;banner.replaceChildren();if(!gate(all()))return;execute('from',build(),RP,afterRes);};
+  function example(){
+    const m=cat().find(x=>x.codigo===st.modelo)||cat()[0];if(!st.modelo){fMod.set(m.codigo);drawVars();}
+    const d=new Date(Date.now()+30*864e5);
+    fx.pasta.set('Contratos');fx.nome.set(m.nome.replace(/\s+\(.*\)/,'').replace(/\s+/g,'_')+'_exemplo.pdf');fx.ref.set('TST-'+String(Date.now()).slice(-6));fx.login.set('suporte.docnuvem');
+    for(const v of m.variaveis){if(v.dis)continue;const f=varF[v.nome];
+      f.set(v.tipo==='data'?fmtDate(d):v.tipo==='numerico'?'1.500,00':v.tipo==='checkbox'?true:v.tipo==='selecao'?v.opcoes[0]:v.tipo==='textolongo'?'Texto de exemplo para teste da integração.':'Exemplo '+v.rotulo);}
+    chg();
+  }
+  sh.left.append(Win('MODELO',fMod.el,info),
+    Win('CAMPOS DO DOCUMENTO',h('div',{class:'grid2'},fx.pasta.el,fx.pai.el,fx.nome.el,fx.ref.el,fx.login.el)),
+    Win('VARIÁVEIS DO MODELO',banner,varBox),
+    Actions(run,example,()=>resetScreen('from')),prev.el);
+  sh.right.append(RP.el);
+  const fillMods=()=>{const cur=st.modelo;fMod.inp.replaceChildren(h('option',{value:''},'— selecione —'),...cat().map(m=>h('option',{value:m.codigo},m.codigo+' · '+m.nome)));fMod.inp.value=cur;};
+  fillMods();fMod.set(st.modelo);drawVars();
+  if(!state.catalog){
+    varBox.replaceChildren(h('div',{class:'empty'},'Carregando modelos da API…'));
+    call({method:'GET',path:'/api/modelos',screen:'models'}).then(r=>{if(r.ok){RS.models=r;fillMods();fMod.set(st.modelo);drawVars();}else varBox.replaceChildren(h('div',{class:'errbox'},'Não foi possível carregar os modelos: '+(r.body.mensagem||r.body.retorno||r.status)));});
+  }
+  return {el:sh.el,run,example};
+}
+
+/* ============ solicitar assinatura ============ */
+const signDefaults=()=>({documentoId:'',sigs:[{nome:'',email:'',cpf:'',telefone:'',ordem:'0'}],autoOrd:true,consideraOrdem:false,vTipo:'dias',dataValidade:'',prazoDias:'30',metodos:'eletronica',textoEmail:'',referenciaExterna:'',loginSolicitante:'',lembretes:'1,7'});
+function SigList(st,o){
+  const box=h('div',{class:'sigs'});let rowsF=[];const listMsg=h('div',{class:'msg'});
+  const renum=()=>{if(st.autoOrd)st.sigs.forEach((s,i)=>{s.ordem=String(i);});};
+  const dup=(k,i,v)=>v&&st.sigs.some((s,j)=>j!==i&&String(s[k]).trim().toLowerCase()===v.trim().toLowerCase());
+  function render(){
+    rowsF=[];box.replaceChildren();
+    if(!st.sigs.length)box.append(h('div',{class:'empty'},'Nenhum signatário. Use ',h('b',{},'+ Adicionar signatário'),'.'));
+    st.sigs.forEach((s,i)=>{
+      const mk=(k,l,x)=>Field(s,{key:k,label:l,change:o.change,...x});
+      const f={
+        nome:mk('nome','Nome',{req:true,param:'nome',check:v=>v.trim()&&v.trim().split(/\s+/).length<2?{warn:'Informe nome e sobrenome.'}:null}),
+        email:mk('email','E-mail',{req:true,param:'email',check:v=>!EMAIL_RE.test(v.trim())?'E-mail inválido.':dup('email',i,v)?{warn:'E-mail repetido na lista.'}:null}),
+        cpf:mk('cpf','CPF',{req:true,param:'cpf',ph:'000.000.000-00',fmt:cpfFmt,check:v=>{const d=digits(v);return d.length<11?'CPF incompleto (11 dígitos).':!cpfValid(d)?'CPF inválido: o dígito verificador não confere.':dup('cpf',i,v)?{warn:'CPF repetido na lista.'}:null;}}),
+        telefone:mk('telefone','Telefone',{param:'telefone (opcional)',ph:'(11) 91234-5678',check:v=>v.trim()&&![10,11].includes(digits(v).length)?{warn:'Esperado DDD + 8 ou 9 dígitos.'}:null}),
+        ordem:mk('ordem','Ordem',{param:'ordem (0-based)',check:v=>{
+          if(!/^-?\d+$/.test(String(v).trim()))return 'A ordem deve ser um número inteiro.';
+          if(o.considera()){const n=st.sigs.length;const set=st.sigs.map(x=>String(x.ordem).trim()).sort((a,b)=>a-b);
+            if(!set.every((x,k)=>x===String(k)))return `Com ordem ligada deve ser 0-based e contígua (0 a ${n-1}) e sem repetição.`;}
+          return null;}}),
+      };
+      f.ordem.inp.readOnly=!!st.autoOrd;rowsF.push(f);
+      box.append(h('div',{class:'srow'},h('div',{class:'srow-h'},h('b',{},'Signatário #'+(i+1)),
+        h('button',{type:'button',class:'btn sm',title:'Subir',disabled:i===0,onclick:()=>move(i,-1)},'▲'),
+        h('button',{type:'button',class:'btn sm',title:'Descer',disabled:i===st.sigs.length-1,onclick:()=>move(i,1)},'▼'),
+        h('button',{type:'button',class:'btn sm danger',title:'Remover',onclick:()=>{st.sigs.splice(i,1);renum();render();o.change();}},'✕ remover')),
+        h('div',{class:'grid2'},f.nome.el,f.email.el,f.cpf.el,f.telefone.el,f.ordem.el)));
+    });
+  }
+  function move(i,d){const j=i+d;[st.sigs[i],st.sigs[j]]=[st.sigs[j],st.sigs[i]];renum();render();o.change();}
+  const add=()=>{st.sigs.push({nome:'',email:'',cpf:'',telefone:'',ordem:String(st.sigs.length)});renum();render();o.change();const last=box.querySelector('.srow:last-child input');last&&last.focus();};
+  const autoChk=h('input',{type:'checkbox',id:uid(),checked:!!st.autoOrd,onchange:e=>{st.autoOrd=e.target.checked;renum();render();o.change();}});
+  const el=h('div',{},box,listMsg,h('div',{class:'acts'},h('button',{type:'button',class:'btn',onclick:add},'+ Adicionar signatário'),h('button',{type:'button',class:'btn',onclick:()=>{renum();render();o.change();}},'Renumerar 0..n')),
+    h('label',{class:'chkline'},autoChk,h('span',{},'Ordem automática (0..n-1). Desligue para testar ordens inválidas.')));
+  render();
+  return {el,
+    validate(){let ok=true;listMsg.textContent='';listMsg.className='msg';
+      if(!st.sigs.length){listMsg.className='msg err';listMsg.textContent='▲ Informe ao menos um signatário.';return false;}
+      for(const f of rowsF)for(const k of Object.values(f))if(!k.validate(true))ok=false;return ok;},
+    refreshOrder(){rowsF.forEach(f=>f.ordem.validate(true));},
+    fill(ex){st.sigs=ex.map((n,i)=>({nome:NOMES[n][0],email:NOMES[n][1]+'@exemplo.com.br',cpf:cpfFmt(SEEDCPF[n]),telefone:'(11) 9'+String(1000+n*137).padStart(4,'0')+'-'+String(2000+n*311).slice(0,4),ordem:String(i)}));render();},
+    payload(){return st.sigs.map(s=>{const t=digits(s.telefone);const on=String(s.ordem).trim();return {nome:s.nome.trim(),email:s.email.trim(),cpf:digits(s.cpf),...(t?{telefone:t}:{}),ordem:/^-?\d+$/.test(on)?Number(on):on};});}};
+}
+function SignForm(st,o){
+  const chg=()=>o.change&&o.change();const fl=[];
+  const doc=DocIdField(st,'documentoId',chg,{lock:o.lockDoc,help:o.lockDoc?'Preenchido pelo passo 1.':'Documento já existente nesta instância (use a lista ao digitar).'});fl.push(doc);
+  const sl=SigList(st,{change:chg,considera:()=>st.consideraOrdem});
+  const cons=h('input',{type:'checkbox',id:uid(),checked:!!st.consideraOrdem,onchange:e=>{st.consideraOrdem=e.target.checked;sl.refreshOrder();chg();}});
+  const vbox=h('div');let vf=null;
+  function drawV(){
+    const dias=st.vTipo==='dias';
+    vf=dias?Field(st,{key:'prazoDias',label:'Prazo em dias',param:'prazoDias',req:true,change:chg,check:v=>!/^\d+$/.test(v.trim())||+v<1||+v>365?'Informe um inteiro entre 1 e 365.':null})
+      :Field(st,{key:'dataValidade',label:'Data limite',param:'dataValidade',req:true,ph:isoDate(new Date(Date.now()+30*864e5))+'T23:59:59',change:chg,help:'yyyy-MM-ddTHH:mm:ss, data futura.',check:v=>{const d=parseIsoDT(v);return !d?'Use yyyy-MM-ddTHH:mm:ss (ex.: 2026-12-31T23:59:59).':d<=new Date()?'A data deve ser futura.':null;}});
+    vbox.replaceChildren(vf.el);
+  }
+  const rad=(v,l)=>h('label',{},h('input',{type:'radio',name:'vt'+uid(),checked:st.vTipo===v,onchange:()=>{st.vTipo=v;drawV();chg();}}),l);
+  const radName='vt'+uid();const r1=rad('dias','Prazo em dias'),r2=rad('data','Data limite');r1.firstChild.name=radName;r2.firstChild.name=radName;
+  const met=Field(st,{key:'metodos',label:'Métodos de assinatura',param:'metodos',req:true,change:chg,help:'Separados por vírgula. Válidos: eletronica, digital, birdid.',
+    check:v=>{const t=v.toLowerCase().split(/[,\s]+/).filter(Boolean);const bad=t.filter(x=>!METODOS.includes(x));return !t.length?'Informe ao menos um método.':bad.length?`Método inválido: ${bad.join(', ')}.`:null;}});
+  const chips=h('div',{class:'chips'},METODOS.map(m=>h('button',{type:'button',class:'btn sm',onclick:()=>{const t=st.metodos.toLowerCase().split(/[,\s]+/).filter(Boolean);const i=t.indexOf(m);if(i>=0)t.splice(i,1);else t.push(m);met.set(t.join(', '));met.validate();chg();}},'± '+m)));
+  met.el.insertBefore(chips,met.el.querySelector('.msg'));
+  const txt=Field(st,{key:'textoEmail',type:'textarea',label:'Texto do e-mail',param:'textoEmail',rows:3,change:chg,help:'Opcional. A API não envia e-mail; o texto fica registrado na solicitação.'});
+  const ref=Field(st,{key:'referenciaExterna',label:'Referência externa',param:'referenciaExterna',change:chg,check:v=>v.length>64?`Máximo de 64 caracteres (atual: ${v.length}).`:null});
+  const login=Field(st,{key:'loginSolicitante',label:'Login do solicitante',param:'loginSolicitante',change:chg,help:'Opcional.'});
+  const lem=Field(st,{key:'lembretes',label:'Lembretes (dias)',param:'lembretes',ph:'1,7',change:chg,help:'Dias de lembrete, separados por vírgula.',
+    check:v=>{const t=v.split(',').map(x=>x.trim()).filter(Boolean);if(t.some(x=>!/^\d+$/.test(x)||+x<1))return 'Use inteiros positivos separados por vírgula (ex.: 1,7).';
+      if(st.vTipo==='dias'&&/^\d+$/.test(st.prazoDias)&&t.some(x=>+x>+st.prazoDias))return {warn:'Há lembrete maior que o prazo.'};return null;}});
+  drawV();fl.push(met,ref,lem);
+  const el=h('div',{},doc.el,
+    Win('SIGNATÁRIOS',sl.el,h('label',{class:'chkline'},cons,h('span',{},'consideraOrdem: respeitar a ordem de assinatura (exige ordem 0-based e contígua)'))),
+    Win('VALIDADE E MÉTODOS',h('div',{class:'radio'},r1,r2),vbox,met.el,lem.el),
+    Win('MENSAGEM',txt.el,ref.el,login.el));
+  return {el,validate(){const a=validateAll(fl),b=sl.validate();return a&&b&&(vf?vf.validate(true):true);},
+    build(){
+      const toks=st.metodos.toLowerCase().split(/[,\s]+/).filter(Boolean);const lm=st.lembretes.split(',').map(x=>x.trim()).filter(Boolean).map(x=>/^\d+$/.test(x)?Number(x):x);
+      return {method:'POST',path:'/api/assinatura',json:{documentoId:/^\d+$/.test(st.documentoId.trim())?Number(st.documentoId):st.documentoId.trim(),signatarios:sl.payload(),consideraOrdem:!!st.consideraOrdem,
+        ...(st.vTipo==='dias'?{prazoDias:/^\d+$/.test(st.prazoDias.trim())?Number(st.prazoDias):st.prazoDias.trim()}:{dataValidade:st.dataValidade.trim()}),
+        metodos:toks,...(st.textoEmail.trim()?{textoEmail:st.textoEmail.trim()}:{}),...(st.loginSolicitante.trim()?{loginSolicitante:st.loginSolicitante.trim()}:{}),...(st.referenciaExterna.trim()?{referenciaExterna:st.referenciaExterna.trim()}:{}),...(lm.length?{lembretes:lm}:{})}};},
+    example(n=3){sl.fill([0,1,2].slice(0,n));cons.checked=true;st.consideraOrdem=true;met.set('eletronica');lem.set('1,7');st.vTipo='dias';r1.firstChild.checked=true;st.prazoDias='30';drawV();if(!st.documentoId&&state.lastDocId)doc.set(String(state.lastDocId));chg();}};
+}
+function LinksView(body,big){
+  const sig=body.signatarios||[];
+  return h('div',{class:big?'biglinks':''},h('div',{class:'okbox'},`Assinatura ${body.assinaturaId} criada para o documento ${body.documentoId}. Nenhum e-mail foi enviado; entregue os links abaixo.`),
+    h('div',{class:'acts'},CopyBtn('Copiar todos os links',()=>sig.map(s=>`${s.nome} <${s.email}>: ${s.linkAssinatura}`).join('\n'),'btn')),
+    sig.map(s=>h('div',{class:'linkrow'},h('div',{},h('div',{class:'nm'},`#${s.ordem} ${s.nome}`,h('span',{class:'dim'},'  '+s.email)),h('div',{class:'lk'},s.linkAssinatura)),CopyBtn('copiar link',()=>s.linkAssinatura))),
+    h('div',{class:'acts'},h('button',{type:'button',class:'btn',onclick:()=>go('status',{prefill:{documentoId:String(body.documentoId)},run:true})},'Ver status do documento'),h('button',{type:'button',class:'btn danger',onclick:()=>go('cancel',{prefill:{assinaturaId:String(body.assinaturaId)}})},'Cancelar esta assinatura')));
+}
+function SignScreen(){
+  const st=S('sign',signDefaults);
+  const sh=Shell({title:'Solicitar assinatura',method:'POST',path:'/api/assinatura',desc:'Cria a solicitação de assinatura eletrônica. A API não envia e-mail: devolve o link de cada signatário. Se já houver solicitação em andamento, responde 409.'});
+  const RP=ResultPanel({key:'sign',visual:res=>LinksView(res.body),highlights:res=>[['assinaturaId',res.body.assinaturaId],['documentoId',res.body.documentoId]]});
+  let form;const prev=ReqPreview(()=>form.build());form=SignForm(st,{change:()=>prev.update()});prev.update();
+  const run=()=>{if(RP.busy||!gate([{validate:()=>form.validate(),el:sh.left,focus(){}}]))return;execute('sign',form.build(),RP);};
+  sh.left.append(form.el,Actions(run,()=>{form.example();prev.update();},()=>resetScreen('sign')),prev.el);sh.right.append(RP.el);
+  return {el:sh.el,run,example:()=>form.example()};
+}
+
+/* ============ cancelar ============ */
+function activeAss(){
+  if(LIVE)return [...state.seenAss.values()].filter(a=>a.status!=='cancelado').map(a=>({id:a.id,doc:a.doc,nome:a.nome,status:a.status||'—',n:'—'}));
+  return db(state.profile.id).docs.filter(d=>d.assin&&['pendente','assinado'].includes(d.status)).map(d=>({id:d.assin.id,doc:d.id,nome:d.nome,status:d.status,n:`${d.assin.sigs.filter(s=>s.status==='assinado').length}/${d.assin.sigs.length}`}));
+}
+function CancelScreen(){
+  const st=S('cancel',{assinaturaId:'',motivo:''});
+  const sh=Shell({title:'Cancelar assinatura',method:'DELETE',path:'/api/assinatura/{id}',desc:'Cancela a solicitação inteira: todos os signatários são cancelados, inclusive quem já assinou. Não há como desfazer.'});
+  const RP=ResultPanel({key:'cancel',visual:res=>{
+    const b=res.body,sg=b.signatarios||[];
+    return h('div',{},h('div',{class:'okbox'},`Assinatura ${b.assinaturaId!=null?b.assinaturaId:''} cancelada.`),
+      h('dl',{class:'kv'},h('dt',{},'Documento'),h('dd',{},b.documentoId!=null?b.documentoId:'—'),h('dt',{},'Status'),h('dd',{},pill(b.status)),h('dt',{},'Signatários'),h('dd',{},sg.length?`${sg.length} (todos cancelados)`:'—')),
+      b.documentoId!=null?h('div',{class:'acts'},h('button',{type:'button',class:'btn',onclick:()=>go('status',{prefill:{documentoId:String(b.documentoId)},run:true})},'Ver status'),h('button',{type:'button',class:'btn pri',onclick:()=>go('sign',{prefill:{documentoId:String(b.documentoId)}})},'Solicitar nova assinatura')):null);},
+    highlights:res=>[['assinaturaId',res.body.assinaturaId!=null?res.body.assinaturaId:'—'],['status',res.body.status||'—']]});
+  const build=()=>{const mo=(st.motivo||'').trim();return {method:'DELETE',path:'/api/assinatura/'+encodeURIComponent((st.assinaturaId||'').trim()),query:mo?[['motivo',mo]]:[]};};
+  const prev=ReqPreview(build);
+  const f=Field(st,{key:'assinaturaId',label:'ID da assinatura',param:'assinaturaId (na URL)',req:true,ph:'ex.: '+(state.lastAssId||7700),change:()=>prev.update(),check:v=>/^\d+$/.test(v.trim())?null:'O ID da assinatura é numérico.'});
+  const fm=Field(st,{key:'motivo',label:'Motivo',param:'motivo (opcional)',ph:'Solicitado pelo cliente',change:()=>prev.update(),help:'Vazio = não enviar.'});
+  function confirmDlg(){
+    const id=st.assinaturaId.trim();
+    const doc=LIVE?null:db(state.profile.id).docs.find(d=>d.assin&&String(d.assin.id)===id);
+    const known=activeAss().find(r=>String(r.id)===id);
+    const sigs=doc?doc.assin.sigs:[];const ja=sigs.filter(s=>s.status==='assinado').length;
+    const inp=h('input',{type:'text',class:'mi-in',placeholder:'Digite '+id+' para confirmar','aria-label':'Confirmação do ID',autocomplete:'off'});
+    const ok=h('button',{type:'button',class:'btn danger',disabled:true,onclick:()=>{m.close();execute('cancel',build(),RP);}},'✖ Cancelar assinatura '+id);
+    inp.addEventListener('input',()=>{ok.disabled=inp.value.trim()!==id;});
+    inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&!ok.disabled){e.preventDefault();ok.click();}});
+    const m=Modal({title:'CONFIRMAR CANCELAMENTO',body:[
+      h('div',{class:'errbox'},h('h4',{},'Ação destrutiva e irreversível'),h('div',{},`DELETE /api/assinatura/${id} cancela TODOS os signatários`+(doc?` (${sigs.length} nesta solicitação)`:'')+', inclusive quem já assinou'+(doc?` (${ja} já assinaram)`:'')+'.'),h('div',{class:'row'},'Os links de assinatura deixam de funcionar. Para continuar, será preciso criar uma nova solicitação.'),LIVE?h('div',{class:'row'},h('b',{},'API REAL: o cancelamento acontece de verdade na instância '+state.profile.id+'.')):null),
+      doc?h('div',{class:'dim',style:{marginBottom:'8px'}},`Documento ${doc.id} · ${doc.nome}`):known?h('div',{class:'dim',style:{marginBottom:'8px'}},`Documento ${known.doc} · ${known.nome}`)
+        :h('div',{class:'warnbox'},LIVE?'Este ID não apareceu nesta sessão. Confira antes de confirmar.':'Esta solicitação não aparece nos dados locais; a API provavelmente responderá 404.'),
+      h('div',{class:'fld'},h('label',{},h('span',{class:'lb'},'Confirmação')),inp)],
+      actions:[h('button',{type:'button',class:'btn',onclick:()=>m.close()},'Voltar',h('kbd',{},'Esc')),ok]});
+  }
+  const run=()=>{if(RP.busy)return;if(!gate([f]))return;confirmDlg();};
+  const ex=()=>{f.set(String(state.lastAssId||(rows[0]&&rows[0].id)||''));fm.set('Solicitado pelo cliente');prev.update();};
+  const rows=activeAss();
+  const pick=DataTable([{k:'id',h:'Assinatura',num:true},{k:'nome',h:'Documento'},{k:'status',h:'Status',render:r=>pill(r.status)},{k:'n',h:'Assinaram',cls:'nw'}],rows,{empty:LIVE?'Nenhuma solicitação vista nesta sessão. Liste documentos ou crie uma assinatura.':'Nenhuma solicitação ativa nesta instância.',onRow:r=>{f.set(String(r.id));prev.update();}});
+  sh.left.append(Win('ASSINATURA A CANCELAR',f.el,fm.el,Actions(run,ex,()=>resetScreen('cancel'),'Cancelar assinatura'),prev.el),
+    Win(LIVE?'SOLICITAÇÕES VISTAS NESTA SESSÃO (clique para usar)':'SOLICITAÇÕES ATIVAS (dados locais; clique para usar)',pick));
+  sh.right.append(RP.el);
+  return {el:sh.el,run,example:ex};
+}
+
+/* ============ listar documentos ============ */
+function ListScreen(){
+  const st=S('list',{diretorioId:'',sub:false,status:'',de:'',ate:'',pagina:'0',tamanho:'',vazios:false});
+  const sh=Shell({title:'Listar documentos',method:'GET',path:'/api/documentos',desc:'Lista documentos com filtros. Filtro vazio nunca é enviado (a menos que você ative o teste de parâmetros vazios). Página começa em 0.'});
+  const urlBar=h('div',{class:'urlbar',title:'URL efetiva da chamada'});
+  const chg=()=>{prev.update();drawUrl();};
+  const build=()=>{
+    const q=[];const t=k=>String(st[k]||'').trim();
+    const add=(k,v,vazio)=>{if(v!==''||(st.vazios&&vazio))q.push([k,v]);};
+    add('diretorioId',t('diretorioId'),1);q.push(['incluirSubpastas',st.sub?'true':'false']);add('status',t('status'),1);add('dataInicio',t('de'),1);add('dataFim',t('ate'),1);
+    q.push(['pagina',t('pagina')||'0']);q.push(['tamanho',t('tamanho')||'50']);
+    return {method:'GET',path:'/api/documentos',query:q};
+  };
+  function drawUrl(){const s=build();const qs=urlPairs(s);
+    urlBar.replaceChildren(h('b',{},'GET '),fullUrl(s).split('?')[0]+'?',...qs.flatMap(([k,v],i)=>[i?'&':'',h('span',{class:'qk'},k+'='),h('span',{class:'qv'},encodeURIComponent(v))]));}
+  const prev=ReqPreview(build);
+  const fp=Field(st,{key:'diretorioId',label:'Diretório',param:'diretorioId',ph:'ex.: 789',change:chg,help:'ID numérico da pasta. Vazio = não enviar.',check:v=>v.trim()&&!/^\d+$/.test(v.trim())?'O diretorioId é numérico.':null});
+  const fs=Field(st,{key:'status',label:'Status',param:'status',list:'dl-status',ph:'(todos)',change:chg,help:'pendente | assinado | expirado | cancelado | sem_assinatura. Vazio = não enviar.',check:v=>v.trim()&&!STATUS.includes(v.trim())?`Status inválido. Use: ${STATUS.join(', ')}.`:null});
+  const fd=Field(st,{key:'de',label:'Solicitado a partir de',param:'dataInicio',ph:'yyyy-MM-dd',change:chg,check:v=>v.trim()&&!parseIsoDate(v)?'Use yyyy-MM-dd.':null});
+  const fa=Field(st,{key:'ate',label:'Solicitado até',param:'dataFim',ph:'yyyy-MM-dd',change:chg,check:v=>{if(v.trim()&&!parseIsoDate(v))return 'Use yyyy-MM-dd.';const a=parseIsoDate(st.de),b=parseIsoDate(v);return a&&b&&a>b?'A data final é anterior à inicial.':null;}});
+  const ft=Field(st,{key:'tamanho',type:'select',label:'Itens por página',param:'tamanho',change:chg,opts:['10','20','50','100','200'],blank:'50 (padrão)'});
+  const sub=h('input',{type:'checkbox',id:uid(),checked:st.sub,onchange:e=>{st.sub=e.target.checked;chg();}});
+  const vaz=h('input',{type:'checkbox',id:uid(),checked:st.vazios,onchange:e=>{st.vazios=e.target.checked;chg();}});
+  function visual(res){
+    const b=res.body;const docs=b.documentos||[];const pg=Number(b.pagina)||0;
+    const pager=h('div',{class:'pager'},h('button',{type:'button',class:'btn sm',disabled:pg<=0,onclick:()=>{st.pagina=String(pg-1);run();}},'◄ Anterior'),h('span',{},`Página ${pg} (0-based) · ${b.total!=null?b.total:'?'} documento(s)`),h('button',{type:'button',class:'btn sm',disabled:!b.temMais,onclick:()=>{st.pagina=String(pg+1);run();}},'Próxima ►'));
+    const btn=(l,fn)=>h('button',{type:'button',class:'btn sm',onclick:e=>{e.stopPropagation();fn();}},l);
+    return h('div',{},DataTable([{k:'documentoId',h:'ID',num:true,cls:'nw',render:d=>h('b',{style:{color:'var(--yel)'}},d.documentoId)},{k:'nomeArquivo',h:'Arquivo'},{k:'diretorioId',h:'Diretório',num:true},{k:'status',h:'Status',render:d=>pill(d.status)},
+      {k:'dataSolicitacao',h:'Solicitado em',cls:'nw',render:d=>fmtAny(d.dataSolicitacao)},{k:'referenciaExterna',h:'Referência',get:d=>d.referenciaExterna||''},{k:'assinaturaId',h:'Assinatura',get:d=>d.assinaturaId==null?'':d.assinaturaId},
+      {k:'a',h:'Ações',nosort:true,cls:'nw',render:d=>h('span',{},btn('status',()=>go('status',{prefill:{documentoId:String(d.documentoId)},run:true})),' ',btn('assinar',()=>go('sign',{prefill:{documentoId:String(d.documentoId)}})),' ',btn('baixar',()=>go('download',{prefill:{documentoId:String(d.documentoId)},run:true})))}],
+      docs,{empty:h('span',{},'Nenhum documento com estes filtros. Remova algum filtro ou troque o perfil.'),onRow:d=>go('status',{prefill:{documentoId:String(d.documentoId)},run:true})}),pager);
+  }
+  const RP=ResultPanel({key:'list',visual,empty:'Carregando documentos…',highlights:res=>[['total',res.body.total!=null?res.body.total:'—'],['página',res.body.pagina!=null?res.body.pagina:'—']]});
+  const run=()=>{if(RP.busy||!gate([fp,fs,fd,fa]))return;execute('list',build(),RP);};
+  const goFirst=()=>{st.pagina='0';run();};
+  const ex=()=>{fs.set('pendente');if(state.lastDirId)fp.set(String(state.lastDirId));chg();};
+  const dirChip=h('button',{type:'button',class:'btn sm',onclick:()=>{fp.set(String(state.lastDirId));chg();}},'usar último diretorioId: '+state.lastDirId);dirChip.hidden=!state.lastDirId;
+  fp.el.insertBefore(h('div',{},dirChip),fp.el.querySelector('.msg'));
+  sh.left.append(Win('FILTROS',h('div',{class:'grid2'},fp.el,fs.el,fd.el,fa.el,ft.el),h('label',{class:'chkline'},sub,h('span',{},'incluirSubpastas=true')),
+    h('label',{class:'chkline'},vaz,h('span',{},'Teste: enviar filtros vazios (reproduz o 400 de status=)')),
+    h('div',{class:'dim',style:{marginBottom:'4px'}},'URL efetiva, atualizada a cada mudança:'),urlBar,Actions(goFirst,ex,()=>resetScreen('list'),'Listar'),prev.el));
+  sh.right.append(RP.el);drawUrl();
+  if(!RS.list)setTimeout(run,0);
+  return {el:sh.el,run:goFirst,example:ex};
+}
+
+/* ============ status ============ */
+function StatusScreen(){
+  const st=S('status',{documentoId:''});
+  const sh=Shell({title:'Status do documento',method:'GET',path:'/api/documento/{id}/status',desc:'Mostra o resumo e a situação de cada signatário. Copie o linkAssinatura de quem ainda não assinou.'});
+  const build=()=>({method:'GET',path:`/api/documento/${encodeURIComponent((st.documentoId||'').trim())}/status`});
+  const prev=ReqPreview(build);const f=DocIdField(st,'documentoId',()=>prev.update());
+  const low=x=>String(x||'').toLowerCase();
+  function visual(res){
+    const b=res.body,sg=b.signatarios||[];
+    const r={total:sg.length,assinados:sg.filter(s=>low(s.status)==='assinado').length,pendentes:sg.filter(s=>low(s.status)==='pendente').length,visualizaram:sg.filter(s=>s.visualizou).length};
+    const pend=sg.filter(s=>s.linkAssinatura);
+    return h('div',{},h('div',{class:'card'},h('div',{},h('b',{style:{color:'var(--yel)'}},b.nomeArquivo||'(sem nome)'),'  ',pill(b.status)),
+      h('div',{class:'dim'},`diretório ${b.diretorioId!=null?b.diretorioId:'—'} · solicitado em ${fmtAny(b.dataSolicitacao)} · válido até ${fmtAny(b.dataValidade)}`),
+      h('div',{class:'chiprow'},Chip('documentoId',b.documentoId!=null?b.documentoId:'—'),b.assinaturaId!=null?Chip('assinaturaId',b.assinaturaId):null,h('span',{class:'pill pendente'},`${r.assinados}/${r.total} assinaram`),h('span',{class:'dim'},`${r.visualizaram} visualizaram · ${r.pendentes} pendentes`))),
+      sg.length?DataTable([{k:'ordem',h:'#',num:true,get:s=>s.ordem==null?'':s.ordem},{k:'nome',h:'Nome',render:s=>h('span',{},s.nome,h('div',{class:'dim'},s.email||''))},{k:'status',h:'Status',render:s=>pill(s.status)},{k:'visualizou',h:'Visualizou',get:s=>s.visualizou?'SIM':'NÃO'},
+        {k:'dataAssinatura',h:'Data',cls:'nw',get:s=>s.dataAssinatura?fmtAny(s.dataAssinatura):'—'},{k:'l',h:'Link',nosort:true,render:s=>s.linkAssinatura?CopyBtn('copiar link',()=>s.linkAssinatura):h('span',{class:'dim'},'—')}],sg)
+        :h('div',{class:'empty'},'Este documento não tem solicitação de assinatura. ',b.documentoId!=null?h('button',{type:'button',class:'lnk',onclick:()=>go('sign',{prefill:{documentoId:String(b.documentoId)}})},'Solicitar assinatura →'):null),
+      h('div',{class:'acts'},pend.length>1?CopyBtn('Copiar todos os links pendentes',()=>pend.map(s=>`${s.nome}: ${s.linkAssinatura}`).join('\n'),'btn'):null,
+        b.documentoId!=null?h('button',{type:'button',class:'btn',onclick:()=>go('download',{prefill:{documentoId:String(b.documentoId)},run:true})},'Baixar'):null,
+        low(b.status)==='pendente'&&b.assinaturaId!=null?h('button',{type:'button',class:'btn danger',onclick:()=>go('cancel',{prefill:{assinaturaId:String(b.assinaturaId)}})},'Cancelar assinatura'):null));
+  }
+  const RP=ResultPanel({key:'status',visual,highlights:res=>[['status',res.body.status||'—']]});
+  const run=()=>{if(RP.busy||!gate([f]))return;execute('status',build(),RP);};
+  const ex=()=>{const alvo=state.lastDocId||(LIVE?'':(db(state.profile.id).docs.find(d=>d.status==='pendente')||{}).id)||'';f.set(String(alvo));prev.update();};
+  sh.left.append(Win('DOCUMENTO',f.el,Actions(run,ex,()=>resetScreen('status'),'Consultar'),prev.el));sh.right.append(RP.el);
+  return {el:sh.el,run,example:ex};
+}
+
+/* ============ download ============ */
+function DownloadScreen(){
+  const st=S('download',{documentoId:''});
+  const sh=Shell({title:'Download',method:'GET',path:'/api/documento/{id}/download',desc:'Gera um link temporário de download. O link expira em 15 minutos.'});
+  const build=()=>({method:'GET',path:`/api/documento/${encodeURIComponent((st.documentoId||'').trim())}/download`});
+  const prev=ReqPreview(build);const f=DocIdField(st,'documentoId',()=>prev.update());
+  function visual(res){
+    const b=res.body;const link=b.urlDownload||b.url||'';
+    let exp=new Date(b.expiraEm);const estimado=isNaN(exp);if(estimado)exp=new Date(res.ts.getTime()+15*60000);
+    const tm=h('div',{class:'bigtime'},'--:--');const mt=h('div',{class:'meter','aria-hidden':'true'});const lab=h('div',{});
+    let seen=false;
+    const tick=()=>{if(!tm.isConnected&&seen){clearInterval(iv);return;}seen=seen||tm.isConnected;
+      const s=Math.round((exp-Date.now())/1000);
+      if(s<=0){tm.textContent='EXPIRADO';tm.className='bigtime low';lab.textContent='O link expirou. Gere outro.';mt.textContent='░'.repeat(30);clearInterval(iv);return;}
+      tm.textContent=`${pad(Math.floor(s/60))}:${pad(s%60)}`;tm.className='bigtime'+(s<60?' low':'');const n=Math.round(Math.min(1,s/900)*30);mt.textContent='█'.repeat(n)+'░'.repeat(30-n);lab.textContent='restante para o link expirar';};
+    const iv=setInterval(tick,1000);tick();
+    return h('div',{},h('div',{class:'card'},h('div',{},'Expira às ',h('b',{style:{color:'var(--yel)',fontSize:'20px'}},fmtTime(exp)),h('span',{class:'dim'},'  ('+fmtDate(exp)+')'+(estimado?` · estimado: expiraEm recebido "${b.expiraEm}" não é uma data reconhecida`:''))),tm,lab,mt),
+      h('div',{class:'warnbox'},'⚠ Este link é temporário e dá acesso ao documento sem login. Não o guarde nem o reencaminhe. Gere um novo link sempre que precisar.'),
+      h('div',{class:'urlbar',style:{wordBreak:'break-all'}},link||'(a resposta não trouxe urlDownload)'),
+      h('div',{class:'acts'},link?CopyBtn('Copiar URL',()=>link,'btn pri'):null,b.documentoId!=null?h('button',{type:'button',class:'btn',onclick:()=>go('status',{prefill:{documentoId:String(b.documentoId)},run:true})},'Ver status'):null));
+  }
+  const RP=ResultPanel({key:'download',visual,highlights:res=>[['documentoId',res.body.documentoId!=null?res.body.documentoId:'—'],['expiraEm',res.body.expiraEm||'—']]});
+  const run=()=>{if(RP.busy||!gate([f]))return;execute('download',build(),RP);};
+  const ex=()=>{const alvo=state.lastDocId||(LIVE?'':db(state.profile.id).docs[0].id)||'';f.set(String(alvo));prev.update();};
+  sh.left.append(Win('DOCUMENTO',f.el,Actions(run,ex,()=>resetScreen('download'),'Gerar link'),prev.el));sh.right.append(RP.el);
+  return {el:sh.el,run,example:ex};
+}
+
+/* ============ fluxo completo ============ */
+function FlowScreen(){
+  const st=S('flow',()=>({step:1,imp:uploadDefaults(),sig:signDefaults(),docId:null,sigBody:null}));
+  const sh=Shell({title:'Fluxo completo',method:null,path:'importar → solicitar assinatura → links',desc:'Importa um arquivo e já solicita a assinatura usando o documentoId retornado. Ao fim, mostra o link de cada signatário.'});
+  sh.el.querySelector('.ep').prepend(methodBadge('POST').cloneNode(true));
+  const RP=ResultPanel({key:null,empty:'Os resultados de cada passo aparecem aqui.',visual:res=>res.body.assinaturaId?LinksView(res.body,true):h('div',{},h('div',{class:'okbox'},'Arquivo importado.'),h('dl',{class:'kv'},h('dt',{},'Caminho'),h('dd',{},res.body.caminho)))});
+  const stepper=h('div',{class:'stepper'});const body=h('div');let form=null,prev=null;
+  function draw(){
+    stepper.replaceChildren(...['1 Importar','2 Solicitar assinatura','3 Links'].map((t,i)=>h('span',{class:'stp'+(st.step===i+1?' on':st.step>i+1?' done':'')},(st.step>i+1?'✔ ':'')+t)));
+    body.replaceChildren();
+    if(st.step===1){
+      prev=ReqPreview(()=>({method:'POST',path:'/importar',multipart:{file:st.imp.file,fields:{nomeArquivo:st.imp.nomeArquivo.trim(),nomePasta:st.imp.nomePasta.trim(),...(st.imp.nomePastaPai.trim()?{nomePastaPai:st.imp.nomePastaPai.trim()}:{})}}}));
+      form=UploadForm(st.imp,{folders:true,onChange:()=>prev.update()});
+      body.append(Win('PASSO 1 · IMPORTAR ARQUIVO',form.el,Actions(run,()=>{form.example();prev.update();},null,'Importar e continuar'),prev.el));
+    }else if(st.step===2){
+      st.sig.documentoId=String(st.docId);let sf;prev=ReqPreview(()=>sf.build());sf=SignForm(st.sig,{change:()=>prev.update(),lockDoc:true});form=sf;prev.update();
+      body.append(Win('PASSO 2 · SOLICITAR ASSINATURA (documentoId '+st.docId+')',sf.el,Actions(run,()=>{sf.example();prev.update();},null,'Solicitar assinatura'),prev.el,h('div',{class:'acts'},h('button',{type:'button',class:'btn',onclick:()=>{st.step=1;draw();}},'← Voltar ao passo 1'))));
+    }else{
+      form=null;
+      body.append(Win('PASSO 3 · RESULTADO',st.sigBody?LinksView(st.sigBody,true):h('div',{class:'empty'},'Sem resultado.'),h('div',{class:'acts'},h('button',{type:'button',class:'btn pri',onclick:()=>{delete FS.flow;go('flow');}},'Novo fluxo'))));
+    }
+  }
+  function run(){
+    if(RP.busy||!form)return;
+    if(st.step===1){if(!gate([{validate:()=>form.validate(),el:body,focus(){}}]))return;
+      const fi=st.imp;const spec={method:'POST',path:'/importar',screen:'import',multipart:{file:fi.file,fields:{nomeArquivo:fi.nomeArquivo.trim(),nomePasta:fi.nomePasta.trim(),...(fi.nomePastaPai.trim()?{nomePastaPai:fi.nomePastaPai.trim()}:{})}}};
+      FS.import=clone(st.imp);
+      RP.loading(spec);call(spec).then(res=>{RP.show(res);if(res.ok){st.docId=res.body.documentoId;st.step=2;draw();}});
+    }else if(st.step===2){if(!gate([{validate:()=>form.validate(),el:body,focus(){}}]))return;
+      const spec={...form.build(),screen:'sign'};FS.sign=clone(st.sig);RP.loading(spec);
+      call(spec).then(res=>{RS.sign=res;RP.show(res);if(res.ok){st.sigBody=res.body;st.step=3;draw();}});
+    }
+  }
+  sh.left.append(stepper,body);sh.right.append(RP.el);draw();
+  if(st.step===3&&RS.sign)RP.show(RS.sign);
+  return {el:sh.el,run,example:()=>form&&form.example&&form.example()};
+}
+
+/* ============ início ============ */
+function Home(){
+  const D=LIVE?{docs:[]}:db(state.profile.id);const sh=Shell({title:'Início',path:'DocNuvem API Tester',desc:'Escolha uma tela no menu lateral ou use os atalhos numéricos. Todas as respostas são simuladas.'},true);
+  sh.el.querySelector('.ep').remove();
+  const counts=STATUS.map(s=>[s,D.docs.filter(d=>d.status===s).length]);const mx=Math.max(1,...counts.map(c=>c[1]));
+  const prof=state.profile;
+  const grid=h('div',{class:'grid2',style:{gap:'22px'}});
+  grid.append(
+    Win('PERFIL ATIVO',h('dl',{class:'kv'},h('dt',{},'instancia'),h('dd',{},prof.id),h('dt',{},'Authorization'),h('dd',{},mask(prof)),h('dt',{},'situação'),h('dd',{},prof.revogado?h('span',{class:'pill cancelado'},'✖ TOKEN REVOGADO (401)'):h('span',{class:'pill assinado'},'✔ ATIVO'))),
+      h('div',{class:'acts'},h('button',{type:'button',class:'btn',onclick:profileDlg},'Trocar perfil',h('kbd',{},'F2')))),
+    Win(LIVE?'SESSÃO':'DOCUMENTOS DESTA INSTÂNCIA',LIVE&&h('div',{},`${state.log.length} chamada(s) · ${state.log.filter(r=>r.ok).length} ok · ${state.log.filter(r=>!r.ok).length} com erro`,h('div',{class:'dim'},'Base: '+(prof.baseUrl||''))),h('div',{style:{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}},(LIVE?[]:counts).map(([s,n])=>h('div',{style:{display:'flex',gap:'10px',alignItems:'baseline'}},h('span',{style:{width:'15ch',display:'inline-block'}},s.replace('_',' ')),h('span',{class:'meter'},'█'.repeat(Math.round(n/mx*14)).padEnd(14,'░')),h('b',{},n))))),
+    Win('COMEÇAR',h('div',{class:'acts',style:{flexDirection:'column',alignItems:'stretch'}},h('button',{type:'button',class:'btn pri',onclick:()=>go('flow')},'0 · Fluxo completo (importar → assinar)'),h('button',{type:'button',class:'btn',onclick:()=>go('list')},'7 · Listar documentos'),h('button',{type:'button',class:'btn',onclick:()=>go('from')},'4 · Criar documento de modelo'))),
+    Win('ÚLTIMAS CHAMADAS',state.log.length?state.log.slice(0,5).map(r=>h('div',{style:{overflowWrap:'anywhere'}},h('span',{class:'st '+(r.ok?'ok':'err')},r.status),' ',r.method,' ',r.url.replace(API_BASE,'').split('?')[0])):h('div',{class:'empty'},'Nenhuma chamada ainda. Comece pelo ',h('b',{},'Fluxo completo'),'.'),h('div',{class:'acts'},h('button',{type:'button',class:'btn sm',onclick:toggleLog},'Abrir log',h('kbd',{},'F3')))));
+  sh.left.append(grid);
+  return {el:sh.el,run(){}};
+}
+
+/* ============ shell do app ============ */
+const SCREENS=[
+ {id:'home',t:'Início',ep:'visão geral',b:Home},
+ {id:'import',n:'1',g:'DOCUMENTOS',t:'Importar arquivo',ep:'POST /importar',b:()=>UploadScreen('import')},
+ {id:'smart',n:'2',t:'Envio inteligente',ep:'POST /enviarParaEnvioInteligente',b:()=>UploadScreen('smart')},
+ {id:'models',n:'3',g:'MODELOS',t:'Modelos',ep:'GET /api/modelos',b:ModelsScreen},
+ {id:'from',n:'4',t:'Documento de modelo',ep:'POST /api/documento/from-template',b:TemplateScreen},
+ {id:'sign',n:'5',g:'ASSINATURA',t:'Solicitar assinatura',ep:'POST /api/assinatura',b:SignScreen},
+ {id:'cancel',n:'6',t:'Cancelar assinatura',ep:'DELETE /api/assinatura/{id}',b:CancelScreen},
+ {id:'list',n:'7',g:'CONSULTA',t:'Listar documentos',ep:'GET /api/documentos',b:ListScreen},
+ {id:'status',n:'8',t:'Status do documento',ep:'GET /api/documento/{id}/status',b:StatusScreen},
+ {id:'download',n:'9',t:'Download',ep:'GET /api/documento/{id}/download',b:DownloadScreen},
+ {id:'flow',n:'0',g:'FLUXO',t:'Fluxo completo',ep:'importar → assinar → links',b:FlowScreen},
+];
+let cur=null;const navStack=[];let openMenu=null;let splashOn=true;
+function go(id,o={}){
+  if(!SCREENS.some(s=>s.id===id))return;
+  if(o.prefill)FS[id]=Object.assign(FS[id]||{},o.prefill);
+  if(o.snapshot)FS[id]=clone(o.snapshot);
+  if(cur&&cur.id!==id&&!o.back)navStack.push(cur.id);
+  const main=$('#main');const sc=SCREENS.find(s=>s.id===id);
+  if(cur&&cur.api&&cur.api.dispose)cur.api.dispose();
+  const api=sc.b();cur={id,api};main.replaceChildren(api.el);main.scrollTop=0;
+  renderSide();refreshDatalists();
+  if(o.run)setTimeout(()=>api.run&&api.run(),30);
+}
+function back(){const p=navStack.pop();go(p||'home',{back:true});}
+function setProfile(p){
+  if(p===state.profile)return;state.profile=p;Object.keys(RS).forEach(k=>delete RS[k]);
+  state.lastDocId=null;state.lastAssId=null;state.lastDirId=null;state.catalog=LIVE?null:MODELOS;state.seenDocs.clear();state.seenAss.clear();toast(`Perfil ${p.id} ativo · ${mask(p)}`);renderMenubar();go(cur?cur.id:'home',{back:true});
+}
+function refreshDatalists(){const opts=LIVE?[...state.seenDocs].map(([id,n])=>h('option',{value:id},n)):db(state.profile.id).docs.slice().sort((a,b)=>b.id-a.id).map(d=>h('option',{value:String(d.id)},d.nome));$('#dl-docs').replaceChildren(...opts);}
+
+function profileDlg(){
+  let idx=PROFILES.indexOf(state.profile);
+  const ul=h('ul',{class:'plist'});
+  const draw=()=>ul.replaceChildren(...PROFILES.map((p,i)=>h('li',{},h('button',{type:'button',class:i===idx?'on':'',onclick:()=>{m.close();setProfile(p);}},h('b',{},String(i+1)),h('span',{},p.id),h('span',{class:'tk'},mask(p)),h('span',{},p.revogado?'✖ revogado':p===state.profile?'● ativo':'')))));
+  const m=Modal({title:'TROCAR PERFIL',body:[h('div',{class:'dim',style:{marginBottom:'8px'}},'Setas e Enter, ou número. O token é fixo por instância e sempre mascarado.'),ul],actions:[h('button',{type:'button',class:'btn',onclick:()=>m.close()},'Fechar',h('kbd',{},'Esc'))]});
+  m.win.addEventListener('keydown',e=>{
+    if(e.key==='ArrowDown'){idx=(idx+1)%PROFILES.length;draw();e.preventDefault();}
+    else if(e.key==='ArrowUp'){idx=(idx+PROFILES.length-1)%PROFILES.length;draw();e.preventDefault();}
+    else if(/^[1-9]$/.test(e.key)&&PROFILES[+e.key-1]){m.close();setProfile(PROFILES[+e.key-1]);}
+    else if(e.key==='Enter'&&e.target.tagName!=='BUTTON'){m.close();setProfile(PROFILES[idx]);}
+  });
+  draw();
+}
+function helpDlg(){
+  const k=(a,b)=>[h('b',{},a),h('span',{},b)];
+  const m=Modal({title:'AJUDA',wide:true,body:[
+    h('h3',{},'Teclado'),h('div',{class:'keys'},k('F1','Esta ajuda'),k('F2','Trocar perfil'),k('F3','Mostrar ou ocultar o log de chamadas'),k('F5 / Enter / Ctrl+Enter','Executar a chamada da tela'),k('F6','Preencher exemplo'),k('Esc','Fechar janela, limpar filtro ou voltar à tela anterior'),k('/','Filtrar a tabela da tela (ou abrir o seletor de telas)'),k('Ctrl+K','Ir para qualquer tela'),k('1 a 9, 0','Abrir tela pelo número (fora de campos de texto)'),k('F10','Sair para a tela de abertura')),
+    h('h3',{},'Como depurar'),h('p',{},'Cada tela mostra a "Requisição prevista" antes de enviar. No resultado, use as abas Visual, JSON e Requisição. Clique em qualquer valor do JSON para copiá-lo inteiro.'),
+    h('p',{},'Menu Ferramentas: desligue a validação local para ver a resposta real da API a dados inválidos, force 400/401/404/409 na próxima chamada e reponha os dados mock.'),
+    h('p',{},'O log guarda toda chamada com URL completa, status e duração. Abra uma linha para ver requisição e resposta, favorite com ★ ou use "Reenviar com os mesmos dados".'),
+    h('p',{class:'dim'},LIVE?'Modo API real: as chamadas passam pelo servidor local (docnuvem-web), que usa os tokens do config.json. Os tokens nunca chegam ao navegador.':'Tudo é simulado: sem rede, sem token real. O cliente3 tem token revogado e sempre responde 401.')],
+    actions:[h('button',{type:'button',class:'btn pri',onclick:()=>m.close()},'Fechar',h('kbd',{},'Esc'))]});
+}
+function palette(){
+  let sel=0,list=[];
+  const items=[...SCREENS.map(s=>({t:(s.n?`[${s.n}] `:'')+s.t,d:s.ep,a:()=>go(s.id)})),{t:'Log de chamadas',d:'F3',a:toggleLog},{t:'Trocar perfil',d:'F2',a:profileDlg},{t:'Ajuda',d:'F1',a:helpDlg}];
+  const inp=h('input',{type:'text',class:'mi-in','aria-label':'Ir para',placeholder:'digite para filtrar telas…'});inp.setAttribute('autocomplete','off');
+  const ul=h('ul',{class:'plist'});
+  const draw=()=>{const q=inp.value.toLowerCase();list=items.filter(i=>!q||(i.t+i.d).toLowerCase().includes(q));sel=Math.min(sel,Math.max(0,list.length-1));
+    ul.replaceChildren(...list.map((i,n)=>h('li',{},h('button',{type:'button',class:n===sel?'on':'',style:{gridTemplateColumns:'minmax(14ch,auto) 1fr'},tabindex:-1,onclick:()=>{m.close();i.a();}},h('span',{},i.t),h('span',{class:'tk'},i.d)))));};
+  const m=Modal({title:'IR PARA',body:[inp,h('div',{style:{height:'8px'}}),ul]});
+  inp.addEventListener('input',()=>{sel=0;draw();});
+  inp.addEventListener('keydown',e=>{if(e.key==='ArrowDown'){sel=Math.min(list.length-1,sel+1);draw();e.preventDefault();}else if(e.key==='ArrowUp'){sel=Math.max(0,sel-1);draw();e.preventDefault();}else if(e.key==='Enter'){e.preventDefault();const i=list[sel];if(i){m.close();i.a();}}});
+  draw();
+}
+function exitApp(){splashOn=true;$('#splash').hidden=false;}
+function toggleLog(){state.logOpen=!state.logOpen;renderLog();}
+
+/* menu */
+function MENUS(){return [
+  {l:'Arquivo',items:[{l:'Início',a:()=>go('home')},{l:'Voltar',k:'Esc',a:back},{sep:1},{l:'Sair (tela de abertura)',k:'F10',a:exitApp}]},
+  {l:'Perfil',items:[...PROFILES.map(p=>({l:`${p===state.profile?'● ':'  '}${p.id}  ${mask(p)}`,a:()=>setProfile(p)})),{sep:1},{l:'Trocar perfil…',k:'F2',a:profileDlg}]},
+  {l:'Ver',items:[{l:'Log de chamadas',k:'F3',a:toggleLog},{l:'Ir para tela…',k:'Ctrl+K',a:palette}]},
+  {l:'Ferramentas',items:[
+    {l:(state.localVal?'✔ ':'  ')+'Validação local antes de enviar',a:()=>{state.localVal=!state.localVal;toast('Validação local '+(state.localVal?'ligada':'desligada: a API vai validar'));renderMenubar();}},
+    ...(LIVE?[]:[{sep:1}]),...(LIVE?[]:[400,401,404,409]).map(s=>({l:`${state.forced===s?'✔ ':'  '}Forçar erro ${s} na próxima chamada`,a:()=>{state.forced=state.forced===s?null:s;renderMenubar();}})),{sep:1},
+    {l:'Limpar log',a:()=>{state.log=[];renderLog();renderMenubar();}},
+    ...(LIVE?[]:[{l:'Restaurar dados mock',a:()=>{Object.keys(DB).forEach(k=>delete DB[k]);Object.keys(RS).forEach(k=>delete RS[k]);state.lastDocId=null;state.lastAssId=null;state.lastDirId=null;state.catalog=LIVE?null:MODELOS;state.seenDocs.clear();state.seenAss.clear();toast('Dados mock restaurados');go(cur.id,{back:true});}}])]},
+  {l:'Ajuda',items:[{l:'Atalhos e guia',k:'F1',a:helpDlg}]},
+];}
+function renderMenubar(){
+  const bar=$('#menubar');if(!bar)return;bar.replaceChildren();
+  bar.append(h('span',{class:'brand'},'DOCNUVEM API TESTER'));
+  MENUS().forEach(m=>{
+    const w=h('div',{class:'mi'},h('button',{type:'button',class:'mb'+(openMenu===m.l?' on':''),'aria-haspopup':'true','aria-expanded':String(openMenu===m.l),onclick:e=>{e.stopPropagation();openMenu=openMenu===m.l?null:m.l;renderMenubar();}},m.l));
+    if(openMenu===m.l)w.append(h('div',{class:'dd',role:'menu'},m.items.map(i=>i.sep?h('hr'):h('button',{type:'button',role:'menuitem',onclick:()=>{openMenu=null;renderMenubar();i.a();}},h('span',{},i.l),h('span',{class:'k'},i.k||'')))));
+    bar.append(w);
+  });
+  bar.append(h('span',{class:'sp'}));
+  if(state.pending)bar.append(h('span',{class:'flag w'},`⏳ ${state.pending} em andamento`));
+  if(state.forced)bar.append(h('span',{class:'flag'},`PRÓXIMA CHAMADA: ERRO ${state.forced}`));
+  if(!state.localVal)bar.append(h('span',{class:'flag w'},'VALIDAÇÃO LOCAL OFF'));
+  bar.append(LIVE?h('span',{class:'flag',title:'As chamadas atingem a API de verdade'},'⚠ API REAL'):h('span',{class:'flag w'},'SIMULADO'));
+  bar.append(h('button',{type:'button',class:'chip-prof',title:'Trocar perfil (F2)',onclick:profileDlg},h('span',{},'● '+state.profile.id),h('span',{class:'tk'},mask(state.profile)),h('span',{},'▾')));
+}
+function renderSide(){
+  const side=$('#side');side.replaceChildren();let g=null;
+  SCREENS.forEach(s=>{
+    if(s.g&&s.g!==g){g=s.g;side.append(h('h3',{},g));}
+    if(s.id==='home')side.append(h('h3',{},'GERAL'));
+    side.append(h('button',{type:'button',class:'nav'+(cur&&cur.id===s.id?' on':''),'aria-current':cur&&cur.id===s.id?'page':null,onclick:()=>go(s.id)},h('span',{class:'n'},s.n?`[${s.n}]`:'[•]'),s.t,h('small',{},s.ep)));
+  });
+}
+function logRowEls(list){
+  return list.map(r=>h('tr',{class:'clk lrow',tabindex:0,onclick:()=>logDetail(r),onkeydown:e=>{if(e.key==='Enter'&&e.target.tagName==='TR')logDetail(r);}},
+    h('td',{class:'nw num'},r.n),h('td',{class:'nw'},fmtTime(r.ts)),h('td',{class:'nw'},r.method),h('td',{},r.url),h('td',{class:'nw'},h('span',{class:'st '+(r.ok?'ok':'err')},r.status)),h('td',{class:'nw num'},r.ms+' ms'),h('td',{class:'nw dim'},r.reqHeaders.Authorization),
+    h('td',{},h('button',{type:'button',class:'star'+(r.fav?' on':''),title:'Favoritar','aria-label':'Favoritar chamada',onclick:e=>{e.stopPropagation();r.fav=!r.fav;renderLog();}},r.fav?'★':'☆'))));
+}
+function renderLog(){
+  const dock=$('#logdock');if(!dock)return;dock.replaceChildren();
+  const last=state.log[0];
+  dock.append(h('button',{type:'button',class:'logbar','aria-expanded':String(state.logOpen),onclick:toggleLog},h('b',{},(state.logOpen?'▼':'▲')+` LOG DE CHAMADAS [${state.log.length}]`),h('span',{},last?`última: ${last.method} ${last.url.replace(API_BASE,'').split('?')[0]} → ${last.status} · ${last.ms} ms`:'nenhuma chamada ainda'),h('span',{class:'sp'}),h('span',{},'F3')));
+  if(!state.logOpen)return;
+  const list=state.logTab==='fav'?state.log.filter(r=>r.fav):state.log;
+  dock.append(h('div',{class:'logbody'},
+    h('div',{class:'logtabs'},h('button',{type:'button',class:'btn sm'+(state.logTab==='all'?' on':''),onclick:()=>{state.logTab='all';renderLog();}},'Todas'),h('button',{type:'button',class:'btn sm'+(state.logTab==='fav'?' on':''),onclick:()=>{state.logTab='fav';renderLog();}},'★ Favoritas'),h('span',{class:'dim'},'Clique numa linha para ver requisição e resposta completas.')),
+    list.length?h('div',{class:'tw'},h('table',{},h('thead',{},h('tr',{},['#','Hora','Método','URL completa','Status','Duração','Authorization',''].map(x=>h('th',{},h('span',{class:'thb'},x))))),h('tbody',{},logRowEls(list))))
+    :h('div',{class:'empty'},state.logTab==='fav'?'Nenhuma chamada favorita. Marque com ☆ no log.':'Nenhuma chamada ainda. Execute algo e ela aparece aqui.')));
+}
+function logDetail(r){
+  const m=Modal({title:`CHAMADA #${r.n}`,wide:true,body:[
+    h('div',{class:'reshead'},h('span',{class:'st '+(r.ok?'ok':'err')},r.status),h('span',{class:'dim'},`${r.ms} ms · ${fmtDT(r.ts)}:${pad(r.ts.getSeconds())} · perfil ${r.profile}`)),
+    h('div',{class:'urlbar'},h('b',{},r.method+' '),r.url),
+    r.ok?null:h('div',{class:'errbox'},h('h4',{},'✖ '+(r.body.erro||'Erro')),h('div',{},r.body.mensagem||''),r.hint&&h('div',{class:'hint'},'DICA: '+r.hint)),
+    h('h3',{},'Requisição'),ReqView(r),h('h3',{},'Resposta'),JsonView(r.resHeaders),h('div',{style:{height:'6px'}}),JsonView(r.body)],
+    actions:[CopyBtn('Copiar cURL',()=>curl(r),'btn'),h('button',{type:'button',class:'btn',onclick:()=>{r.fav=!r.fav;renderLog();m.close();}},r.fav?'★ Desfavoritar':'☆ Favoritar'),
+      r.screen&&r.snap?h('button',{type:'button',class:'btn pri',onclick:()=>{m.close();reuse(r);}},'↻ Reenviar com os mesmos dados'):null,h('button',{type:'button',class:'btn',onclick:()=>m.close()},'Fechar',h('kbd',{},'Esc'))]});
+}
+function renderFkeys(){
+  const fk=[['F1','Ajuda',helpDlg],['F2','Perfil',profileDlg],['F3','Log',toggleLog],['F5','Executar',()=>cur&&cur.api.run&&cur.api.run()],['F6','Exemplo',()=>cur&&cur.api.example&&cur.api.example()],['Esc','Voltar',back],['F10','Sair',exitApp]];
+  $('#fkeys').replaceChildren(...fk.map(([k,l,a])=>h('button',{type:'button',onclick:a},h('b',{},k),h('span',{},l))),h('div',{class:'leg'},h('span',{},h('b',{},'Enter'),' executa'),h('span',{},h('b',{},'/'),' busca'),h('span',{},h('b',{},'1-0'),' telas'),h('span',{},h('b',{},'Ctrl+K'),' ir para')));
+}
+
+/* teclado */
+document.addEventListener('keydown',e=>{
+  if(splashOn){if(['Shift','Control','Alt','Meta'].includes(e.key))return;e.preventDefault();enterApp();return;}
+  const k=e.key,t=e.target,tag=t.tagName;const top=modals[modals.length-1];
+  const typing=(tag==='INPUT'&&!['checkbox','radio','button','file'].includes(t.type))||tag==='TEXTAREA'||tag==='SELECT';
+  if(k==='Tab'&&top){const f=[...top.win.querySelectorAll('button,input,select,textarea,[tabindex="0"]')].filter(x=>!x.disabled&&!x.hidden&&x.offsetParent);
+    if(f.length){const i=f.indexOf(document.activeElement);if(e.shiftKey&&i<=0){e.preventDefault();f[f.length-1].focus();}else if(!e.shiftKey&&i===f.length-1){e.preventDefault();f[0].focus();}}return;}
+  if(k==='Escape'){e.preventDefault();
+    if(openMenu){openMenu=null;renderMenubar();}else if(top)top.close();
+    else if(tag==='INPUT'&&t.type==='search'&&t.value){t.value='';t.dispatchEvent(new Event('input'));}
+    else back();return;}
+  const fn={F1:helpDlg,F2:profileDlg,F3:toggleLog,F10:exitApp,F5:()=>cur&&cur.api.run&&cur.api.run(),F6:()=>cur&&cur.api.example&&cur.api.example()}[k];
+  if(fn){e.preventDefault();if(top&&k!=='F1'&&k!=='F2'&&k!=='F3'&&k!=='F10')return;fn();return;}
+  if((e.ctrlKey||e.metaKey)&&k.toLowerCase()==='k'){e.preventDefault();if(!top)palette();return;}
+  if(top)return;
+  if(k==='Enter'&&!e.shiftKey&&!e.altKey&&typing&&t.type!=='search'&&!(t.dataset&&t.dataset.search)&&(tag!=='TEXTAREA'||e.ctrlKey||e.metaKey)){e.preventDefault();cur&&cur.api.run&&cur.api.run();return;}
+  if(!typing&&!e.ctrlKey&&!e.metaKey&&!e.altKey){
+    if(k==='/'){e.preventDefault();const s=$('#main [data-search]');if(s)s.focus();else palette();return;}
+    if(/^[0-9]$/.test(k)){const sc=SCREENS.find(s=>s.n===k);if(sc)go(sc.id);}
+  }
+});
+document.addEventListener('click',e=>{if(openMenu&&!e.target.closest('.mi')){openMenu=null;renderMenubar();}});
+
+/* abertura */
+const GL={D:['████ ','█   █','█   █','█   █','████ '],O:[' ███ ','█   █','█   █','█   █',' ███ '],C:[' ████','█    ','█    ','█    ',' ████'],N:['█   █','██  █','█ █ █','█  ██','█   █'],U:['█   █','█   █','█   █','█   █',' ███ '],V:['█   █','█   █','█   █',' █ █ ','  █  '],E:['█████','█    ','████ ','█    ','█████'],M:['█   █','██ ██','█ █ █','█   █','█   █'],A:[' ███ ','█   █','█████','█   █','█   █'],P:['████ ','█   █','████ ','█    ','█    '],I:['█████','  █  ','  █  ','  █  ','█████'],T:['█████','  █  ','  █  ','  █  ','  █  '],S:[' ████','█    ',' ███ ','    █','████ '],R:['████ ','█   █','████ ','█  █ ','█   █'],' ':['   ','   ','   ','   ','   ']};
+const banner=w=>[0,1,2,3,4].map(r=>[...w].map(c=>GL[c][r]).join(' ')).join('\n');
+$('#ban1').textContent=banner('DOCNUVEM');$('#ban2').textContent=banner('API TESTER');
+function enterApp(){splashOn=false;$('#splash').hidden=true;}
+$('#splash').addEventListener('click',enterApp);
+
+/* montagem */
+$('#app').append(h('div',{id:'menubar',class:'menubar',role:'menubar'}),h('div',{class:'body'},h('nav',{id:'side',class:'side','aria-label':'Telas'}),h('main',{id:'main',class:'main'})),h('div',{id:'logdock',class:'logdock'}),h('div',{id:'fkeys',class:'fkeys'}));
+async function boot(){
+  try{
+    const r=await fetch('/_perfis',{cache:'no-store'});
+    if(r.ok){const j=await r.json();
+      if(j&&Array.isArray(j.perfis)&&j.perfis.length){LIVE=j;PROFILES=j.perfis.map(p=>({id:p.id,instancia:p.instancia,baseUrl:p.baseUrl,mascara:p.tokenMascarado,token:''}));state.profile=PROFILES.find(p=>p.id===j.padrao)||PROFILES[0];}}
+  }catch{}
+  if(!LIVE)state.catalog=MODELOS;
+  else{
+    $('#mode').textContent='MODO API REAL: as chamadas atingem a API de verdade, com os tokens do config.json';$('#mode').style.color='var(--red)';
+    $('#splprof').replaceChildren('Perfil inicial: ',h('b',{style:{color:'var(--yel)'}},state.profile.id),h('span',{class:'dim'},' · '+PROFILES.length+' perfil(is) no config.json'));
+  }
+  state.logOpen=innerWidth>=1400&&innerHeight>=860;
+  renderMenubar();renderFkeys();renderLog();go('home');
+}
+boot();
+})();
+</script>
