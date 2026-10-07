@@ -100,7 +100,10 @@ o navegador).
   ferramenta (não é um proxy aberto).
 - Telas: importar, envio inteligente, modelos, criar de modelo, solicitar e cancelar
   assinatura, documentos, pastas (`GET /api/diretorios`), status, download e o
-  fluxo completo.
+  fluxo completo. Para escolas, há também "Solicitar documentos" e "Status do
+  aluno" (`/api/solicitacaoAluno/*`). Atenção: solicitar documentos **envia um
+  e-mail real ao aluno**, por isso, no modo real, a tela exige marcar uma
+  confirmação antes de liberar o botão.
 - A página foi desenhada no artifact "Design" do Claude e usa o runtime desse
   formato (`webapp/dc-runtime.js`, servido localmente; não precisa de internet,
   só das fontes do Google). Abrindo o `index.html` direto no navegador, sem o

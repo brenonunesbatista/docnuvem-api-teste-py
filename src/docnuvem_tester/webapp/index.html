@@ -581,6 +581,44 @@ kbd{font-family:inherit;font-size:11px;border:1px solid var(--ln);border-bottom-
               <div class="row"><button class="btn pri" type="button" disabled="{{dl.expired}}" onClick="{{dl.copy}}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.copy}}"/></svg>Copiar URL</button><span class="muted small">campo <code class="api">urlDownload</code></span></div>
             </section>
           </sc-if>
+
+          <!-- Aluno: solicitação criada -->
+          <sc-if value="{{al.show}}" hint-placeholder-val="{{ false }}">
+            <section class="card">
+              <div class="row"><h2>Solicitação criada</h2><span class="pill {{al.cls}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{al.icon}}"/></svg>{{al.label}}</span></div>
+              <dl class="kvs"><dt>Aluno</dt><dd>{{al.nome}} · matrícula {{al.matricula}}</dd><dt>Tipo</dt><dd>{{al.tipo}}</dd><dt>Modelo</dt><dd>{{al.modelo}}</dd><dt>Validade</dt><dd>{{al.validade}}</dd><dt>Pasta do aluno</dt><dd>{{al.dir}}</dd><dt>Responsável</dt><dd>{{al.resp}}</dd></dl>
+              <div class="row"><sc-for list="{{al.flags}}" as="f" hint-placeholder-count="3"><span class="pill {{f.cls}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{f.icon}}"/></svg>{{f.label}}</span></sc-for></div>
+              <div class="linkbig"><div style="flex:1 1 220px"><strong>Link de envio do aluno</strong><div class="small muted">O aluno usa este link para enviar os documentos.</div></div><code class="url">{{al.link}}</code><button class="btn pri sm" type="button" onClick="{{al.copyLink}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.copy}}"/></svg>Copiar link</button></div>
+              <div class="tw"><table>
+                <thead><tr><th class="plain">Documento pedido</th><th class="plain">Obrigatório</th><th class="plain">Status</th></tr></thead>
+                <tbody><sc-for list="{{al.rows}}" as="r" hint-placeholder-count="5"><tr><td>{{r.descricao}}</td><td>{{r.obrig}}</td><td><span class="pill {{r.cls}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{r.icon}}"/></svg>{{r.label}}</span></td></tr></sc-for></tbody>
+              </table></div>
+            </section>
+          </sc-if>
+
+          <!-- Aluno: status -->
+          <sc-if value="{{asv.show}}" hint-placeholder-val="{{ false }}">
+            <section class="card">
+              <h2>Aluno</h2>
+              <dl class="kvs"><dt>Nome</dt><dd>{{asv.nome}}</dd><dt>Matrícula</dt><dd>{{asv.matricula}}</dd><dt>CPF</dt><dd>{{asv.cpf}}</dd><dt>E-mail</dt><dd>{{asv.email}}</dd><dt>Telefone</dt><dd>{{asv.tel}}</dd><dt>contatoId</dt><dd>{{asv.contato}}</dd></dl>
+              <sc-if value="{{asv.noSols}}" hint-placeholder-val="{{ false }}"><div class="empty small"><strong>Sem solicitações</strong><span>Este aluno ainda não tem solicitação de envio de documentos.</span></div></sc-if>
+              <sc-for list="{{asv.sols}}" as="sl" hint-placeholder-count="2">
+                <div class="mcard">
+                  <div class="row"><strong>{{sl.tipo}}</strong><span class="pill {{sl.cls}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{sl.icon}}"/></svg>{{sl.label}}</span><span class="muted small">{{sl.prog}}</span><span class="grow"></span>
+                    <button class="btn sm" type="button" onClick="{{sl.copyLink}}">Copiar link de envio</button>
+                    <button class="btn sm" type="button" aria-expanded="{{sl.open}}" onClick="{{sl.toggle}}">{{sl.toggleLabel}}</button></div>
+                  <span class="bar" style="display:block"><i style="width: {{sl.pct}}%"></i></span>
+                  <span class="muted small">{{sl.datas}}</span>
+                  <sc-if value="{{sl.open}}" hint-placeholder-val="{{ false }}">
+                    <div class="tw"><table>
+                      <thead><tr><th class="plain">Documento pedido</th><th class="plain">Obrigatório</th><th class="plain">Status</th><th class="plain">Arquivos recebidos</th><th class="plain">Observação</th></tr></thead>
+                      <tbody><sc-for list="{{sl.itens}}" as="it" hint-placeholder-count="4"><tr><td>{{it.descricao}}</td><td>{{it.obrig}}</td><td><span class="pill {{it.cls}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{it.icon}}"/></svg>{{it.label}}</span></td><td style="white-space:pre-line">{{it.docsTxt}}</td><td>{{it.obs}}</td></tr></sc-for></tbody>
+                    </table></div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </section>
+          </sc-if>
         </sc-if>
 
         <!-- ===== FLUXO: PASSO 3 ===== -->
@@ -682,7 +720,9 @@ plus:'M12 5v14M5 12h14',
 send:'M22 2L11 13M22 2l-7 20-4-9-9-4z',
 refresh:'M20 11a8 8 0 10-2.3 5.7M20 4v7h-7',
 chev:'M9 6l6 6-6 6',
-cloud:'M7 18a4 4 0 01-.5-8A6 6 0 0118 10a4 4 0 010 8z'
+cloud:'M7 18a4 4 0 01-.5-8A6 6 0 0118 10a4 4 0 010 8z',
+cap:'M2 9l10-5 10 5-10 5zM6 11v5c0 1.5 3 3 6 3s6-1.5 6-3v-5M22 9v6',
+user:'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0'
 };
 const META={
 inicio:{label:'Início',title:'O que você quer testar hoje?',sub:'Escolha uma tarefa ou continue de onde parou. Tudo aqui é simulado.',d:ICON.home,grp:'Começar'},
@@ -696,9 +736,11 @@ cancelar:{label:'Cancelar assinatura',title:'Cancelar assinatura',method:'DELETE
 documentos:{label:'Documentos',title:'Documentos',method:'GET',path:'/api/documentos',sub:'Lista documentos com filtros. Parâmetros vazios nunca são enviados.',d:ICON.files,grp:'Consultar'},
 pastas:{label:'Pastas',title:'Pastas',method:'GET',path:'/api/diretorios',sub:'Encontre o diretorioId e o caminho completo de cada pasta.',d:ICON.folder,grp:''},
 status:{label:'Status do documento',title:'Status do documento',method:'GET',path:'/api/documento/{id}/status',sub:'Situação da assinatura e de cada signatário.',d:ICON.clip,grp:''},
-download:{label:'Download',title:'Download',method:'GET',path:'/api/documento/{id}/download',sub:'Gera um link temporário para baixar o arquivo.',d:ICON.download,grp:''}
+download:{label:'Download',title:'Download',method:'GET',path:'/api/documento/{id}/download',sub:'Gera um link temporário para baixar o arquivo.',d:ICON.download,grp:''},
+alunoSolicitar:{label:'Solicitar documentos',title:'Solicitar documentos do aluno',method:'POST',path:'/api/solicitacaoAluno/solicitarEnvioDocumentos',sub:'Cria o contato e a pasta do aluno, abre a solicitação de envio de documentos e envia o link por e-mail.',d:ICON.cap,grp:'Escola'},
+alunoStatus:{label:'Status do aluno',title:'Status do aluno',method:'GET',path:'/api/solicitacaoAluno/consultarStatus',sub:'Solicitações de envio de documentos do aluno e o que já foi recebido.',d:ICON.user,grp:''}
 };
-const ORDER=['inicio','fluxo','importar','envio','modelos','template','assinatura','cancelar','documentos','pastas','status','download'];
+const ORDER=['inicio','fluxo','importar','envio','modelos','template','assinatura','cancelar','documentos','pastas','status','download','alunoSolicitar','alunoStatus'];
 const AUTO=['documentos','pastas','modelos'];
 let LIVE=null;const FILEBLOB=new WeakMap();
 const BASE='https://api.docnuvem.example';
@@ -778,7 +820,8 @@ K(61003,'Procuração - Dr. Almeida.pdf',404,'sem_assinatura',4,null,[]),
 K(61004,'Termo de Adesão.pdf',402,'cancelado',18,null,[S('Patrícia Souza','patricia.souza',0,'cancelado',false,17)])
 ];
 }else{pastas=[P(501,'Meus documentos',null)];docs=[];}
-return {pastas:withPaths(pastas),docs,nextDoc:(docs.reduce((a,x)=>Math.max(a,x.documentoId),n*10000+100))+1,nextPasta:Math.max.apply(null,pastas.map(x=>x.diretorioId))+1,nextAss:7900+n*10};
+const alunos=n===1?[seedAluno(D,F)]:[];
+return {pastas:withPaths(pastas),docs,alunos,nextSol:905,nextContato:5001,nextDoc:(docs.reduce((a,x)=>Math.max(a,x.documentoId),n*10000+100))+1,nextPasta:Math.max.apply(null,pastas.map(x=>x.diretorioId))+1,nextAss:7900+n*10};
 }
 
 function pathOf(nome,pai){const norm=s=>'/'+String(s||'').split('/').map(x=>x.trim()).filter(Boolean).join('/');let full=pai?norm(pai)+norm(nome):norm(nome);if(!/^\/meus documentos(\/|$)/i.test(full))full='/Meus documentos'+full;return full;}
@@ -797,6 +840,34 @@ const d=JSON.parse(JSON.stringify(db));
 const intq=v=>/^\d+$/.test(String(v));
 const vazios=Object.keys(q).filter(k=>k!=='instancia'&&q[k]===''&&k!=='status'&&k!=='motivo'&&k!=='tipo'&&k!=='nomePastaPai');
 switch(req.screen){
+case 'alunoSolicitar':{
+const mt=String(b.codigoMatricula||'').trim(),nm=String(b.nome||'').trim();
+if(!mt)return E(400,'Campo obrigatório ausente: codigoMatricula.','PARAMETRO_OBRIGATORIO');
+if(!nm)return E(400,'Campo obrigatório ausente: nome.','PARAMETRO_OBRIGATORIO');
+if(!b.cpf||!cpfOk(b.cpf))return E(400,'cpf inválido.','CPF_INVALIDO');
+if(!b.email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.email))return E(400,'email inválido.','EMAIL_INVALIDO');
+if(b.tipoSolicitacao!==1&&b.tipoSolicitacao!==2)return E(400,'tipoSolicitacao deve ser 1 (Ensino médio) ou 2 (Cursos técnicos).','TIPO_INVALIDO');
+const rp=b.emailResponsavel?String(b.emailResponsavel).toLowerCase():'secretaria@instituicao.example.com.br';
+if(!RESP_OK[rp])return E(400,'emailResponsavel não corresponde a um usuário ativo do DocNuvem.','RESPONSAVEL_NAO_ENCONTRADO');
+d.alunos=d.alunos||[];
+let al=d.alunos.find(x=>x.codigoMatricula===mt);const novoContato=!al;
+const dirNome='Alunos/'+mt+' - '+nm,dirPath='/Meus documentos/'+dirNome;
+const existiaDir=!!d.pastas.find(p=>p.caminho.toLowerCase()===(dirPath+'/Documentos').toLowerCase());
+const dirId=ensurePasta(d,dirNome+'/Documentos',''),certId=ensurePasta(d,dirNome+'/Certificados','');
+if(!al){d.nextContato=(d.nextContato||5000)+1;al={codigoMatricula:mt,contatoId:d.nextContato,solicitacoes:[]};d.alunos.push(al);}
+Object.assign(al,{nome:nm,cpf:dg(b.cpf),email:b.email,telefone:b.telefone?dg(b.telefone):(al.telefone||null)});
+d.nextSol=(d.nextSol||900)+1;const sid=d.nextSol;
+const hash=Math.random().toString(36).slice(2,10)+Math.random().toString(36).slice(2,10),tipo=b.tipoSolicitacao,now=new Date().toISOString().slice(0,19);
+const itens=(tipo===1?ITENS_EM:ITENS_TEC).map((t,i)=>({id:sid*10+i,modeloItemId:100+i,descricao:t[0],obrigatorio:t[1],permiteMultiplosArquivos:t[2],status:'PENDENTE',statusDescricao:'Pendente',possuiPendencia:t[1],observacao:null,diretorioId:dirId,caminhoComplementar:null,documentos:[]}));
+const sol={solicitacaoId:sid,modeloSolicitacaoId:tipo===1?21:22,modeloSolicitacaoNome:tipo===1?'Documentos do ensino médio':'Documentos de cursos técnicos',tipoSolicitacao:tipo,tipoSolicitacaoDescricao:tipo===1?'Ensino médio':'Cursos técnicos',status:'PENDENTE',statusDescricao:'Pendente',dataSolicitacao:now,dataValidade:new Date(Date.now()+30*864e5).toISOString().slice(0,19),dataConclusao:null,diretorioId:dirId,diretorioCaminho:dirPath+'/Documentos',hash,linkEnvio:'https://envio.docnuvem.example/aluno/'+hash,itens};
+al.solicitacoes.unshift(sol);
+return R(200,{solicitacaoId:sid,contatoId:al.contatoId,codigoMatricula:mt,nome:nm,email:b.email,diretorioId:dirId,diretorioCaminho:dirPath+'/Documentos',diretorioCertificadosId:certId,diretorioCertificadosCaminho:dirPath+'/Certificados',responsavelNome:RESP_OK[rp],responsavelEmail:rp,tipoSolicitacao:tipo,tipoSolicitacaoDescricao:sol.tipoSolicitacaoDescricao,modeloSolicitacaoId:sol.modeloSolicitacaoId,modeloSolicitacaoNome:sol.modeloSolicitacaoNome,hash,linkEnvio:sol.linkEnvio,dataSolicitacao:now,dataValidade:sol.dataValidade,status:'PENDENTE',statusDescricao:'Pendente',contatoCriado:novoContato,diretorioCriado:!existiaDir,emailEnviado:true,itens},{db:d});}
+case 'alunoStatus':{
+const mt=String(q.codigoMatricula==null?'':q.codigoMatricula).trim();
+if(!mt)return E(400,'Parâmetro obrigatório ausente: codigoMatricula.','PARAMETRO_OBRIGATORIO');
+const al=(d.alunos||[]).find(x=>x.codigoMatricula===mt);
+if(!al)return E(404,'Aluno com matrícula "'+mt+'" não encontrado.','ALUNO_NAO_ENCONTRADO');
+return R(200,{codigoMatricula:al.codigoMatricula,contatoId:al.contatoId,nome:al.nome,cpf:al.cpf,email:al.email,telefone:al.telefone,solicitacoes:al.solicitacoes.map(x=>{const env=x.itens.filter(i=>i.status==='ENVIADO').length;return Object.assign({},x,{quantidadeItens:x.itens.length,quantidadeItensEnviados:env,quantidadeItensPendentes:x.itens.length-env});})});}
 case 'modelos':return R(200,{modelos:MODELOS});
 case 'importar':case 'envio':{
 if(!req.file)return E(400,'Parte multipart "file" ausente.','ARQUIVO_AUSENTE');
@@ -976,6 +1047,18 @@ return rows;
 }
 function allPaths(v,path,out){if(v!==null&&typeof v==='object'){out[path]=true;Object.keys(v).forEach(k=>allPaths(v[k],path+'/'+k,out));}return out;}
 
+const ITENS_EM=[['RG ou certidão de nascimento',true,false],['CPF',true,false],['Comprovante de residência',true,false],['Histórico escolar do ensino fundamental',true,true],['Foto 3x4',false,false]];
+const ITENS_TEC=ITENS_EM.concat([['Certificado de conclusão do ensino médio',true,true]]);
+const RESP_OK={'secretaria@instituicao.example.com.br':'Secretaria Acadêmica','coordenacao@instituicao.example.com.br':'Coordenação Pedagógica'};
+function aluSt(v,desc){const k=skey(v);
+const cls=/rejeit|recus|reprov|cancel|erro/.test(k)?'er':/pend|andamento|parcial|aguard|nao|não/.test(k)?'wn':/conclu|envi|receb|aprov/.test(k)?'ok':'mu';
+return {cls,icon:cls==='ok'?ICON.check:cls==='wn'?ICON.clock:cls==='er'?ICON.x:ICON.minus,label:desc||v||'—'};}
+function seedAluno(D,F){
+const dir=330,hash='k3m9x2q8a1b7c5d4';
+const itens=ITENS_EM.map((t,i)=>{const env=i<3;return {id:9010+i,modeloItemId:100+i,descricao:t[0],obrigatorio:t[1],permiteMultiplosArquivos:t[2],status:env?'ENVIADO':'PENDENTE',statusDescricao:env?'Enviado':'Pendente',possuiPendencia:!env&&t[1],observacao:null,diretorioId:dir,caminhoComplementar:null,documentos:env?[{id:7000+i,nome:t[0].split(' ')[0]+'_beatriz',extensao:'pdf',tamanho:184000+i*31000,dataEnvio:D(2)}]:[]};});
+return {codigoMatricula:'2026001',contatoId:5001,nome:'Beatriz Nogueira Alves',cpf:'52998224725',email:'beatriz.alves@email.example.com',telefone:'31999998888',
+solicitacoes:[{solicitacaoId:901,modeloSolicitacaoId:21,modeloSolicitacaoNome:'Documentos do ensino médio',tipoSolicitacao:1,tipoSolicitacaoDescricao:'Ensino médio',status:'EM_ANDAMENTO',statusDescricao:'Em andamento',dataSolicitacao:D(3),dataValidade:F(27),dataConclusao:null,diretorioId:dir,diretorioCaminho:'/Meus documentos/Alunos/2026001 - Beatriz Nogueira Alves/Documentos',hash,linkEnvio:'https://envio.docnuvem.example/aluno/'+hash,itens}]};
+}
 function mkState(){
 const sg=()=>({id:'s'+Math.random().toString(36).slice(2,8),nome:'',email:'',doc:'',tel:'',ordem:'0',selfie:false,otp:'',pagina:'',x:'',y:'',semCarimbo:false,open:false});
 return {screen:'inicio',prev:'inicio',perfil:'cliente1',theme:'light',validar:true,forcar:'auto',
@@ -988,9 +1071,10 @@ assinatura:{documentoId:'',signers:[sg()],consideraOrdem:false,dataValidade:'',p
 cancelar:{assinaturaId:'',motivo:'',confirm:''},
 documentos:{diretorioId:'',incluirSubpastas:false,status:'',dataInicio:'',dataFim:'',pagina:'0',tamanho:'50',q:''},
 pastas:{diretorioPaiId:'',nome:'',caminho:'',pagina:'0',tamanho:'50'},
-status:{documentoId:''},download:{documentoId:''},modelos:{}},
+status:{documentoId:''},download:{documentoId:''},modelos:{},
+alunoSolicitar:{codigoMatricula:'',nome:'',cpf:'',email:'',telefone:'',tipoSolicitacao:'1',emailResponsavel:'',confirmEmail:false},alunoStatus:{codigoMatricula:''}},
 results:{},loading:{},lists:{},tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
-paletteOpen:false,paletteQ:'',toast:'',wizStep:0,
+paletteOpen:false,paletteQ:'',toast:'',wizStep:0,lastMat:'',openSol:null,
 lastDoc:{cliente1:48204,cliente2:61003,cliente3:null},lastAss:{cliente1:7201,cliente2:7001,cliente3:null},
 sort:{documentos:{k:'criadoEm',d:-1},pastas:{k:'caminho',d:1}},openModelo:'',dragging:false,newSg:sg};
 }
@@ -1170,6 +1254,27 @@ req={method:'GET',path:'/api/diretorios',query:q};break;}
 case 'status':case 'download':{
 const id=(f.documentoId||'').trim();idOk('documentoId',id);
 req={method:'GET',path:'/api/documento/'+id+'/'+sc,query:q,id:Number(id)};break;}
+case 'alunoSolicitar':{
+const mt=(f.codigoMatricula||'').trim(),nm=(f.nome||'').trim(),cp=dg(f.cpf),em=(f.email||'').trim(),tl=dg(f.telefone),er=(f.emailResponsavel||'').trim();
+const mailOk=x=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x);
+if(!mt)E('codigoMatricula','Informe a matrícula.');
+if(!nm)E('nome','Informe o nome do aluno.');
+if(!cp)E('cpf','Informe o CPF.');else if(!cpfOk(cp))E('cpf','CPF inválido: dígito verificador não confere.');
+if(!em)E('email','Informe o e-mail do aluno.');else if(!mailOk(em))E('email','E-mail em formato inválido.');
+if(tl&&(tl.length<10||tl.length>13))E('telefone','Telefone com DDD, 10 a 13 dígitos.');
+if(['1','2'].indexOf(String(f.tipoSolicitacao))<0)E('tipoSolicitacao','Escolha 1 (Ensino médio) ou 2 (Cursos técnicos).');
+if(er&&!mailOk(er))E('emailResponsavel','E-mail em formato inválido.');
+if(LIVE&&!f.confirmEmail)block='Marque a confirmação: esta chamada envia um e-mail real ao aluno.';
+const body={};const o=(k,val)=>{val=(val||'').trim();if(val||!v)body[k]=val;};
+o('codigoMatricula',mt);o('nome',nm);o('cpf',cp);o('email',em);o('telefone',tl);
+body.tipoSolicitacao=/^\d+$/.test(String(f.tipoSolicitacao))?Number(f.tipoSolicitacao):f.tipoSolicitacao;
+o('emailResponsavel',er);
+req={method:'POST',path:'/api/solicitacaoAluno/solicitarEnvioDocumentos',query:q,body};break;}
+case 'alunoStatus':{
+const mt=(f.codigoMatricula||'').trim();
+if(!mt)E('codigoMatricula','Informe a matrícula.');
+put('codigoMatricula',mt);
+req={method:'GET',path:'/api/solicitacaoAluno/consultarStatus',query:q};break;}
 }
 const nErr=Object.keys(errs).length;
 const ready=!!req&&!block&&(!v||nErr===0);
@@ -1195,6 +1300,7 @@ if(out.db){patch.dbs=Object.assign({},st.dbs,{[perfil]:out.db});lists={};}
 if(LIVE&&ok&&req.method!=='GET'){lists=Object.assign({},lists);delete lists.documentos;delete lists.pastas;}
 if(ok){const b=out.r.body||{};
 if(b.documentoId&&['importar','envio','template'].indexOf(sc)>=0)patch.lastDoc=Object.assign({},st.lastDoc,{[perfil]:b.documentoId});
+if(b.codigoMatricula&&['alunoSolicitar','alunoStatus'].indexOf(sc)>=0)patch.lastMat=String(b.codigoMatricula);
 if(sc==='assinatura'&&b.assinaturaId)patch.lastAss=Object.assign({},st.lastAss,{[perfil]:b.assinaturaId});
 if(['documentos','pastas','modelos'].indexOf(sc)>=0)lists=Object.assign({},lists,{[sc]:b});
 if(st.screen==='fluxo'){
@@ -1342,6 +1448,20 @@ T('pastas','caminho',{label:'Caminho',api:'caminho',hint:'Partes do caminho, sem
 T('pastas','pagina',{label:'Página',api:'pagina',half:true,hint:'Começa em 0'}),
 T('pastas','tamanho',{label:'Tamanho',api:'tamanho',half:true})]});
 if(eff==='status'||eff==='download')C({title:'Qual documento?',fields:[T(eff,'documentoId',Object.assign({label:'Documento',api:'documentoId',req:true,placeholder:'48201'},docLast(eff)))]});
+if(eff==='alunoSolicitar'){
+C({title:LIVE?'Atenção: envia e-mail de verdade':'Atenção: na API real isto envia e-mail',tone:'danger',notice:'Esta chamada cria (ou atualiza) o contato do aluno, cria a pasta /Meus documentos/Alunos/{matrícula} - {nome}/Documentos e envia ao aluno o e-mail com o link de envio. Repetir a matrícula reaproveita o contato e a pasta e gera um novo link.'});
+C({title:'Aluno',fields:[
+T('alunoSolicitar','codigoMatricula',{label:'Matrícula',api:'codigoMatricula',req:true,half:true,placeholder:'12345'}),
+T('alunoSolicitar','nome',{label:'Nome do aluno',api:'nome',req:true,half:true,placeholder:'João da Silva'}),
+T('alunoSolicitar','cpf',{label:'CPF',api:'cpf',req:true,half:true,placeholder:'000.000.000-00',hint:'Com ou sem máscara.',onInput:e=>this.setF('alunoSolicitar',{cpf:maskDoc(dg(e.target.value).slice(0,11))})}),
+T('alunoSolicitar','email',{label:'E-mail do aluno',api:'email',req:true,half:true,placeholder:'joao.silva@email.com.br',hint:'Recebe o link de envio.'}),
+T('alunoSolicitar','telefone',{label:'Telefone',api:'telefone',tag:'opcional',half:true,placeholder:'(31) 99999-8888',onInput:e=>this.setF('alunoSolicitar',{telefone:maskTel(e.target.value)})})]});
+C({title:'Solicitação',fields:[
+T('alunoSolicitar','tipoSolicitacao',{label:'Tipo de solicitação',api:'tipoSolicitacao',req:true,kind:'select',half:true,hint:'Define o modelo de documentos pedidos ao aluno.',options:[{value:'1',label:'1 — Ensino médio'},{value:'2',label:'2 — Cursos técnicos'}]}),
+T('alunoSolicitar','emailResponsavel',{label:'E-mail do responsável',api:'emailResponsavel',tag:'opcional',half:true,placeholder:'secretaria@instituicao.com.br',hint:'Usuário ativo do DocNuvem que recebe o aviso do envio. Sem isto vale o padrão da instância.'})]});
+if(LIVE)C({title:'Confirmação',fields:[T('alunoSolicitar','confirmEmail',{kind:'switch',label:'Entendo que o aluno receberá um e-mail real',api:'confirmação local',switchText:f.confirmEmail?'Confirmado':'Marque para liberar o envio'})]});
+}
+if(eff==='alunoStatus')C({title:'Qual aluno?',fields:[T('alunoStatus','codigoMatricula',{label:'Matrícula',api:'codigoMatricula',req:true,placeholder:'12345',useLast:true,lastLabel:s.lastMat?'Usar última matrícula ('+s.lastMat+')':'Nenhuma matrícula recente',lastDisabled:!s.lastMat,onLast:()=>this.setF('alunoStatus',{codigoMatricula:s.lastMat})})]});
 cards.forEach(c=>{c.hasTitle=!!c.title;c.hasSub=!!c.sub;c.hasNotice=!!c.notice;});
 
 const drop={cls:(s.dragging?'over ':'')+(p.errs.file?'bad':''),hasFile:!!f.file,name:f.file?f.file.name:'',size:f.file?fmtSize(f.file.size):'',err:p.errs.file||'',hasErr:!!p.errs.file,
@@ -1352,7 +1472,7 @@ onClear:()=>this.setF(eff,{file:null})};
 
 const forcarOpts=[['auto','Automática (conforme os dados)'],['400','Forçar 400 Requisição inválida'],['401','Forçar 401 Não autorizado'],['404','Forçar 404 Não encontrado'],['409','Forçar 409 Conflito']].map(a=>({value:a[0],label:a[1],selected:a[0]===s.forcar}));
 
-const SEND={importar:'Importar arquivo',envio:'Enviar para envio inteligente',modelos:'Listar modelos',template:'Criar documento',assinatura:'Solicitar assinatura',cancelar:'Cancelar assinatura',documentos:'Consultar documentos',pastas:'Consultar pastas',status:'Consultar status',download:'Gerar link de download'};
+const SEND={alunoSolicitar:'Solicitar envio de documentos',alunoStatus:'Consultar aluno',importar:'Importar arquivo',envio:'Enviar para envio inteligente',modelos:'Listar modelos',template:'Criar documento',assinatura:'Solicitar assinatura',cancelar:'Cancelar assinatura',documentos:'Consultar documentos',pastas:'Consultar pastas',status:'Consultar status',download:'Gerar link de download'};
 const sendLabel=SEND[eff]||'Enviar';
 const pv=p.req?(()=>{const r=reqView(p.req,perfil);return Object.assign({},r,{copyUrl:()=>this.copy(r.url),copyCurl:()=>this.copy(r.curl)});})():{method:'GET',url:'',headers:[],body:'',hasBody:false,copyUrl:()=>{},copyCurl:()=>{}};
 
@@ -1384,6 +1504,10 @@ nexts.push({label:'Baixar documento',cls:'btn sm',go:()=>this.goWith('download',
 if(skey(res0.body.status)!=='pendente'&&skey(res0.body.status)!=='assinado')nexts.push({label:'Solicitar assinatura',cls:'btn pri sm',go:()=>this.goWith('assinatura',{documentoId:String(bodyDoc)},false)});}
 if(res0&&res0.status===409&&res0.body&&res0.body.assinaturaId&&eff==='assinatura')nexts.push({label:'Cancelar a assinatura em andamento',cls:'btn sm',go:()=>this.goWith('cancelar',{assinaturaId:String(res0.body.assinaturaId),confirm:''},false)});
 
+if(res0&&res0.ok&&eff==='alunoSolicitar'){const b0=res0.body;
+nexts.push({label:'Ver status do aluno',cls:'btn pri sm',go:()=>this.goWith('alunoStatus',{codigoMatricula:String(b0.codigoMatricula||f.codigoMatricula)},true)});
+if(b0.linkEnvio)nexts.push({label:'Copiar link de envio',cls:'btn sm',go:()=>this.copy(b0.linkEnvio)});}
+if(res0&&res0.ok&&eff==='alunoStatus'){const b0=res0.body;nexts.push({label:'Solicitar novamente (novo link)',cls:'btn sm',go:()=>this.goWith('alunoSolicitar',{codigoMatricula:String(b0.codigoMatricula||''),nome:b0.nome||'',cpf:maskDoc(b0.cpf||''),email:b0.email||'',telefone:maskTel(b0.telefone||''),confirmEmail:false},false)});}
 const assRes=s.results.assinatura;
 const linkSrc=assRes&&assRes.ok&&(eff==='assinatura'||eff==='resultado')?assRes.body:null;
 const links=linkSrc?(linkSrc.signatarios||[]).filter(x=>x.linkAssinatura).map(x=>({nome:x.nome,email:x.email,ordem:x.ordem,link:x.linkAssinatura,copy:()=>this.copy(x.linkAssinatura)})):[];
@@ -1438,6 +1562,18 @@ rows:sgs.map(x=>({nome:x.nome,email:x.email,ordem:x.ordem,cls:stc(skey(x.status)
 let dl={show:false};
 if(eff==='download'&&res0&&res0.ok){const b=res0.body,exp0=new Date(b.expiraEm).getTime(),exp=isNaN(exp0)?res0.ts+15*60000:exp0,left=Math.max(0,exp-Date.now()),mm=Math.floor(left/60000),ss=Math.floor(left%60000/1000);
 dl={show:true,expired:left<=0,count:left>0?String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0'):'Expirado',expLabel:left>0?'Tempo restante':'Link inutilizável',hora:fmtT(exp),nome:b.nomeArquivo,url:b.urlDownload,copy:()=>this.copy(b.urlDownload)};}
+// aluno
+let al={show:false};
+if(eff==='alunoSolicitar'&&res0&&res0.ok){const b=res0.body,ss=aluSt(b.status,b.statusDescricao);
+al={show:true,cls:ss.cls,icon:ss.icon,label:ss.label,nome:b.nome||'—',matricula:b.codigoMatricula||'—',tipo:b.tipoSolicitacaoDescricao||(b.tipoSolicitacao==1?'Ensino médio':b.tipoSolicitacao==2?'Cursos técnicos':String(b.tipoSolicitacao)),modelo:b.modeloSolicitacaoNome||'—',validade:fmtDT(b.dataValidade),dir:b.diretorioCaminho||'—',resp:(b.responsavelNome||'—')+(b.responsavelEmail?' · '+b.responsavelEmail:''),link:b.linkEnvio||'(a resposta não trouxe linkEnvio)',copyLink:()=>this.copy(b.linkEnvio||''),
+flags:[['contatoCriado','Contato criado','Contato já existia (reaproveitado)','mu'],['diretorioCriado','Pasta criada','Pasta já existia (reaproveitada)','mu'],['emailEnviado','E-mail enviado ao aluno','E-mail não enviado','wn']].map(a=>({label:b[a[0]]?a[1]:a[2],cls:b[a[0]]?'ok':a[3],icon:b[a[0]]?ICON.check:ICON.minus})),
+rows:(b.itens||[]).map(x=>{const s2=aluSt(x.status,x.statusDescricao);return {descricao:x.descricao,obrig:x.obrigatorio?'Sim':'Não',cls:s2.cls,icon:s2.icon,label:s2.label};})};}
+let asv={show:false};
+if(eff==='alunoStatus'&&res0&&res0.ok){const b=res0.body,ss=b.solicitacoes||[];
+asv={show:true,nome:b.nome||'—',matricula:b.codigoMatricula||'—',cpf:b.cpf||'—',email:b.email||'—',tel:b.telefone||'—',contato:b.contatoId==null?'—':b.contatoId,noSols:ss.length===0,
+sols:ss.map((x,i)=>{const sid=x.solicitacaoId!=null?x.solicitacaoId:i,open=s.openSol===sid,s1=aluSt(x.status,x.statusDescricao),its=x.itens||[],tot=x.quantidadeItens!=null?x.quantidadeItens:its.length,env=x.quantidadeItensEnviados!=null?x.quantidadeItensEnviados:0,pen=x.quantidadeItensPendentes!=null?x.quantidadeItensPendentes:Math.max(0,tot-env);
+return {tipo:(x.tipoSolicitacaoDescricao||'Solicitação')+' #'+sid,cls:s1.cls,icon:s1.icon,label:s1.label,prog:env+' de '+tot+' itens enviados · '+pen+' pendentes',pct:tot?Math.round(env*100/tot):0,datas:'Solicitada em '+fmtDT(x.dataSolicitacao)+' · validade '+fmtDT(x.dataValidade)+(x.dataConclusao?' · concluída em '+fmtDT(x.dataConclusao):''),open,toggleLabel:open?'Ocultar itens':'Ver itens',toggle:()=>this.setState({openSol:open?null:sid}),copyLink:()=>this.copy(x.linkEnvio||''),
+itens:its.map(it=>{const s3=aluSt(it.status,it.statusDescricao),ds=it.documentos||[];return {descricao:it.descricao,obrig:it.obrigatorio?'Sim':'Não',cls:s3.cls,icon:s3.icon,label:s3.label,obs:it.observacao||'',docsTxt:ds.length?ds.map(d=>d.nome+' · '+(d.tamanho!=null?fmtSize(d.tamanho):'')+' · '+fmtDT(d.dataEnvio)).join('\n'):'—'};})};})};}
 // wizard
 const wiz={doc:assRes&&assRes.ok?assRes.body.documentoId:'',ass:assRes&&assRes.ok?assRes.body.assinaturaId:'',convite:assRes&&assRes.ok?(assRes.body.conviteEnviado?'enviado':'não enviado (padrão)'):'',
 copyDoc:()=>this.copy(String(assRes&&assRes.ok?assRes.body.documentoId:'')),copyAss:()=>this.copy(String(assRes&&assRes.ok?assRes.body.assinaturaId:'')),
@@ -1500,7 +1636,7 @@ hasRes:!!res0,noRes:!res0&&!loading,res,tabs,tabResumo:s.tab==='resumo',tabJson:
 jsonCopyAll:()=>this.copy(JSON.stringify(res0?res0.body:{},null,2)),jsonCollapse:()=>this.setState({collapsed:allPaths(res0?res0.body:{},'$',{})}),jsonExpand:()=>this.setState({collapsed:{}}),
 nexts,hasNexts:nexts.length>0,
 hasLinks:links.length>0&&eff==='assinatura',links,linksNote:linkSrc?(linkSrc.conviteEnviado?'Convite enviado por e-mail (conviteEnviado = true). Os links abaixo também valem.':'Nenhum e-mail foi enviado (conviteEnviado = false, padrão). Envie cada link ao signatário.'):'',
-dt,pt,md,stv,dl,wiz,
+dt,pt,md,stv,dl,wiz,al,asv,
 logOpen:s.logOpen,logFav:s.logFav,onLogFav:e=>this.setState({logFav:e.target.checked}),logRows:lrows,logEmpty:lrows.length===0&&!sel,hasLogSel:!!sel,showLogList:!sel,ld,
 paletteOpen:s.paletteOpen,paletteQ:s.paletteQ,onPaletteQ:e=>this.setState({paletteQ:e.target.value}),palItems,palEmpty:palItems.length===0,closePalette:()=>this.setState({paletteOpen:false}),stop:e=>{if(e&&e.stopPropagation)e.stopPropagation();},
 toast:s.toast,toastCls:s.toast?'':'off'

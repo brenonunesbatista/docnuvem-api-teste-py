@@ -41,6 +41,8 @@ ROTAS_PERMITIDAS: list[tuple[str, re.Pattern[str]]] = [
         ("DELETE", rf"^/api/assinatura/{_SEG}$"),
         ("GET", r"^/api/documentos$"),
         ("GET", r"^/api/diretorios$"),
+        ("POST", r"^/api/solicitacaoAluno/solicitarEnvioDocumentos$"),
+        ("GET", r"^/api/solicitacaoAluno/consultarStatus$"),
         ("GET", rf"^/api/documento/{_SEG}/status$"),
         ("GET", rf"^/api/documento/{_SEG}/download$"),
     ]
