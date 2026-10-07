@@ -40,6 +40,7 @@ ESTATICOS = {
 PORTA_PADRAO = 8765
 TIMEOUT = httpx.Timeout(30.0, connect=10.0)
 MAX_CORPO = 50 * 1024 * 1024  # maior arquivo/corpo aceito pelo proxy
+MAX_DESCARTE = 1_000_000  # corpo recusado até este tamanho é lido e jogado fora
 MAX_ENTRADA = 1_000_000  # maior entrada do histórico (bytes)
 MAX_HISTORICO = 5000  # entradas mantidas em disco
 FOLGA_HISTORICO = 500  # só poda depois de passar do limite por essa folga
@@ -59,6 +60,7 @@ CHAVES_HISTORICO = (
     "req",
     "screen",
     "perfil",
+    "fav",
 )
 
 # Um segmento de caminho não vazio e que não seja só pontos ("." / ".."), para que
@@ -82,6 +84,8 @@ ROTAS_PERMITIDAS: list[tuple[str, re.Pattern[str]]] = [
         ("GET", rf"^/api/documento/{_SEG}/download$"),
     ]
 ]
+# Cabeçalho que a página manda depois que o usuário confirma uma chamada em perfil protegido.
+CABECALHO_CONFIRMACAO = "X-Docnuvem-Confirmado"
 HEADERS_RESPOSTA = {"content-type", "x-request-id", "date", "content-length", "location"}
 
 
@@ -125,9 +129,38 @@ class Historico:
                 f.write(linha + "\n")
             self._n = len(self._linhas()) if self._n is None else self._n + 1
             if self._n > MAX_HISTORICO + FOLGA_HISTORICO:
-                linhas = self._linhas()[-MAX_HISTORICO:]
-                self.arquivo.write_text("\n".join(linhas) + "\n", encoding="utf-8")
-                self._n = len(linhas)
+                self._podar()
+
+    def _gravar(self, linhas: list[str]) -> None:
+        """Reescreve o arquivo com estas linhas (o lock já deve estar tomado)."""
+        self.arquivo.write_text("".join(linha + "\n" for linha in linhas), encoding="utf-8")
+        self._n = len(linhas)
+
+    def _podar(self) -> None:
+        """Mantém as últimas MAX_HISTORICO entradas e todas as favoritas (lock já tomado)."""
+        linhas = self._linhas()
+        corte = max(0, len(linhas) - MAX_HISTORICO)
+        self._gravar([ln for i, ln in enumerate(linhas) if i >= corte or _eh_favorita(ln)])
+
+    def marcar_favorito(self, id_: str, fav: bool) -> bool:
+        """Liga/desliga a estrela de uma entrada. Devolve False se o id não existe."""
+        with self._lock:
+            achou = False
+            saida: list[str] = []
+            for linha in self._linhas():
+                try:
+                    dado = json.loads(linha)
+                except json.JSONDecodeError:
+                    saida.append(linha)
+                    continue
+                if isinstance(dado, dict) and dado.get("id") == id_:
+                    dado["fav"] = fav
+                    linha = json.dumps(dado, ensure_ascii=False)
+                    achou = True
+                saida.append(linha)
+            if achou:
+                self._gravar(saida)
+            return achou
 
     def todas(self) -> list[dict[str, Any]]:
         """Da mais antiga para a mais recente."""
@@ -144,21 +177,31 @@ class Historico:
         return itens
 
     def recentes(self, limite: int) -> list[dict[str, Any]]:
-        """Da mais recente para a mais antiga."""
-        return self.todas()[-limite:][::-1]
+        """Da mais recente para a mais antiga; as favoritas mais velhas vêm junto, no fim."""
+        todas = self.todas()
+        corte = max(0, len(todas) - limite)
+        antigas = [e for e in todas[:corte] if e.get("fav") is True]
+        return (antigas + todas[corte:])[::-1]
 
-    def limpar(self) -> None:
+    def limpar(self, manter_favoritas: bool = True) -> None:
         with self._lock:
             self.arquivo.parent.mkdir(parents=True, exist_ok=True)
-            self.arquivo.write_text("", encoding="utf-8")
-            self._n = 0
+            self._gravar([ln for ln in self._linhas() if manter_favoritas and _eh_favorita(ln)])
+
+
+def _eh_favorita(linha: str) -> bool:
+    try:
+        dado = json.loads(linha)
+    except json.JSONDecodeError:
+        return False
+    return isinstance(dado, dict) and dado.get("fav") is True
 
 
 def historico_csv(itens: list[dict[str, Any]]) -> bytes:
     """CSV (UTF-8 com BOM, abre direto no Excel) do histórico."""
     saida = io.StringIO()
     w = csv.writer(saida, delimiter=";")
-    w.writerow(["data_hora", "perfil", "metodo", "url", "status", "duracao_ms", "tela"])
+    w.writerow(["data_hora", "perfil", "metodo", "url", "status", "duracao_ms", "tela", "favorita"])
     for e in itens:
         ts = e.get("ts")
         quando = datetime.fromtimestamp(ts / 1000).strftime("%Y-%m-%d %H:%M:%S") if ts else ""
@@ -171,6 +214,7 @@ def historico_csv(itens: list[dict[str, Any]]) -> bytes:
                 e.get("status", ""),
                 e.get("ms", ""),
                 e.get("screen", ""),
+                "sim" if e.get("fav") else "",
             ]
         )
     return saida.getvalue().encode("utf-8-sig")
@@ -229,6 +273,237 @@ def verificar_status(cliente: httpx.Client, perfil: PerfilConfig) -> dict[str, A
     return res
 
 
+def _retorno(resp: httpx.Response) -> str:
+    """Mensagem curta da resposta (campo "retorno" quando houver)."""
+    try:
+        dado = resp.json()
+    except ValueError:
+        return resp.text[:160].strip()
+    if isinstance(dado, dict):
+        for chave in ("retorno", "mensagem", "message", "erro", "error"):
+            if isinstance(dado.get(chave), str):
+                return str(dado[chave])[:160]
+    return ""
+
+
+def _json_dict(resp: httpx.Response) -> dict[str, Any]:
+    try:
+        dado = resp.json()
+    except ValueError:
+        return {}
+    return dado if isinstance(dado, dict) else {}
+
+
+def _http(resp: httpx.Response) -> str:
+    return f"HTTP {resp.status_code}. {_retorno(resp)}".strip()
+
+
+def diagnosticar(cliente: httpx.Client, perfil: PerfilConfig) -> dict[str, Any]:
+    """Confere a instância só com leituras e explica a causa provável de cada falha.
+
+    Cada item tem nivel ok | aviso | erro | info | pulado. O resultado geral é o pior deles.
+    """
+    base = perfil.baseUrl.rstrip("/")
+    auth = {"Authorization": f"Bearer {perfil.token}"}
+    inst = {"instancia": perfil.instancia.lower()}
+    itens: list[dict[str, Any]] = []
+
+    def item(
+        id_: str, titulo: str, nivel: str, detalhe: str, causa: str = "", **extra: Any
+    ) -> None:
+        itens.append(
+            {"id": id_, "titulo": titulo, "nivel": nivel, "detalhe": detalhe, "causa": causa}
+            | extra
+        )
+
+    def pular(motivo: str) -> None:
+        for id_, titulo in (
+            ("token", "Token aceito"),
+            ("modelos", "Modelos de documento"),
+            ("pastas", "Pastas"),
+            ("escola", "Solicitações de escola"),
+        ):
+            if not any(i["id"] == id_ for i in itens):
+                item(id_, titulo, "pulado", motivo)
+
+    def ler(
+        caminho: str, autenticado: bool, **params: Any
+    ) -> tuple[httpx.Response | None, int, str]:
+        t0 = time.perf_counter()
+        try:
+            r = cliente.get(
+                base + caminho,
+                params={**(inst if autenticado else {}), **params},
+                headers=auth if autenticado else None,
+                timeout=10,
+            )
+        except httpx.HTTPError as exc:
+            return None, round((time.perf_counter() - t0) * 1000), str(exc)[:200]
+        return r, round((time.perf_counter() - t0) * 1000), ""
+
+    # 1. A API responde?
+    r, ms, erro = ler("/v3/api-docs/swagger-config", False)
+    if r is None or r.status_code >= 500:
+        item(
+            "api",
+            "API acessível",
+            "erro",
+            erro or (_http(r) if r else "sem resposta"),
+            "O baseUrl do perfil está errado, a API está fora do ar ou algo bloqueia o acesso "
+            "(VPN, firewall, porta).",
+            ms=ms,
+        )
+        pular("Não verificado: a API não respondeu.")
+        return _resumo_diag(itens, perfil)
+    item("api", "API acessível", "ok", f"Respondeu em {ms} ms (HTTP {r.status_code}).", ms=ms)
+
+    # 2. O token vale para a instância?
+    rm, ms, erro = ler("/api/modelos", True)
+    if rm is None:
+        item("token", "Token aceito", "erro", erro, "A conexão caiu durante a consulta.", ms=ms)
+        pular("Não verificado: a consulta com o token falhou.")
+        return _resumo_diag(itens, perfil)
+    if rm.status_code in (401, 403):
+        item(
+            "token",
+            "Token aceito",
+            "erro",
+            _http(rm),
+            "O token é fixo por instância: ele está errado, foi revogado ou é de outra "
+            f'instância. Confira o token e o campo "instancia" ({perfil.instancia.lower()}) '
+            "no config.json.",
+            ms=ms,
+        )
+        pular("Não verificado: o token não foi aceito.")
+        return _resumo_diag(itens, perfil)
+    if rm.status_code >= 400:
+        item(
+            "token",
+            "Token aceito",
+            "erro",
+            _http(rm),
+            "A API recusou a consulta. Veja a mensagem acima; um nome de instância "
+            "inexistente costuma cair aqui.",
+            ms=ms,
+        )
+        pular("Não verificado: a consulta com o token falhou.")
+        return _resumo_diag(itens, perfil)
+    item("token", "Token aceito", "ok", f"HTTP {rm.status_code} em {ms} ms.", ms=ms)
+
+    # 3. Modelos cadastrados e geráveis por API
+    modelos = [m for m in _json_dict(rm).get("modelos") or [] if isinstance(m, dict)]
+    geraveis = [m for m in modelos if m.get("geravelPorApi")]
+    nomes = ", ".join(f"{m.get('codigo') or m.get('id')} ({m.get('nome', '?')})" for m in geraveis)
+    if not modelos:
+        item(
+            "modelos",
+            "Modelos de documento",
+            "aviso",
+            "Nenhum modelo cadastrado.",
+            "Criar documento de modelo não vai funcionar: cadastre os modelos no painel da "
+            "instância.",
+            total=0,
+            geraveis=0,
+        )
+    elif not geraveis:
+        item(
+            "modelos",
+            "Modelos de documento",
+            "aviso",
+            f"{len(modelos)} modelo(s), nenhum gerável por API.",
+            "Só modelos marcados como geráveis por API aceitam from-template. Peça a "
+            "liberação na configuração do modelo.",
+            total=len(modelos),
+            geraveis=0,
+        )
+    else:
+        item(
+            "modelos",
+            "Modelos de documento",
+            "ok",
+            f"{len(modelos)} modelo(s), {len(geraveis)} gerável(is) por API: {nomes}.",
+            total=len(modelos),
+            geraveis=len(geraveis),
+        )
+
+    # 4. Pastas
+    rp, ms, erro = ler("/api/diretorios", True, pagina=0, tamanho=1)
+    if rp is None or rp.status_code >= 400:
+        item(
+            "pastas",
+            "Pastas",
+            "erro",
+            erro or (_http(rp) if rp else "sem resposta"),
+            "Não foi possível listar as pastas da instância.",
+            ms=ms,
+        )
+    else:
+        total = _json_dict(rp).get("total")
+        if total == 0:
+            item(
+                "pastas",
+                "Pastas",
+                "aviso",
+                "Nenhuma pasta encontrada.",
+                "Importar arquivo cria a árvore de pastas, mas criar documento de modelo "
+                "exige que a pasta já exista.",
+                ms=ms,
+            )
+        else:
+            n = f"{total} pasta(s)" if isinstance(total, int) else "Pastas listadas"
+            item("pastas", "Pastas", "ok", f"{n} em {ms} ms.", ms=ms)
+
+    # 5. Módulo de escola (leitura com uma matrícula fictícia)
+    re_, ms, erro = ler(
+        "/api/solicitacaoAluno/consultarStatus", True, codigoMatricula="diagnostico"
+    )
+    if re_ is None:
+        item("escola", "Solicitações de escola", "erro", erro, "A conexão caiu.", ms=ms)
+    elif re_.status_code in (401, 403):
+        item(
+            "escola",
+            "Solicitações de escola",
+            "aviso",
+            _http(re_),
+            "O token não tem acesso ao módulo de escola. É esperado se a instância não for "
+            "uma escola.",
+            ms=ms,
+        )
+    elif re_.status_code >= 500:
+        item(
+            "escola",
+            "Solicitações de escola",
+            "erro",
+            _http(re_),
+            "A API falhou ao consultar. Tente de novo; se persistir, é um erro do servidor.",
+            ms=ms,
+        )
+    else:
+        item(
+            "escola",
+            "Solicitações de escola",
+            "info",
+            f"O módulo respondeu (HTTP {re_.status_code}) para uma matrícula fictícia. "
+            + _retorno(re_),
+            "Só com leitura não dá para saber se os modelos de solicitação (tipo 1 e 2) estão "
+            "configurados: isso só aparece ao solicitar de verdade.",
+            ms=ms,
+        )
+    return _resumo_diag(itens, perfil)
+
+
+def _resumo_diag(itens: list[dict[str, Any]], perfil: PerfilConfig) -> dict[str, Any]:
+    niveis = {i["nivel"] for i in itens}
+    geral = "erro" if "erro" in niveis else "aviso" if "aviso" in niveis else "ok"
+    return {
+        "verificadoEm": int(time.time() * 1000),
+        "instancia": perfil.instancia.lower(),
+        "baseUrl": perfil.baseUrl,
+        "nivel": geral,
+        "itens": itens,
+    }
+
+
 # --------------------------------------------------------------------------
 # Servidor
 # --------------------------------------------------------------------------
@@ -274,6 +549,7 @@ class Servidor(ThreadingHTTPServer):
 class Handler(BaseHTTPRequestHandler):
     server: Servidor  # type: ignore[assignment]
     server_version = "docnuvem-web"
+    _corpo_lido = False
 
     def log_message(self, format: str, *args: object) -> None:  # noqa: A002
         return  # a página já tem o log de chamadas
@@ -293,6 +569,7 @@ class Handler(BaseHTTPRequestHandler):
     def _enviar(
         self, status: int, corpo: bytes, tipo: str, extra: dict[str, str] | None = None
     ) -> None:
+        self._descartar_corpo()
         self.send_response(status)
         self.send_header("Content-Type", tipo)
         self.send_header("Content-Length", str(len(corpo)))
@@ -301,6 +578,24 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header(k, v)
         self.end_headers()
         self.wfile.write(corpo)
+
+    def _descartar_corpo(self) -> None:
+        """Consome o corpo que ficou sem ler antes de responder (recusas, 413).
+
+        Sem isso o cliente ainda está enviando quando a resposta chega e o Windows pode
+        derrubar a conexão (reset) em vez de entregar o erro. Corpos enormes não são lidos.
+        """
+        restante = int(self.headers.get("Content-Length") or 0)
+        if self._corpo_lido or restante <= 0:
+            return
+        self._corpo_lido = True
+        if restante > MAX_DESCARTE:
+            return
+        while restante > 0:
+            pedaco = self.rfile.read(min(restante, 65536))
+            if not pedaco:
+                break
+            restante -= len(pedaco)
 
     def _json(self, dados: object, status: int = 200) -> None:
         corpo = json.dumps(dados, ensure_ascii=False).encode("utf-8")
@@ -315,6 +610,7 @@ class Handler(BaseHTTPRequestHandler):
         if tamanho > limite:
             self._texto(413, f"Corpo grande demais (máximo {limite // (1024 * 1024)} MB).")
             return None
+        self._corpo_lido = True
         return self.rfile.read(tamanho) if tamanho else b""
 
     # --- rotas ----------------------------------------------------------
@@ -332,6 +628,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._perfis()
         if caminho.startswith("/_status/"):
             return self._status(unquote(caminho[len("/_status/") :]), parse_qs(partes.query))
+        if caminho.startswith("/_diagnostico/"):
+            return self._diagnostico(unquote(caminho[len("/_diagnostico/") :]))
         if caminho == "/_historico":
             return self._hist_listar(parse_qs(partes.query))
         if caminho == "/_historico/exportar":
@@ -341,13 +639,17 @@ class Handler(BaseHTTPRequestHandler):
         self._texto(404, "Não encontrado.")
 
     def do_POST(self) -> None:  # noqa: N802
-        if urlsplit(self.path).path == "/_historico":
+        caminho = urlsplit(self.path).path
+        if caminho == "/_historico":
             return self._hist_gravar()
+        if caminho == "/_historico/favorito":
+            return self._hist_favorito()
         self._proxy()
 
     def do_DELETE(self) -> None:  # noqa: N802
-        if urlsplit(self.path).path == "/_historico":
-            return self._hist_limpar()
+        partes = urlsplit(self.path)
+        if partes.path == "/_historico":
+            return self._hist_limpar(parse_qs(partes.query))
         self._proxy()
 
     def _arquivo(self, caminho: Path, tipo: str) -> None:
@@ -367,6 +669,7 @@ class Handler(BaseHTTPRequestHandler):
                         "instancia": p.instancia,
                         "baseUrl": p.baseUrl,
                         "tokenMascarado": mascarar_token(p.token),
+                        "protegido": p.protecao,
                     }
                     for nome, p in cfg.perfis.items()
                 ],
@@ -384,6 +687,12 @@ class Handler(BaseHTTPRequestHandler):
             return self._texto(404, "Perfil desconhecido.")
         forcar = query.get("forcar", [""])[0] == "1"
         self._json(self.server.status_de(nome, perfil, forcar))
+
+    def _diagnostico(self, nome: str) -> None:
+        perfil = self.server.cfg.perfis.get(nome)
+        if perfil is None:
+            return self._texto(404, "Perfil desconhecido.")
+        self._json(diagnosticar(self.server.cliente, perfil))
 
     # --- histórico ------------------------------------------------------
     def _hist_listar(self, query: dict[str, list[str]]) -> None:
@@ -416,12 +725,29 @@ class Handler(BaseHTTPRequestHandler):
         h.adicionar(entrada)
         self._json({"ok": True})
 
-    def _hist_limpar(self) -> None:
+    def _hist_favorito(self) -> None:
+        if not self._origem_ok():
+            return self._texto(403, "Origem não permitida.")
+        corpo = self._ler_corpo(MAX_ENTRADA)
+        if corpo is None:
+            return
+        h = self.server.historico
+        if h is None:
+            return self._json({"ok": False, "desligado": True})
+        try:
+            dado = json.loads(corpo)
+        except json.JSONDecodeError:
+            return self._texto(400, "JSON inválido.")
+        if not isinstance(dado, dict) or not isinstance(dado.get("id"), str):
+            return self._texto(400, "Informe o id da entrada.")
+        self._json({"ok": h.marcar_favorito(dado["id"], dado.get("fav") is True)})
+
+    def _hist_limpar(self, query: dict[str, list[str]]) -> None:
         if not self._origem_ok():
             return self._texto(403, "Origem não permitida.")
         h = self.server.historico
         if h is not None:
-            h.limpar()
+            h.limpar(manter_favoritas=query.get("tudo", [""])[0] != "1")
         self._json({"ok": True})
 
     def _hist_exportar(self, query: dict[str, list[str]]) -> None:
@@ -439,6 +765,29 @@ class Handler(BaseHTTPRequestHandler):
             corpo,
             tipo,
             {"Content-Disposition": f'attachment; filename="docnuvem-historico-{carimbo}.{ext}"'},
+        )
+
+    def _recusa_protecao(self, perfil: PerfilConfig, url_final: str) -> None:
+        """Perfil protegido: a chamada que altera dados não chega à API."""
+        if perfil.protecao == "bloquear":
+            msg = (
+                'Perfil protegido: este perfil só aceita leituras (protegido = "bloquear" '
+                "no config.json). A chamada não foi enviada."
+            )
+        else:
+            msg = (
+                "Perfil protegido: esta chamada altera dados e precisa de confirmação. "
+                "A chamada não foi enviada."
+            )
+        self._json(
+            {
+                "status": 403,
+                "ms": 0,
+                "url": url_final,
+                "headers": {},
+                "body": json.dumps({"retorno": msg}, ensure_ascii=False),
+                "protecao": perfil.protecao,
+            }
         )
 
     # --- proxy para a API -----------------------------------------------
@@ -469,6 +818,10 @@ class Handler(BaseHTTPRequestHandler):
         corpo = self._ler_corpo(MAX_CORPO)
         if corpo is None:
             return
+        if metodo != "GET" and perfil.protecao:
+            confirmou = self.headers.get(CABECALHO_CONFIRMACAO, "").lower() == "sim"
+            if perfil.protecao == "bloquear" or not confirmou:
+                return self._recusa_protecao(perfil, url_final)
         headers = {"Authorization": f"Bearer {perfil.token}"}
         if self.headers.get("Content-Type"):
             headers["Content-Type"] = self.headers["Content-Type"]

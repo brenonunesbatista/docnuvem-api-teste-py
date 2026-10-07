@@ -329,7 +329,7 @@ def test_historico_exporta_csv(app: App) -> None:
     assert r.headers["content-disposition"].endswith('.csv"')
     assert r.content.startswith(b"\xef\xbb\xbf")  # BOM para o Excel
     linhas = r.content.decode("utf-8-sig").splitlines()
-    assert linhas[0] == "data_hora;perfil;metodo;url;status;duracao_ms;tela"
+    assert linhas[0] == "data_hora;perfil;metodo;url;status;duracao_ms;tela;favorita"
     assert "cliente1;GET;http://api/x/1;200;12;documentos" in linhas[1]
 
 

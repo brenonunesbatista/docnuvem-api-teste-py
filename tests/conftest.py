@@ -101,6 +101,8 @@ def app(upstream: Upstream, tmp_path: Path) -> Iterator[App]:
             "cliente1": PerfilConfig("CLIENTE1", upstream.base, TOKEN_OK),
             "ruim": PerfilConfig("ruim", upstream.base, "token-errado"),
             "fora": PerfilConfig("fora", "http://127.0.0.1:9", "x"),
+            "prod": PerfilConfig("prod", upstream.base, TOKEN_OK, "confirmar"),
+            "leitura": PerfilConfig("leitura", upstream.base, TOKEN_OK, "bloquear"),
         },
         perfilPadrao="cliente1",
     )

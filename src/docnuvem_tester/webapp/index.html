@@ -274,6 +274,13 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
 .rowkv{grid-template-columns:1fr;gap:2px}
 .phead h1{font-size:22px}
 }
+.diag{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.dg{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:start;border:1px solid var(--ln);border-radius:12px;padding:12px 14px;background:var(--sf)}
+.dg .ttl{font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.dg .det{grid-column:2;font-size:13.5px;overflow-wrap:anywhere}
+.dg .cause{grid-column:2;font-size:13px;color:var(--mu)}
+.modalb{padding:20px;gap:12px}
+.modalb p{margin:0;font-size:14px}
 </style>
 </helmet>
 
@@ -303,6 +310,7 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
             <sc-for list="{{perfilOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.value}}" selected="{{o.selected}}">{{o.label}}</option></sc-for>
           </select>
           <span class="tok" title="Token do perfil, sempre mascarado">{{tokenMask}}</span>
+          <sc-if value="{{prot.on}}" hint-placeholder-val="{{ false }}"><span class="pill {{prot.cls}}" title="{{prot.title}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.shield}}"/></svg>{{prot.label}}</span></sc-if>
           <button class="pill {{api.cls}}" type="button" onClick="{{api.refresh}}" title="{{api.title}}" aria-label="Status da API: {{api.label}}. Clique para verificar de novo"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{api.icon}}"/></svg>{{api.label}}</button>
           <sc-if value="{{revogado}}" hint-placeholder-val="{{ false }}"><span class="pill er"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.x}}"/></svg>Token revogado · responde 401</span></sc-if>
         </div>
@@ -347,6 +355,30 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
                 <button class="lrow" type="button" onClick="{{r.open}}"><span class="row"><span class="m {{r.method}}">{{r.method}}</span><span class="pill {{r.cls}}">{{r.statusText}}</span><span class="muted small">{{r.ms}} ms · {{r.time}}</span></span><span class="u">{{r.url}}</span></button>
               </sc-for>
             </div>
+          </section>
+        </sc-if>
+
+        <!-- ===== DIAGNÓSTICO ===== -->
+        <sc-if value="{{show.diagnostico}}" hint-placeholder-val="{{ false }}">
+          <section class="card">
+            <div class="row"><h2>Instância do perfil {{perfil}}</h2><span class="pill {{dg.cls}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{dg.icon}}"/></svg>{{dg.label}}</span><span class="grow"></span><button class="btn sm" type="button" onClick="{{dg.copy}}" disabled="{{dg.empty}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.copy}}"/></svg>Copiar resumo</button><button class="btn pri sm" type="button" onClick="{{dg.run}}" disabled="{{dg.busy}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.refresh}}"/></svg>Rodar diagnóstico</button></div>
+            <p class="muted small">Só leituras: nada é criado, alterado ou enviado por e-mail. Cada item mostra a causa provável quando algo falha.</p>
+            <sc-if value="{{dg.busy}}" hint-placeholder-val="{{ false }}"><div class="loadbar" role="status"><span class="spin"></span>Verificando a instância…</div></sc-if>
+            <sc-if value="{{dg.hasErr}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{dg.err}}</span></div></sc-if>
+            <sc-if value="{{dg.empty}}" hint-placeholder-val="{{ false }}"><div class="empty"><strong>Ainda não verificado</strong><span>Clique em “Rodar diagnóstico”.</span></div></sc-if>
+            <sc-if value="{{dg.has}}" hint-placeholder-val="{{ true }}">
+              <div class="diag">
+                <sc-for list="{{dg.items}}" as="it" hint-placeholder-count="5">
+                  <div class="dg">
+                    <span class="pill {{it.cls}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{it.icon}}"/></svg>{{it.label}}</span>
+                    <span class="ttl">{{it.titulo}}</span>
+                    <span class="det">{{it.detalhe}}</span>
+                    <sc-if value="{{it.hasCause}}" hint-placeholder-val="{{ false }}"><span class="cause"><strong>{{it.causaLabel}}</strong> {{it.causa}}</span></sc-if>
+                  </div>
+                </sc-for>
+              </div>
+              <p class="muted small">Verificado às {{dg.quando}}.</p>
+            </sc-if>
           </section>
         </sc-if>
 
@@ -464,7 +496,7 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
             <sc-if value="{{loading}}" hint-placeholder-val="{{ false }}"><div class="loadbar" role="status"><span class="spin"></span>{{loadText}}</div></sc-if>
             <sc-if value="{{noRes}}" hint-placeholder-val="{{ false }}"><div class="empty small"><strong>Ainda sem resultado</strong><span>Clique em “{{sendLabel}}” (ou pressione Enter) para ver a resposta aqui.</span></div></sc-if>
             <sc-if value="{{hasRes}}" hint-placeholder-val="{{ true }}">
-              <div class="rh"><span class="http {{res.cls}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{res.icon}}"/></svg>{{res.statusText}}</span><span class="muted small">{{res.ms}} ms · {{res.time}} · perfil {{res.perfil}}</span><sc-if value="{{res.forcado}}" hint-placeholder-val="{{ false }}"><span class="pill wn">resposta forçada</span></sc-if></div>
+              <div class="rh"><span class="http {{res.cls}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{res.icon}}"/></svg>{{res.statusText}}</span><span class="muted small">{{res.ms}} ms · {{res.time}} · perfil {{res.perfil}}</span><sc-if value="{{res.forcado}}" hint-placeholder-val="{{ false }}"><span class="pill wn">resposta forçada</span></sc-if><span class="grow"></span><button class="btn sm" type="button" onClick="{{res.copyRelato}}" title="Copia cURL mascarado, requisição, resposta, perfil e horário"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.flag}}"/></svg>Copiar relato de bug</button></div>
               <div class="tabs" role="tablist"><sc-for list="{{tabs}}" as="t" hint-placeholder-count="3"><button class="tab" type="button" role="tab" aria-selected="{{t.sel}}" onClick="{{t.go}}">{{t.label}}</button></sc-for></div>
 
               <sc-if value="{{tabResumo}}" hint-placeholder-val="{{ true }}">
@@ -699,7 +731,7 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
             <div class="row"><button class="btn sm" type="button" onClick="{{ld.copyUrl}}">Copiar URL</button><button class="btn sm" type="button" onClick="{{ld.copyCurl}}">Copiar cURL</button></div>
             <strong class="small">Resposta</strong>
             <pre class="code">{{ld.resp}}</pre>
-            <button class="btn sm" type="button" onClick="{{ld.copyResp}}">Copiar resposta</button>
+            <div class="row"><button class="btn sm" type="button" onClick="{{ld.copyResp}}">Copiar resposta</button><button class="btn sm" type="button" onClick="{{ld.copyRelato}}" title="Copia cURL mascarado, requisição, resposta, perfil e horário"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.flag}}"/></svg>Copiar relato de bug</button></div>
           </div>
         </sc-if>
         <sc-if value="{{showLogList}}" hint-placeholder-val="{{ true }}">
@@ -721,6 +753,18 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
           <sc-if value="{{palEmpty}}" hint-placeholder-val="{{ false }}"><div class="empty small">Nada encontrado.</div></sc-if>
           <sc-for list="{{palItems}}" as="it" hint-placeholder-count="5"><button class="pali" type="button" onClick="{{it.go}}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{it.d}}"/></svg><span>{{it.label}}</span><small>{{it.kind}} {{it.sub}}</small></button></sc-for>
         </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===== CONFIRMAÇÃO (PERFIL PROTEGIDO) ===== -->
+  <sc-if value="{{prot.open}}" hint-placeholder-val="{{ false }}">
+    <div class="pal" onClick="{{prot.cancel}}">
+      <div class="palb modalb" role="alertdialog" aria-label="Confirmar chamada em perfil protegido" onClick="{{stop}}">
+        <h2 style="font-size:17px">Perfil protegido: {{prot.perfil}}</h2>
+        <p>O perfil está marcado como produção no config.json e esta chamada <strong>altera dados</strong> ou envia e-mails de verdade.</p>
+        <code class="url">{{prot.what}}</code>
+        <div class="row"><span class="grow"></span><button class="btn" type="button" onClick="{{prot.cancel}}">Cancelar</button><button class="btn dng" type="button" onClick="{{prot.confirm}}">Enviar mesmo assim</button></div>
       </div>
     </div>
   </sc-if>
@@ -764,7 +808,10 @@ chev:'M9 6l6 6-6 6',
 cloud:'M7 18a4 4 0 01-.5-8A6 6 0 0118 10a4 4 0 010 8z',
 cap:'M2 9l10-5 10 5-10 5zM6 11v5c0 1.5 3 3 6 3s6-1.5 6-3v-5M22 9v6',
 user:'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0',
-panel:'M3 5h18v14H3zM9 5v14'
+panel:'M3 5h18v14H3zM9 5v14',
+pulse:'M3 12h4l3-8 4 16 3-8h4',
+shield:'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
+flag:'M5 21V4M5 4h12l-2 4 2 4H5'
 };
 const META={
 inicio:{label:'Início',title:'O que você quer testar hoje?',sub:'Escolha uma tarefa ou continue de onde parou. As chamadas são reais.',d:ICON.home,grp:'Começar'},
@@ -780,9 +827,10 @@ pastas:{label:'Pastas',title:'Pastas',method:'GET',path:'/api/diretorios',sub:'E
 status:{label:'Status do documento',title:'Status do documento',method:'GET',path:'/api/documento/{id}/status',sub:'Situação da assinatura e de cada signatário.',d:ICON.clip,grp:''},
 download:{label:'Download',title:'Download',method:'GET',path:'/api/documento/{id}/download',sub:'Gera um link temporário para baixar o arquivo.',d:ICON.download,grp:''},
 alunoSolicitar:{label:'Solicitar documentos',title:'Solicitar documentos do aluno',method:'POST',path:'/api/solicitacaoAluno/solicitarEnvioDocumentos',sub:'Cria o contato e a pasta do aluno, abre a solicitação de envio de documentos e envia o link por e-mail.',d:ICON.cap,grp:'Escola'},
-alunoStatus:{label:'Status do aluno',title:'Status do aluno',method:'GET',path:'/api/solicitacaoAluno/consultarStatus',sub:'Solicitações de envio de documentos do aluno e o que já foi recebido.',d:ICON.user,grp:''}
+alunoStatus:{label:'Status do aluno',title:'Status do aluno',method:'GET',path:'/api/solicitacaoAluno/consultarStatus',sub:'Solicitações de envio de documentos do aluno e o que já foi recebido.',d:ICON.user,grp:''},
+diagnostico:{label:'Diagnóstico',title:'Diagnóstico da instância',sub:'Confere, só com leituras, se o perfil está pronto para uso e mostra a causa provável de cada problema.',d:ICON.pulse,grp:'Suporte'}
 };
-const ORDER=['inicio','fluxo','importar','envio','modelos','template','assinatura','cancelar','documentos','pastas','status','download','alunoSolicitar','alunoStatus'];
+const ORDER=['inicio','fluxo','importar','envio','modelos','template','assinatura','cancelar','documentos','pastas','status','download','alunoSolicitar','alunoStatus','diagnostico'];
 const AUTO=['documentos','pastas','modelos'];
 let LIVE=null;const FILEBLOB=new WeakMap();
 const BASE='https://api.docnuvem.example';
@@ -899,7 +947,7 @@ documentos:{diretorioId:'',incluirSubpastas:false,status:'',dataInicio:'',dataFi
 pastas:{diretorioPaiId:'',nome:'',caminho:'',pagina:'0',tamanho:'50'},
 status:{documentoId:''},download:{documentoId:''},modelos:{},
 alunoSolicitar:{codigoMatricula:'',nome:'',cpf:'',email:'',telefone:'',tipoSolicitacao:'1',emailResponsavel:'',confirmEmail:false},alunoStatus:{codigoMatricula:''}},
-results:{},loading:{},lists:{},tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
+results:{},loading:{},lists:{},diag:{},protPend:null,tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
 paletteOpen:false,paletteQ:'',toast:'',wizStep:0,lastMat:'',openSol:null,navMin:false,
 lastDoc:{},lastAss:{},
 sort:{documentos:{k:'criadoEm',d:-1},pastas:{k:'caminho',d:1}},openModelo:'',dragging:false,newSg:sg};
@@ -913,7 +961,7 @@ this._api=setInterval(()=>this.checarApi(false),60000);
 fetch('/_perfis',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{
 if(!j||!Array.isArray(j.perfis)||!j.perfis.length){this.setState({boot:'sem'});return;}
 LIVE=j;PERFIS={};const lastDoc={},lastAss={};
-j.perfis.forEach(p=>{PERFIS[p.id]={mascara:p.tokenMascarado,baseUrl:p.baseUrl,instancia:p.instancia};lastDoc[p.id]=null;lastAss[p.id]=null;});
+j.perfis.forEach(p=>{PERFIS[p.id]={mascara:p.tokenMascarado,baseUrl:p.baseUrl,instancia:p.instancia,protegido:p.protegido||''};lastDoc[p.id]=null;lastAss[p.id]=null;});
 const perfil=PERFIS[j.padrao]?j.padrao:j.perfis[0].id;
 this.setState({boot:'ok',perfil,lastDoc,lastAss,results:{},lists:{},hist:{ligado:!!j.historico,arquivo:j.arquivoHistorico||'',confirmar:false}});
 this.checarApi(true);
@@ -924,7 +972,7 @@ componentWillUnmount(){clearInterval(this._iv);clearInterval(this._api);}
 eff(){const s=this.state;return s.screen==='fluxo'?['importar','assinatura','resultado'][s.wizStep]:s.screen;}
 setF(sc,patch){const s=this.state;this.setState({forms:Object.assign({},s.forms,{[sc]:Object.assign({},s.forms[sc],patch)})});}
 hf(sc,key,tf){return e=>{const t=e.target;let v=t.type==='checkbox'?t.checked:t.value;if(tf)v=tf(v);this.setF(sc,{[key]:v});};}
-copy(t){const done=()=>{this.setState({toast:'Copiado!'});clearTimeout(this._tt);this._tt=setTimeout(()=>this.setState({toast:''}),1700);};
+copy(t,msg){const done=()=>{this.setState({toast:msg||'Copiado!'});clearTimeout(this._tt);this._tt=setTimeout(()=>this.setState({toast:''}),msg?3200:1700);};
 try{navigator.clipboard.writeText(t).then(done,()=>this.fb(t,done));}catch(e){this.fb(t,done);}}
 fb(t,done){try{const a=document.createElement('textarea');a.value=t;a.style.position='fixed';a.style.opacity='0';document.body.appendChild(a);a.select();document.execCommand('copy');a.remove();}catch(e){}done();}
 
@@ -932,7 +980,7 @@ goWith(sc,patch,runIt){
 const s=this.state;
 const forms=patch?Object.assign({},s.forms,{[sc]:Object.assign({},s.forms[sc],patch)}):s.forms;
 this.setState({screen:sc,prev:s.screen===sc?s.prev:s.screen,forms,paletteOpen:false,tab:'resumo'});
-setTimeout(()=>{const st=this.state;const e=this.eff();if(runIt||(AUTO.indexOf(sc)>=0&&!st.lists[sc]&&!st.loading[sc]))this.run(e);if(LIVE&&e==='template'&&!st.lists.modelos&&!st.loading.modelos)this.run('modelos');},0);
+setTimeout(()=>{const st=this.state;const e=this.eff();if(runIt||(AUTO.indexOf(sc)>=0&&!st.lists[sc]&&!st.loading[sc]))this.run(e);if(LIVE&&e==='template'&&!st.lists.modelos&&!st.loading.modelos)this.run('modelos');if(LIVE&&sc==='diagnostico'&&!st.diag[st.perfil])this.diagnosticar();},0);
 }
 go(sc){this.goWith(sc,null,false);}
 back(){const s=this.state;this.go(s.prev&&s.prev!==s.screen?s.prev:'inicio');}
@@ -960,9 +1008,29 @@ try{fetch('/_historico',{method:'POST',headers:{'Content-Type':'application/json
 limparHistorico(){
 const h=this.state.hist;
 if(!h.confirmar){this.setState({hist:Object.assign({},h,{confirmar:true})});clearTimeout(this._hc);this._hc=setTimeout(()=>this.setState({hist:Object.assign({},this.state.hist,{confirmar:false})}),4000);return;}
-fetch('/_historico',{method:'DELETE'}).then(()=>this.setState({log:[],logSel:null,hist:Object.assign({},this.state.hist,{confirmar:false})})).catch(()=>{});
+fetch('/_historico',{method:'DELETE'}).then(()=>this.setState({log:this.state.log.filter(e=>e.fav),logSel:null,hist:Object.assign({},this.state.hist,{confirmar:false})})).catch(()=>{});
 }
 
+diagnosticar(){
+if(!LIVE)return;const perfil=this.state.perfil;if(!perfil)return;
+const set=v=>this.setState({diag:Object.assign({},this.state.diag,{[perfil]:v})});
+set(Object.assign({},this.state.diag[perfil]||{},{busy:true,erroLocal:''}));
+fetch('/_diagnostico/'+encodeURIComponent(perfil),{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error('HTTP '+r.status))).then(j=>set(Object.assign({},j,{busy:false,erroLocal:''}))).catch(e=>set({busy:false,erroLocal:'O servidor local (docnuvem-web) não respondeu: '+e.message}));
+}
+relato(o){
+const pf=PERFIS[o.perfil]||{};
+const L=['RELATO DE PROBLEMA · Docnuvem API Tester','',
+'Data/hora: '+new Date(o.ts).toLocaleString('pt-BR'),
+'Perfil: '+o.perfil+' (instância: '+(pf.instancia||'?')+')',
+'Servidor: '+(pf.baseUrl||'?'),
+'Tela: '+((META[o.screen]||{}).label||o.screen||'?'),
+'Resultado: '+o.status+' '+(HTTPT[o.status]||'')+' em '+o.ms+' ms','',
+'Requisição: '+o.method+' '+o.rv.url,'','cURL (token mascarado):',o.rv.curl];
+if(o.rv.hasBody)L.push('','Corpo enviado:',o.rv.body);
+L.push('','Resposta:',JSON.stringify(o.body,null,2));
+return L.join('\n');
+}
+copyRelato(o){this.copy(this.relato(o),'Relato copiado. Confira dados pessoais antes de colar no ticket.');}
 setTema(v){this.setState({theme:v});try{localStorage.setItem('docnuvem-tema',v);}catch(e){}}
 
 toggleSide(){const v=!this.state.navMin;this.setState({navMin:v});try{localStorage.setItem('docnuvem-nav-min',v?'1':'0');}catch(e){}}
@@ -973,17 +1041,19 @@ if((e.ctrlKey||e.metaKey)&&String(e.key).toLowerCase()==='k'){e.preventDefault()
 if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&String(e.key).toLowerCase()==='b'){e.preventDefault();this.toggleSide();return;}
 if(e.key==='/'&&!typing){e.preventDefault();this.openPalette();return;}
 if(e.key==='Escape'){
+if(s.protPend){this.setState({protPend:null});return;}
 if(s.paletteOpen){this.setState({paletteOpen:false});return;}
 if(s.logOpen){if(s.logSel)this.setState({logSel:null});else this.setState({logOpen:false});return;}
 this.back();return;}
 if(e.key==='Enter'&&!e.shiftKey){
+if(s.protPend)return;
 if(s.paletteOpen){const f=this._pal&&this._pal[0];if(f){e.preventDefault();f.go();}return;}
 if(tag==='TEXTAREA'||tag==='BUTTON'||tag==='A'||tag==='SELECT')return;
 if(t&&(t.type==='file'||t.type==='checkbox'||t.type==='search'))return;
 if(s.logOpen)return;
 e.preventDefault();this.send();}
 };
-send(){const sc=this.eff();if(sc==='inicio'||sc==='resultado')return;if(this.state.loading[sc])return;const p=this.plan(sc);if(p.ready)this.run(sc);}
+send(){const sc=this.eff();if(sc==='inicio'||sc==='resultado'||sc==='diagnostico')return;if(this.state.loading[sc])return;const p=this.plan(sc);if(p.ready)this.run(sc);}
 
 plan(sc){
 const s=this.state,f=s.forms[sc]||{},perfil=s.perfil,v=s.validar;
@@ -1140,12 +1210,13 @@ const ready=!!req&&!block&&(!v||nErr===0);
 return {req,errs,warns,ready,block,nErr,list:Object.keys(errs).map(k=>errs[k])};
 }
 
-run(sc,over){
+run(sc,over,confirmado){
 const s=this.state;
 let req=over;
 if(!req){const p=this.plan(sc);if(!p.ready)return;req=Object.assign({},p.req,{screen:sc,perfil:s.perfil});}
 if(s.loading[sc])return;
 if(!LIVE){this.setState({toast:'Servidor local não encontrado. Rode docnuvem-web e abra o endereço que ele mostra.'});clearTimeout(this._tt);this._tt=setTimeout(()=>this.setState({toast:''}),3500);return;}
+if(!confirmado&&req.method!=='GET'&&((PERFIS[req.perfil]||{}).protegido==='confirmar')){this.setState({protPend:{sc,req}});return;}
 this.setState({loading:Object.assign({},s.loading,{[sc]:true})});
 const t0=Date.now();
 const fin=(out,dur,real)=>{
@@ -1168,15 +1239,16 @@ if(sc==='assinatura')patch.wizStep=2;}}
 patch.lists=lists;
 this.setState(patch);
 };
-this.live(req).then(o=>fin(o.out,Date.now()-t0,o.real));
+this.live(req,confirmado).then(o=>fin(o.out,Date.now()-t0,o.real));
 }
 
 models(){const L=this.state.lists.modelos;return L?normModelos(L.modelos):[];}
-async live(req){
+async live(req,confirmado){
 const perfil=req.perfil;
 const qs=Object.keys(req.query).filter(k=>k!=='instancia').map(k=>k+'='+encodeURIComponent(req.query[k])).join('&');
 const url='/_proxy/'+encodeURIComponent(perfil)+req.path+(qs?'?'+qs:'');
 const init={method:req.method,headers:{}};
+if(confirmado)init.headers['X-Docnuvem-Confirmado']='sim';
 if(req.body){init.headers['Content-Type']='application/json';init.body=JSON.stringify(req.body);}
 if(req.file){const blob=FILEBLOB.get(req.file);
 if(!blob)return {out:{r:{status:400,body:{erro:'O arquivo não está mais disponível para reenvio. Escolha-o de novo na tela.'}}}};
@@ -1211,7 +1283,7 @@ const res0=s.results[eff];
 const loading=!!s.loading[eff];
 const show={};ORDER.concat(['resultado']).forEach(i=>{show[i]=eff===i;});
 show.fluxo=s.screen==='fluxo';
-show.form=eff!=='inicio'&&eff!=='resultado';
+show.form=eff!=='inicio'&&eff!=='resultado'&&eff!=='diagnostico';
 const T=(sc,k,o)=>this.fld(sc,k,o);
 const last=s.lastDoc[perfil],lastA=s.lastAss[perfil];
 const docLast=(sc)=>({useLast:true,lastLabel:last?'Usar último documentoId ('+last+')':'Nenhum documentoId recente',lastDisabled:!last,onLast:()=>this.setF(sc,{documentoId:String(last)})});
@@ -1341,7 +1413,7 @@ if(b.variaveisFaltantes){exL='variaveisFaltantes';b.variaveisFaltantes.forEach(k
 if(b.variaveisNaoAceitas){exL='variaveisNaoAceitas';b.variaveisNaoAceitas.forEach(k=>extras.push({label:k,copy:()=>this.copy(k)}));}
 if(b.parametros){exL='parametros vazios';b.parametros.forEach(k=>extras.push({label:k,copy:()=>this.copy(k)}));}
 return {cls:ok?'ok':'er',icon:ok?ICON.check:ICON.alert,statusText:res0.status+' '+(HTTPT[res0.status]||''),ms:res0.ms,time:fmtT(res0.ts),perfil:res0.perfil,forcado:res0.forcado,method:res0.method,isOk:ok,isErr:!ok,
-msg:b.erro||b.mensagem||b.message||b.retorno||JSON.stringify(b),url:res0.rv.url,copyUrl:()=>this.copy(res0.rv.url),dica:ok?'':dica(res0,res0.req),hasExtras:extras.length>0,extras,extrasLabel:exL};})():{};
+msg:b.erro||b.mensagem||b.message||b.retorno||JSON.stringify(b),url:res0.rv.url,copyUrl:()=>this.copy(res0.rv.url),copyRelato:()=>this.copyRelato(Object.assign({screen:eff},res0)),dica:ok?'':dica(res0,res0.req),hasExtras:extras.length>0,extras,extrasLabel:exL};})():{};
 const sumRows=(res0&&res0.ok)?flat(res0.body).map(r=>Object.assign({},r,{plain:!r.chip,copy:()=>this.copy(r.v)})):[];
 const tabs=[['resumo','Resumo'],['json','JSON'],['req','Requisição']].map(a=>({label:a[1],sel:s.tab===a[0],go:()=>this.setState({tab:a[0]})}));
 const jsonRows=(res0&&s.tab==='json')?treeRows(res0.body,s.collapsed).map(r=>({pad:r.pad,key:r.key,hasKey:r.hasKey,text:r.text,kind:r.kind,toggle:!!r.toggle,noToggle:!r.toggle,open:!!r.toggle&&!r.col,canCopy:!!r.leaf,noCopy:!r.leaf,comma:!!r.comma,
@@ -1449,7 +1521,22 @@ if(ap.verificadoEm)apiDet.push({k:'Verificado às',v:fmtT(ap.verificadoEm)});
 if(PERFIS[perfil]&&PERFIS[perfil].baseUrl)apiDet.push({k:'Endereço',v:PERFIS[perfil].baseUrl});
 const apiCls=sem?'er':ap.carregando&&!ap.nivel?'mu':(NV[nivel]||['mu'])[0];
 const api={cls:apiCls,icon:sem?ICON.alert:ap.carregando&&!ap.nivel?ICON.refresh:(NV[nivel]||[0,ICON.refresh])[1],label:sem?'Sem servidor local':(apiTxt[nivel]||apiTxt.carregando),title:'Clique para verificar de novo. '+apiDet.map(d=>d.k+': '+d.v).join(' · '),refresh:()=>this.checarApi(true),det:apiDet};
-const hist={on:s.hist.ligado,arquivo:s.hist.arquivo,limpar:()=>this.limparHistorico(),limparLabel:s.hist.confirmar?'Confirmar limpeza':'Limpar histórico',clsLimpar:s.hist.confirmar?'btn dng sm':'btn sm'};
+const hist={on:s.hist.ligado,arquivo:s.hist.arquivo,limpar:()=>this.limparHistorico(),limparLabel:s.hist.confirmar?'Confirmar limpeza':'Limpar (mantém favoritas)',clsLimpar:s.hist.confirmar?'btn dng sm':'btn sm'};
+// diagnóstico
+const dgs=s.diag[perfil]||{};
+const DGN={ok:['ok',ICON.check,'Tudo certo'],aviso:['wn',ICON.alert,'Atenção'],erro:['er',ICON.x,'Com problema']};
+const DGI={ok:['ok',ICON.check,'OK'],aviso:['wn',ICON.alert,'Atenção'],erro:['er',ICON.x,'Falhou'],info:['mu',ICON.clock,'Informação'],pulado:['mu',ICON.minus,'Pulado']};
+const dgItens=(dgs.itens||[]).map(it=>{const k=DGI[it.nivel]||DGI.info;return {titulo:it.titulo,cls:k[0],icon:k[1],label:k[2],detalhe:it.detalhe,causa:it.causa,hasCause:!!it.causa,causaLabel:(it.nivel==='aviso'||it.nivel==='erro')?'Causa provável:':'Observação:'};});
+const dgk=dgs.erroLocal?['er',ICON.alert,'Servidor local sem resposta']:dgs.busy&&!dgs.nivel?['mu',ICON.refresh,'Verificando…']:dgs.nivel?DGN[dgs.nivel]:['mu',ICON.minus,'Ainda não verificado'];
+const dg={cls:dgk[0],icon:dgk[1],label:dgk[2],busy:!!dgs.busy,notBusy:!dgs.busy,empty:!dgs.itens&&!dgs.busy&&!dgs.erroLocal,hasErr:!!dgs.erroLocal,err:dgs.erroLocal||'',has:!!dgs.itens,items:dgItens,
+quando:dgs.verificadoEm?fmtT(dgs.verificadoEm):'',run:()=>this.diagnosticar(),
+copy:()=>this.copy(['DIAGNÓSTICO DA INSTÂNCIA · Docnuvem API Tester','Perfil: '+perfil+' (instância: '+(dgs.instancia||'?')+')','Servidor: '+(dgs.baseUrl||'?'),'Quando: '+(dgs.verificadoEm?new Date(dgs.verificadoEm).toLocaleString('pt-BR'):'?'),'Geral: '+dgk[2],''].concat((dgs.itens||[]).map(it=>'['+(DGI[it.nivel]||DGI.info)[2]+'] '+it.titulo+': '+it.detalhe+(it.causa?'\n    Causa provável: '+it.causa:''))).join('\n'),'Diagnóstico copiado.')};
+// perfil protegido
+const pmode=(PERFIS[perfil]||{}).protegido||'';
+const prot={on:!!pmode,cls:pmode==='bloquear'?'er':'wn',label:pmode==='bloquear'?'Produção · só leitura':'Produção · confirma antes de alterar',
+title:pmode==='bloquear'?'Perfil protegido no config.json: chamadas que alteram dados são bloqueadas.':'Perfil protegido no config.json: chamadas que alteram dados pedem confirmação.',
+open:!!s.protPend,perfil:s.protPend?s.protPend.req.perfil:'',what:s.protPend?s.protPend.req.method+' '+s.protPend.req.path:'',
+cancel:()=>this.setState({protPend:null}),confirm:()=>{const pp=s.protPend;if(!pp)return;this.setState({protPend:null});setTimeout(()=>this.run(pp.sc,pp.req,true),0);}};
 // wizard
 const wiz={doc:assRes&&assRes.ok?assRes.body.documentoId:'',ass:assRes&&assRes.ok?assRes.body.assinaturaId:'',convite:assRes&&assRes.ok?(assRes.body.conviteEnviado?'enviado':'não enviado (padrão)'):'',
 copyDoc:()=>this.copy(String(assRes&&assRes.ok?assRes.body.documentoId:'')),copyAss:()=>this.copy(String(assRes&&assRes.ok?assRes.body.assinaturaId:'')),
@@ -1464,13 +1551,14 @@ const home={cards:[
 {title:'Fluxo completo',desc:'Importar e solicitar assinatura em três passos guiados.',d:ICON.route,go:()=>this.go('fluxo')},
 {title:'Criar documento de modelo',desc:'Formulário montado a partir das variáveis do modelo.',d:ICON.filetext,go:()=>this.go('template')},
 {title:'Ver status do documento',desc:'Quem já assinou, quem visualizou e links pendentes.',d:ICON.clip,go:()=>this.go('status')},
-{title:'Listar documentos',desc:'Filtros, ordenação e URL efetiva da consulta.',d:ICON.files,go:()=>this.go('documentos')}],
+{title:'Listar documentos',desc:'Filtros, ordenação e URL efetiva da consulta.',d:ICON.files,go:()=>this.go('documentos')},
+{title:'Diagnóstico da instância',desc:'Confere token, modelos e pastas e explica o que falta.',d:ICON.pulse,go:()=>this.go('diagnostico')}],
 recent:s.log.slice(0,5).map(e=>this.logRow(e)),noRecent:s.log.length===0};
 
 // log
 const lrows=s.log.filter(e=>!s.logFav||e.fav).map(e=>this.logRow(e));
 const sel=s.log.find(e=>e.id===s.logSel);
-const ld=sel?{back:()=>this.setState({logSel:null}),fav:()=>this.favToggle(sel.id),favOn:sel.fav,favLabel:sel.fav?'Favorita':'Favoritar',resend:()=>this.run(sel.screen,Object.assign({},sel.req)),method:sel.method,cls:sel.status<400?'ok':'er',statusText:sel.status+' '+(HTTPT[sel.status]||''),ms:sel.ms,time:fmtDT(sel.ts),url:sel.url,headers:sel.rv.headers,hasBody:sel.rv.hasBody,body:sel.rv.body,copyUrl:()=>this.copy(sel.url),copyCurl:()=>this.copy(sel.rv.curl),resp:JSON.stringify(sel.body,null,2),copyResp:()=>this.copy(JSON.stringify(sel.body,null,2))}:{headers:[]};
+const ld=sel?{back:()=>this.setState({logSel:null}),fav:()=>this.favToggle(sel.id),favOn:sel.fav,favLabel:sel.fav?'Favorita':'Favoritar',resend:()=>this.run(sel.screen,Object.assign({},sel.req)),method:sel.method,cls:sel.status<400?'ok':'er',statusText:sel.status+' '+(HTTPT[sel.status]||''),ms:sel.ms,time:fmtDT(sel.ts),url:sel.url,headers:sel.rv.headers,hasBody:sel.rv.hasBody,body:sel.rv.body,copyUrl:()=>this.copy(sel.url),copyCurl:()=>this.copy(sel.rv.curl),resp:JSON.stringify(sel.body,null,2),copyResp:()=>this.copy(JSON.stringify(sel.body,null,2)),copyRelato:()=>this.copyRelato(sel)}:{headers:[]};
 
 // palette
 let palItems=[];
@@ -1491,7 +1579,7 @@ theme:s.theme,bannerCls:car?'':'live',modeTitle:sem?'Sem servidor local':car?'Co
 ic:ICON,onKey:this.onKey,sideCls:s.navMin?'min':'',sideOpen:!s.navMin,sideLabel:s.navMin?'Expandir menu':'Recolher menu',toggleSide:()=>this.toggleSide(),openPalette:()=>this.openPalette(),
 nav:ORDER.map(id=>({id,label:META[id].label,d:META[id].d,hasGrp:!!META[id].grp,grp:META[id].grp,cur:s.screen===id?'page':'false',go:()=>this.go(id)})),
 perfil,perfilOpts:Object.keys(PERFIS).map(k=>({value:k,label:k,selected:k===perfil})),
-onPerfil:e=>{const v=e.target.value;this.setState({perfil:v,results:{},lists:{},collapsed:{}});setTimeout(()=>{const sc=this.eff();if(AUTO.indexOf(sc)>=0)this.run(sc);if(LIVE&&sc==='template')this.run('modelos');this.checarApi(true);},0);},
+onPerfil:e=>{const v=e.target.value;this.setState({perfil:v,results:{},lists:{},collapsed:{}});setTimeout(()=>{const sc=this.eff();if(AUTO.indexOf(sc)>=0)this.run(sc);if(LIVE&&sc==='template')this.run('modelos');if(LIVE&&sc==='diagnostico'&&!this.state.diag[v])this.diagnosticar();this.checarApi(true);},0);},
 tokenMask:mask(perfil),revogado:false,validar:s.validar,validarOff:!s.validar&&show.form,onValidar:e=>this.setState({validar:e.target.checked}),
 toggleLog:()=>this.setState({logOpen:!s.logOpen,logSel:null}),logCount:s.log.length,
 title:eff==='resultado'?'Fluxo completo · Links dos signatários':(s.screen==='fluxo'?'Fluxo completo · '+META[eff].title:meta.title),
@@ -1509,7 +1597,7 @@ hasRes:!!res0,noRes:!res0&&!loading,res,tabs,tabResumo:s.tab==='resumo',tabJson:
 jsonCopyAll:()=>this.copy(JSON.stringify(res0?res0.body:{},null,2)),jsonCollapse:()=>this.setState({collapsed:allPaths(res0?res0.body:{},'$',{})}),jsonExpand:()=>this.setState({collapsed:{}}),
 nexts,hasNexts:nexts.length>0,
 hasLinks:links.length>0&&eff==='assinatura',links,linksNote:linkSrc?(linkSrc.conviteEnviado?'Convite enviado por e-mail (conviteEnviado = true). Os links abaixo também valem.':'Nenhum e-mail foi enviado (conviteEnviado = false, padrão). Envie cada link ao signatário.'):'',
-dt,pt,md,stv,dl,wiz,al,asv,api,hist,
+dt,pt,md,stv,dl,wiz,al,asv,api,hist,dg,prot,
 logOpen:s.logOpen,logFav:s.logFav,onLogFav:e=>this.setState({logFav:e.target.checked}),logRows:lrows,logEmpty:lrows.length===0&&!sel,hasLogSel:!!sel,showLogList:!sel,ld,
 paletteOpen:s.paletteOpen,paletteQ:s.paletteQ,onPaletteQ:e=>this.setState({paletteQ:e.target.value}),palItems,palEmpty:palItems.length===0,closePalette:()=>this.setState({paletteOpen:false}),stop:e=>{if(e&&e.stopPropagation)e.stopPropagation();},
 toast:s.toast,toastCls:s.toast?'':'off'
@@ -1517,7 +1605,7 @@ toast:s.toast,toastCls:s.toast?'':'off'
 }
 
 setFile(sc,fl){const f=this.state.forms[sc];const meta={name:fl.name,size:fl.size,type:fl.type};FILEBLOB.set(meta,fl);const o={file:meta};if(!f.editedNome)o.nomeArquivo=fl.name;this.setF(sc,o);}
-favToggle(id){this.setState({log:this.state.log.map(e=>e.id===id?Object.assign({},e,{fav:!e.fav}):e)});}
+favToggle(id){const e0=this.state.log.find(e=>e.id===id);if(!e0)return;const fav=!e0.fav;this.setState({log:this.state.log.map(e=>e.id===id?Object.assign({},e,{fav}):e)});if(LIVE&&this.state.hist.ligado){try{fetch('/_historico/favorito',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,fav})}).catch(()=>{});}catch(e){}}}
 logRow(e){return {method:e.method,url:e.url,time:fmtT(e.ts),ms:e.ms,auth:e.auth,cls:e.status<400?'ok':'er',statusText:e.status+' '+(HTTPT[e.status]||''),favOn:e.fav,starStyle:e.fav?'fill:currentColor':'',open:()=>this.setState({logOpen:true,logSel:e.id}),fav:()=>this.favToggle(e.id)};}
 }
 </script>

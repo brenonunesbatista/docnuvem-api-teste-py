@@ -14,6 +14,8 @@ class PerfilConfig:
     instancia: str
     baseUrl: str
     token: str
+    # "" (livre), "confirmar" (pede confirmação ao alterar dados) ou "bloquear" (só leituras).
+    protecao: str = ""
 
 
 @dataclass(frozen=True)
@@ -44,6 +46,19 @@ def _texto(valor: Any, onde: str) -> str:
     return valor.strip()
 
 
+def _protecao(valor: Any, onde: str) -> str:
+    """`protegido`: ausente/false = livre; true = confirmar; "confirmar" ou "bloquear"."""
+    if valor is None or valor is False:
+        return ""
+    if valor is True:
+        return "confirmar"
+    if valor in ("confirmar", "bloquear"):
+        return str(valor)
+    raise ConfigError(
+        f'config.json inválido: {onde} deve ser true, false, "confirmar" ou "bloquear".'
+    )
+
+
 def parse_config(dados: Any) -> AppConfig:
     """Valida o conteúdo já lido do config.json."""
     if not isinstance(dados, dict):
@@ -60,6 +75,7 @@ def parse_config(dados: Any) -> AppConfig:
             baseUrl=_texto(p.get("baseUrl"), f"perfis.{nome}.baseUrl"),
             # Espaço ou quebra de linha colados junto do token quebram o cabeçalho.
             token=_texto(p.get("token"), f"perfis.{nome}.token"),
+            protecao=_protecao(p.get("protegido"), f"perfis.{nome}.protegido"),
         )
     padrao = _texto(dados.get("perfilPadrao"), "perfilPadrao")
     if padrao not in perfis:
@@ -78,7 +94,8 @@ def load_config(path: Path | None = None) -> AppConfig:
             "Copie config.example.json para config.json e preencha os tokens."
         )
     try:
-        dados = json.loads(p.read_text(encoding="utf-8"))
+        # utf-8-sig: o Bloco de Notas do Windows pode salvar o arquivo com BOM.
+        dados = json.loads(p.read_text(encoding="utf-8-sig"))
     except json.JSONDecodeError as exc:
         raise ConfigError(f"config.json inválido (JSON malformado): {exc}") from exc
     return parse_config(dados)

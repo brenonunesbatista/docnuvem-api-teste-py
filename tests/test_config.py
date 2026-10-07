@@ -77,3 +77,9 @@ def test_le_do_arquivo_e_respeita_variavel_de_ambiente(
     monkeypatch.setenv("DOCNUVEM_TESTER_CONFIG", str(arq))
     assert config_path() == arq
     assert load_config().perfilPadrao == "cliente2"
+
+
+def test_load_config_aceita_arquivo_com_bom(tmp_path: Path) -> None:
+    arq = tmp_path / "config.json"
+    arq.write_bytes(b"\xef\xbb\xbf" + json.dumps(valido()).encode("utf-8"))
+    assert load_config(arq).perfilPadrao == "cliente2"

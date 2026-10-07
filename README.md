@@ -36,6 +36,14 @@ cp config.example.json config.json
 O `config.json` fica fora do git (`.gitignore`): nunca versione tokens. Por padrão ele é
 lido da pasta atual; para usar outro caminho, defina `DOCNUVEM_TESTER_CONFIG`.
 
+**Perfil protegido (produção).** Acrescente `"protegido"` ao perfil para evitar acidentes:
+
+- `"protegido": true` (ou `"confirmar"`): toda chamada que altera dados ou envia e-mail pede
+  confirmação na tela antes de ir para a API.
+- `"protegido": "bloquear"`: o perfil só faz leituras; qualquer outra chamada é recusada.
+
+O servidor local aplica a regra, não só a página: uma chamada sem confirmação nunca chega à API.
+
 ## Uso
 
 ```bash
@@ -56,8 +64,14 @@ Opções: `--porta N`, `--nao-abrir`, `--sem-historico`, `--dados PASTA`.
   em abas Resumo, JSON e Requisição, com copiar em um clique.
 - **Status da API** no topo e na Início: online, lenta, token recusado, com erro ou fora do ar.
   Usa só leituras e se atualiza a cada minuto.
-- **Histórico de chamadas** que sobrevive a fechar o programa, com favoritos da sessão,
-  reenvio, **exportação em JSON e CSV** e limpeza.
+- **Diagnóstico da instância** (menu Suporte): só com leituras, confere API, token, modelos
+  (e quais são geráveis por API), pastas e o módulo de escola, e explica a causa provável de
+  cada falha.
+- **Relato de bug**: o botão "Copiar relato de bug" (no resultado e no log) copia perfil,
+  horário, requisição, cURL com o token mascarado e resposta, pronto para colar no ticket.
+  Confira se há dados pessoais antes de colar.
+- **Histórico de chamadas** que sobrevive a fechar o programa, com **favoritos persistentes**
+  (nunca são podados nem apagados por "Limpar"), reenvio, **exportação em JSON e CSV** e limpeza.
 - Tema escuro por padrão (alternável), menu lateral retrátil (`Ctrl+B`), busca global (`/` ou `Ctrl+K`),
   validação local que pode ser desligada para testar a resposta da API a dados inválidos.
 

@@ -14,20 +14,20 @@ Legenda: ✅ feito · 🔜 próximo · ⬜ planejado.
 - ✅ Tema escuro por padrão, menu retrátil, barras de rolagem refinadas.
 - ✅ README enxuto e `.gitignore` mínimo.
 
-## Etapa 2 — Menos trabalho no suporte 🔜
+## Etapa 2 — Menos trabalho no suporte ✅
 
-1. **Diagnóstico da instância.** Roda só leituras e mostra o que falta: token válido, modelos
+- ✅ **Diagnóstico da instância.** Roda só leituras e mostra o que falta: token válido, modelos
    cadastrados (e quais são geráveis por API), pastas, tipos de solicitação de escola.
    *Pronto quando:* uma tela mostra um check por item, com a causa provável de cada falha.
-2. **Relato de bug pronto.** Botão que copia um texto com cURL mascarado, requisição, resposta,
+- ✅ **Relato de bug pronto.** Botão que copia um texto com cURL mascarado, requisição, resposta,
    perfil e horário, para colar no ticket.
    *Pronto quando:* funciona a partir do resultado e do histórico.
-3. **Perfil protegido.** Marcar um perfil como "produção": bloqueia ou pede confirmação em
+- ✅ **Perfil protegido.** Marcar um perfil como "produção": bloqueia ou pede confirmação em
    chamadas que escrevem ou enviam e-mail.
    *Pronto quando:* a marca fica no `config.json` e vale para toda chamada que altera dados.
-4. **Favoritos persistentes** no histórico (hoje valem só na sessão).
+- ✅ **Favoritos persistentes** no histórico: sobrevivem a reiniciar, à poda e a "Limpar".
 
-## Etapa 3 — Rotina de testes ⬜
+## Etapa 3 — Rotina de testes 🔜
 
 1. **Roteiros salvos.** Importar, assinar, ver status e cancelar com checagens, rodando num clique
    e gerando relatório. Serve de teste de fumaça de um cliente novo.
