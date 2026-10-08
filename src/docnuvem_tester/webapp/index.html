@@ -393,6 +393,56 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
           </section>
         </sc-if>
 
+        <!-- ===== IMPORTAR PASTA ===== -->
+        <sc-if value="{{show.importarPasta}}" hint-placeholder-val="{{ false }}">
+          <section class="card">
+            <h2>1. O que enviar</h2>
+            <p class="muted small">Escolha uma pasta do seu computador. Arquivos de tipos que o Docnuvem não aceita, vazios, temporários do Office e pastas ocultas ficam de fora e aparecem na lista de ignorados.</p>
+            <div class="fields">
+              <div class="field"><label class="lbl" for="ip-origem"><span>Pasta do computador</span><span class="req">obrigatório</span></label>
+                <div class="row" style="flex-wrap:nowrap"><input id="ip-origem" type="text" value="{{ip.origem}}" placeholder="C:\Users\voce\Documents\Cliente" autocomplete="off" disabled="{{ip.ocupado}}" onInput="{{ip.onOrigem}}" style="flex:1 1 auto"><button class="btn" type="button" onClick="{{ip.escolher}}" disabled="{{ip.escolherOff}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.folder}}"/></svg>{{ip.escolherLabel}}</button></div></div>
+              <div class="field"><label class="sw"><input type="checkbox" checked="{{ip.subpastas}}" disabled="{{ip.ocupado}}" onChange="{{ip.onSub}}"><span class="track"></span><span class="swt">Incluir as subpastas (refaz a árvore no Docnuvem)</span></label></div>
+            </div>
+          </section>
+          <section class="card">
+            <h2>2. Para onde enviar</h2>
+            <div class="fields">
+              <div class="field"><label class="lbl" for="ip-pasta"><span>Pasta no Docnuvem</span><code class="api">nomePasta</code><span class="req">obrigatório</span></label><input id="ip-pasta" type="text" value="{{ip.pasta}}" placeholder="Cliente X" autocomplete="off" disabled="{{ip.ocupado}}" onInput="{{ip.onPasta}}"><span class="hint">Criada se não existir. As subpastas ficam dentro dela.</span></div>
+              <div class="field"><label class="lbl" for="ip-pai"><span>Pasta pai</span><code class="api">nomePastaPai</code><span class="tag">opcional</span></label><input id="ip-pai" type="text" value="{{ip.pastaPai}}" placeholder="/Meus documentos/Contratos" autocomplete="off" disabled="{{ip.ocupado}}" onInput="{{ip.onPai}}"><span class="hint">Se vazia, o que está na raiz da pasta vai para a raiz do Docnuvem e as subpastas usam /Meus documentos.</span></div>
+              <div class="field"><label class="lbl" for="ip-tipo"><span>Tipo de documento</span><code class="api">tipo</code><span class="tag">opcional</span></label><input id="ip-tipo" type="text" value="{{ip.tipo}}" placeholder="Contrato" autocomplete="off" disabled="{{ip.ocupado}}" onInput="{{ip.onTipo}}"></div>
+              <div class="field"><label class="sw"><input type="checkbox" checked="{{ip.pular}}" disabled="{{ip.ocupado}}" onChange="{{ip.onPular}}"><span class="track"></span><span class="swt">Pular arquivos já enviados antes</span></label><span class="hint">O programa anota no computador o que enviou, por perfil e destino. Um arquivo alterado conta como novo.</span></div>
+            </div>
+            <sc-if value="{{ip.hasErr}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{ip.err}}</span></div></sc-if>
+            <div class="row"><button class="btn pri" type="button" onClick="{{ip.verificar}}" disabled="{{ip.verificarOff}}">Ver o que será enviado</button><sc-if value="{{ip.busy}}" hint-placeholder-val="{{ false }}"><span class="loadbar"><span class="spin"></span>Lendo a pasta…</span></sc-if></div>
+          </section>
+          <sc-if value="{{ip.has}}" hint-placeholder-val="{{ false }}">
+            <section class="card">
+              <h2>3. Conferir e enviar</h2>
+              <div class="bxn"><strong>{{ip.resumo}}</strong></div>
+              <div class="muted small">{{ip.exts}}</div>
+              <sc-if value="{{ip.hasAmostra}}" hint-placeholder-val="{{ false }}"><strong class="small">Primeiros arquivos: de onde → para onde</strong><div class="dglist"><sc-for list="{{ip.amostra}}" as="a" hint-placeholder-count="3"><div class="mi" style="flex-direction:column;align-items:flex-start"><strong style="overflow-wrap:anywhere">{{a.arq}}</strong><span class="muted small" style="overflow-wrap:anywhere">{{a.dest}}</span></div></sc-for></div></sc-if>
+              <sc-if value="{{ip.hasIgn}}" hint-placeholder-val="{{ false }}"><strong class="small">{{ip.nIgn}} ignorado(s)</strong><div class="dglist"><sc-for list="{{ip.ign}}" as="i" hint-placeholder-count="3"><div class="mi"><strong style="overflow-wrap:anywhere">{{i.arq}}</strong><span class="pill mu">{{i.motivo}}</span></div></sc-for></div></sc-if>
+              <sc-if value="{{ip.nadaNovo}}" hint-placeholder-val="{{ false }}"><div class="muted small">Todos os arquivos já foram enviados antes. Desligue “Pular arquivos já enviados” para enviar de novo.</div></sc-if>
+              <sc-if value="{{ip.bloqueado}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>Este perfil está protegido como somente leitura: não dá para importar nele.</span></div></sc-if>
+              <sc-if value="{{ip.prodAviso}}" hint-placeholder-val="{{ false }}"><div class="muted small">Este perfil está marcado como produção: o envio pede a confirmação abaixo.</div></sc-if>
+              <div class="field"><label class="lbl" for="ip-int"><span>Intervalo entre os envios (ms)</span></label><input id="ip-int" type="text" value="{{ip.intervalo}}" autocomplete="off" disabled="{{ip.ocupado}}" onInput="{{ip.onIntervalo}}" style="max-width:160px"></div>
+              <sc-if value="{{ip.confirmando}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alertdialog"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{ip.confirmaTxt}}</span></div><div class="row"><button class="btn dng" type="button" onClick="{{ip.confirmar}}">Confirmar e enviar</button><button class="btn" type="button" onClick="{{ip.recuar}}">Voltar</button></div></sc-if>
+              <div class="row"><button class="btn pri" type="button" onClick="{{ip.enviar}}" disabled="{{ip.naoPode}}">{{ip.enviarLabel}}</button><sc-if value="{{ip.ocupado}}" hint-placeholder-val="{{ false }}"><button class="btn dng" type="button" onClick="{{ip.cancelar}}">Cancelar</button></sc-if></div>
+              <div class="muted small">Se várias chamadas falharem em seguida, o envio para sozinho. Uma chamada que falha nunca é repetida, para não duplicar o documento.</div>
+            </section>
+          </sc-if>
+          <sc-if value="{{ip.prog}}" hint-placeholder-val="{{ false }}">
+            <section class="card" aria-live="polite">
+              <div class="row"><h2>Andamento</h2><span class="pill {{ip.cls}}">{{ip.label}}</span><span class="grow"></span><sc-if value="{{ip.hasFim}}" hint-placeholder-val="{{ false }}"><a class="btn sm" href="{{ip.relHref}}" download>Baixar relatório (CSV)</a></sc-if></div>
+              <sc-if value="{{ip.ocupado}}" hint-placeholder-val="{{ false }}"><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ip.pct}}"><span style="{{ip.barStyle}}"></span></div><div class="muted small">{{ip.progresso}}</div></sc-if>
+              <sc-if value="{{ip.hasAtual}}" hint-placeholder-val="{{ false }}"><div class="muted small" style="overflow-wrap:anywhere">Agora: {{ip.atual}}</div></sc-if>
+              <div class="bxn"><strong>{{ip.resumoEnvio}}</strong></div>
+              <sc-if value="{{ip.hasEstErro}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{ip.estErro}}</span></div></sc-if>
+              <sc-if value="{{ip.hasFalhas}}" hint-placeholder-val="{{ false }}"><strong class="small">{{ip.nFalhas}} com falha</strong><div class="dglist"><sc-for list="{{ip.falhas}}" as="f" hint-placeholder-count="2"><div class="mi"><strong style="overflow-wrap:anywhere">{{f.arq}}</strong><span class="pill er">{{f.erro}}</span></div></sc-for></div></sc-if>
+            </section>
+          </sc-if>
+        </sc-if>
+
         <!-- ===== COMPARAR INSTÂNCIAS ===== -->
         <sc-if value="{{show.comparar}}" hint-placeholder-val="{{ false }}">
           <section class="card">
@@ -1026,6 +1076,7 @@ inicio:{label:'Início',title:'O que você quer testar hoje?',sub:'Escolha uma t
 fluxo:{label:'Fluxo completo',title:'Fluxo completo',sub:'Importe um arquivo, solicite a assinatura e receba os links, em três passos guiados.',d:ICON.route,grp:''},
 importar:{label:'Importar arquivo',title:'Importar arquivo',method:'POST',path:'/importar',sub:'Envia um arquivo para uma pasta. Se a pasta (ou a árvore de pastas) não existir, ela é criada.',d:ICON.upload,grp:'Enviar'},
 envio:{label:'Envio inteligente',title:'Envio inteligente',method:'POST',path:'/enviarParaEnvioInteligente',sub:'Envia o arquivo para o fluxo de envio inteligente e devolve o documentoId.',d:ICON.zap,grp:''},
+importarPasta:{label:'Importar pasta',title:'Importar pasta do computador',sub:'Envia todos os arquivos de uma pasta do seu computador para o Docnuvem, refazendo as subpastas. Antes de enviar você vê exatamente o que irá.',d:ICON.upload,grp:''},
 modelos:{label:'Modelos',title:'Modelos',method:'GET',path:'/api/modelos',sub:'Lista os modelos de documento e as variáveis de cada um.',d:ICON.layout,grp:'Modelos'},
 template:{label:'Criar de modelo',title:'Criar documento de modelo',method:'POST',path:'/api/documento/from-template',sub:'O formulário é montado a partir das variáveis do modelo escolhido. A pasta precisa já existir.',d:ICON.filetext,grp:''},
 assinatura:{label:'Solicitar assinatura',title:'Solicitar assinatura',method:'POST',path:'/api/assinatura',sub:'Cria a solicitação de assinatura eletrônica. Por padrão a API não envia e-mail: use os links devolvidos.',d:ICON.pen,grp:'Assinatura'},
@@ -1044,7 +1095,7 @@ vigia:{label:'Vigia de assinaturas',title:'Vigia de assinaturas pendentes',sub:'
 diagnostico:{label:'Diagnóstico',title:'Diagnóstico da instância',sub:'Confere, só com leituras, se o perfil está pronto para uso e mostra a causa provável de cada problema.',d:ICON.pulse,grp:'Suporte'},
 perfis:{label:'Perfis',title:'Perfis',sub:'Crie, edite e remova os perfis do config.json: nome, instância, endereço, token e proteção.',d:ICON.gear,grp:''}
 };
-const ORDER=['inicio','fluxo','importar','envio','modelos','template','assinatura','cancelar','documentos','pastas','status','download','baixarPasta','alunoSolicitar','alunoStatus','comparar','lote','fumaca','vigia','diagnostico','perfis'];
+const ORDER=['inicio','fluxo','importar','envio','importarPasta','modelos','template','assinatura','cancelar','documentos','pastas','status','download','baixarPasta','alunoSolicitar','alunoStatus','comparar','lote','fumaca','vigia','diagnostico','perfis'];
 const AUTO=['documentos','pastas','modelos'];
 let LIVE=null;const FILEBLOB=new WeakMap();
 const BASE='https://api.docnuvem.example';
@@ -1164,12 +1215,13 @@ pastas:{diretorioPaiId:'',nome:'',caminho:'',pagina:'0',tamanho:'50'},
 status:{documentoId:''},download:{documentoId:''},modelos:{},
 alunoSolicitar:{codigoMatricula:'',nome:'',cpf:'',email:'',telefone:'',tipoSolicitacao:'1',emailResponsavel:'',confirmEmail:false},alunoStatus:{codigoMatricula:''},
 comparar:{a:'',b:'',tipo:'modelos'},
+importarPasta:{origem:'',subpastas:true,pastaPai:'',pasta:'',tipo:'',pular:true,intervalo:'300',confirmando:false},
 vigia:{ids:'',intervalo:'10',alerta:'48'},
 lote:{csvNome:'',csvTexto:'',modo:'enviar',intervalo:'500',confirmando:false},
 fumaca:{ok:false},
 baixar:{diretorioId:'',subpastas:true,estrutura:true,conflito:'renomear',destino:'',status:'',dataInicio:'',dataFim:''},
 perfis:{aberto:false,original:'',nome:'',instancia:'',baseUrl:'',token:'',protecao:'',erro:'',salvando:false,rm:''}},
-results:{},loading:{},lists:{},diag:{},bx:{id:'',snap:null,erro:'',escolhendo:false},cmp:{busy:false,res:null,erro:''},vg:{todos:[],vistos:{},notif:false,erro:''},lt:{val:null,erro:'',validando:false,id:'',snap:null},fm:{busy:false,res:null,erro:''},protPend:null,tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
+results:{},loading:{},lists:{},diag:{},bx:{id:'',snap:null,erro:'',escolhendo:false},cmp:{busy:false,res:null,erro:''},ip:{ens:null,erro:'',busy:false,escolhendo:false,id:'',snap:null},vg:{todos:[],vistos:{},notif:false,erro:''},lt:{val:null,erro:'',validando:false,id:'',snap:null},fm:{busy:false,res:null,erro:''},protPend:null,tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
 paletteOpen:false,paletteQ:'',toast:'',wizStep:0,lastMat:'',openSol:null,navMin:false,
 lastDoc:{},lastAss:{},
 sort:{documentos:{k:'criadoEm',d:-1},pastas:{k:'caminho',d:1}},openModelo:'',dragging:false,newSg:sg};
@@ -1250,6 +1302,46 @@ try{localStorage.setItem('docnuvem-vigia-notif',ok?'1':'0');}catch(e){}
 this.aviso(ok?'Avisos do navegador ligados.':'O navegador não permitiu notificações.');
 });
 }
+ipSet(patch){
+const s=this.state,f=Object.assign({},s.forms.importarPasta,patch,{confirmando:false});
+this.setState({forms:Object.assign({},s.forms,{importarPasta:f}),ip:Object.assign({},s.ip,{ens:null,erro:''})});
+}
+ipCorpo(extra){const s=this.state,f=s.forms.importarPasta;return Object.assign({perfil:s.perfil,origem:f.origem,subpastas:!!f.subpastas,pastaPai:f.pastaPai,pasta:f.pasta,tipo:f.tipo,pularEnviados:!!f.pular},extra||{});}
+ipEscolher(){
+if(this.state.ip.escolhendo)return;
+this.setState({ip:Object.assign({},this.state.ip,{escolhendo:true,erro:''})});
+this.cfgCall('/_pasta/escolher','POST',{inicial:this.state.forms.importarPasta.origem}).then(r=>{
+const ip=Object.assign({},this.state.ip,{escolhendo:false});
+if(!r.ok){ip.erro=r.erro||'Não foi possível abrir a janela.';this.setState({ip});return;}
+this.setState({ip});
+if(r.caminho)this.ipSet({origem:r.caminho});
+});
+}
+ipEnsaio(){
+this.setState({ip:Object.assign({},this.state.ip,{busy:true,erro:'',ens:null,id:'',snap:null})});
+this.cfgCall('/_importar/ensaio','POST',this.ipCorpo()).then(r=>this.setState({ip:Object.assign({},this.state.ip,{busy:false,ens:r.ok?r:null,erro:r.ok?'':(r.erro||'Não foi possível verificar a pasta.')})}));
+}
+ipIniciar(confirmado){
+const s=this.state,f=s.forms.importarPasta;
+if(s.ip.snap&&s.ip.snap.estado==='executando')return;
+if(!confirmado){this.setState({forms:Object.assign({},s.forms,{importarPasta:Object.assign({},f,{confirmando:true})})});return;}
+this.setState({forms:Object.assign({},s.forms,{importarPasta:Object.assign({},f,{confirmando:false})})});
+this.cfgCall('/_importar/iniciar','POST',this.ipCorpo({intervaloMs:Number(f.intervalo)||0,confirmarEnvio:true,confirmarProtecao:true})).then(r=>{
+if(!r.ok){this.setState({ip:Object.assign({},this.state.ip,{erro:r.erro||'Não foi possível iniciar.'})});return;}
+this.setState({ip:Object.assign({},this.state.ip,{erro:'',id:r.id,snap:{estado:'executando',total:0,feitos:0,enviados:0,nFalhas:0,falhas:[],bytes:0,puladosAntes:0}})});
+this.ipPoll(r.id);
+});
+}
+ipPoll(id){
+clearInterval(this._ipp);
+const tick=()=>fetch('/_importar/'+encodeURIComponent(id),{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error('HTTP '+r.status))).then(sn=>{
+if(this.state.ip.id!==id){clearInterval(this._ipp);return;}
+this.setState({ip:Object.assign({},this.state.ip,{snap:sn})});
+if(sn.estado!=='executando')clearInterval(this._ipp);
+}).catch(e=>{clearInterval(this._ipp);this.setState({ip:Object.assign({},this.state.ip,{erro:'Perdi o contato com o servidor local: '+e.message})});});
+this._ipp=setInterval(tick,700);tick();
+}
+ipCancelar(){const id=this.state.ip.id;if(id)this.cfgCall('/_importar/'+encodeURIComponent(id)+'/cancelar','POST',{});}
 cmpRodar(){
 const s=this.state,f=s.forms.comparar,ids=Object.keys(PERFIS);
 const a=f.a&&PERFIS[f.a]?f.a:s.perfil,b=f.b&&PERFIS[f.b]?f.b:(ids.find(k=>k!==a)||'');
@@ -1348,7 +1440,7 @@ if(f.rm!==id){this.setF('perfis',{rm:id});clearTimeout(this._rm);this._rm=setTim
 this.setF('perfis',{rm:''});
 this.cfgCall('/_config/perfil/'+encodeURIComponent(id),'DELETE').then(r=>{if(!r.ok){this.aviso(r.erro||'Não foi possível remover.');return;}this.recarregarPerfis({}).then(()=>this.aviso('Perfil "'+id+'" removido do config.json.'));});
 }
-componentWillUnmount(){clearInterval(this._iv);clearInterval(this._api);clearInterval(this._bxp);clearInterval(this._ltp);clearInterval(this._vgp);}
+componentWillUnmount(){clearInterval(this._iv);clearInterval(this._api);clearInterval(this._bxp);clearInterval(this._ltp);clearInterval(this._vgp);clearInterval(this._ipp);}
 
 eff(){const s=this.state;return s.screen==='fluxo'?['importar','assinatura','resultado'][s.wizStep]:s.screen;}
 setF(sc,patch){const s=this.state;this.setState({forms:Object.assign({},s.forms,{[sc]:Object.assign({},s.forms[sc],patch)})});}
@@ -1434,7 +1526,7 @@ if(t&&(t.type==='file'||t.type==='checkbox'||t.type==='search'))return;
 if(s.logOpen)return;
 e.preventDefault();this.send();}
 };
-send(){const sc=this.eff();if(sc==='inicio'||sc==='resultado'||sc==='diagnostico'||sc==='perfis'||sc==='baixarPasta'||sc==='comparar'||sc==='lote'||sc==='fumaca'||sc==='vigia')return;if(this.state.loading[sc])return;const p=this.plan(sc);if(p.ready)this.run(sc);}
+send(){const sc=this.eff();if(sc==='inicio'||sc==='resultado'||sc==='diagnostico'||sc==='perfis'||sc==='baixarPasta'||sc==='comparar'||sc==='lote'||sc==='fumaca'||sc==='vigia'||sc==='importarPasta')return;if(this.state.loading[sc])return;const p=this.plan(sc);if(p.ready)this.run(sc);}
 
 plan(sc){
 const s=this.state,f=s.forms[sc]||{},perfil=s.perfil,v=s.validar;
@@ -1664,7 +1756,7 @@ const res0=s.results[eff];
 const loading=!!s.loading[eff];
 const show={};ORDER.concat(['resultado']).forEach(i=>{show[i]=eff===i;});
 show.fluxo=s.screen==='fluxo';
-show.form=eff!=='inicio'&&eff!=='resultado'&&eff!=='diagnostico'&&eff!=='perfis'&&eff!=='baixarPasta'&&eff!=='comparar'&&eff!=='lote'&&eff!=='fumaca'&&eff!=='vigia';
+show.form=eff!=='inicio'&&eff!=='resultado'&&eff!=='diagnostico'&&eff!=='perfis'&&eff!=='baixarPasta'&&eff!=='comparar'&&eff!=='lote'&&eff!=='fumaca'&&eff!=='vigia'&&eff!=='importarPasta';
 const T=(sc,k,o)=>this.fld(sc,k,o);
 const last=s.lastDoc[perfil],lastA=s.lastAss[perfil];
 const docLast=(sc)=>({useLast:true,lastLabel:last?'Usar último documentoId ('+last+')':'Nenhum documentoId recente',lastDisabled:!last,onLast:()=>this.setF(sc,{documentoId:String(last)})});
@@ -1947,6 +2039,43 @@ destinoAtual:bxs?bxs.destino:'',hasRel:!!bxs&&!!bxs.relatorio,relatorio:bxs?bxs.
 amostra:(bxs&&bxs.amostra||[]).map(n=>({n})),hasAmostra:!!bxs&&!!(bxs.amostra||[]).length&&!!bxs.ensaio,
 falhas:(bxs&&bxs.falhas||[]).map(x=>({id:x.documentoId,nome:x.nome||'(sem nome)',erro:x.erro})),hasFalhas:!!bxs&&bxs.nFalhas>0,nFalhas:bxs?bxs.nFalhas:0,
 copyFalhas:()=>this.copy((bxs?bxs.falhas:[]).map(x=>x.documentoId+' · '+x.nome+' · '+x.erro).join('\n'),'Falhas copiadas.')};
+// importar pasta
+const fip=s.forms.importarPasta,ipst=s.ip,ens=ipst.ens,isn=ipst.snap;
+const ipAtivo=!!isn&&isn.estado==='executando';
+const pmI=(PERFIS[perfil]||{}).protegido||'';
+const IPT={executando:'Enviando…',concluido:'Concluído',cancelado:'Cancelado',erro:'Interrompido'};
+const IPC={executando:'mu',concluido:'ok',cancelado:'wn',erro:'er'};
+const ipv={
+origem:fip.origem,onOrigem:e=>this.ipSet({origem:e.target.value}),
+subpastas:!!fip.subpastas,onSub:e=>this.ipSet({subpastas:e.target.checked}),
+pastaPai:fip.pastaPai,onPai:e=>this.ipSet({pastaPai:e.target.value}),
+pasta:fip.pasta,onPasta:e=>this.ipSet({pasta:e.target.value}),
+tipo:fip.tipo,onTipo:e=>this.ipSet({tipo:e.target.value}),
+pular:!!fip.pular,onPular:e=>this.ipSet({pular:e.target.checked}),
+intervalo:fip.intervalo,onIntervalo:e=>this.setF('importarPasta',{intervalo:e.target.value}),
+escolher:()=>this.ipEscolher(),escolherLabel:ipst.escolhendo?'Aguardando a janela…':'Escolher pasta…',escolherOff:ipst.escolhendo||ipAtivo,
+verificar:()=>this.ipEnsaio(),verificarOff:ipst.busy||ipAtivo,busy:ipst.busy,
+hasErr:!!ipst.erro,err:ipst.erro,
+has:!!ens,
+resumo:ens?(ens.arquivos+' arquivo(s) em '+ens.pastas+' pasta(s) · '+fmtSize(ens.bytes)+' · '+ens.aEnviar+' a enviar'+(ens.jaEnviados?' · '+ens.jaEnviados+' já enviado(s) antes':'')+(ens.nIgnorados?' · '+ens.nIgnorados+' ignorado(s)':'')):'',
+exts:ens?Object.keys(ens.porExtensao).sort().map(k=>k+': '+ens.porExtensao[k]).join(' · '):'',
+amostra:(ens&&ens.amostra||[]).map(a=>({arq:a.arquivo,dest:a.pastaPai+' → '+a.pasta})),hasAmostra:!!ens&&ens.amostra.length>0,
+ign:(ens&&ens.ignorados||[]).map(i=>({arq:i.arquivo,motivo:i.motivo})),hasIgn:!!ens&&ens.nIgnorados>0,nIgn:ens?ens.nIgnorados:0,
+podeEnviar:!!ens&&ens.aEnviar>0&&!ipAtivo&&pmI!=='bloquear',naoPode:!(!!ens&&ens.aEnviar>0&&!ipAtivo&&pmI!=='bloquear'),
+bloqueado:pmI==='bloquear',prodAviso:pmI==='confirmar',nadaNovo:!!ens&&ens.aEnviar===0&&ens.arquivos>0,
+enviarLabel:ens?'Enviar '+ens.aEnviar+' arquivo(s)…':'Enviar',
+enviar:()=>this.ipIniciar(false),confirmando:!!fip.confirmando&&!ipAtivo,
+confirmaTxt:ens?'Isso vai enviar '+ens.aEnviar+' arquivo(s) ('+fmtSize(ens.bytesAEnviar)+') para o perfil '+perfil+', na pasta “'+(fip.pasta||'')+'”.'+(pmI==='confirmar'?' O perfil está marcado como produção.':'')+' A API não permite excluir documentos depois.':'',
+confirmar:()=>this.ipIniciar(true),recuar:()=>this.setF('importarPasta',{confirmando:false}),
+ocupado:ipAtivo,cancelar:()=>this.ipCancelar(),
+prog:!!isn,cls:isn?(IPC[isn.estado]||'mu'):'mu',label:isn?(IPT[isn.estado]||isn.estado):'',
+pct:isn&&isn.total?Math.min(100,Math.round(isn.feitos*100/isn.total)):0,barStyle:'width:'+(isn&&isn.total?Math.min(100,Math.round(isn.feitos*100/isn.total)):0)+'%',
+progresso:isn?isn.feitos+' de '+isn.total:'',
+hasAtual:!!isn&&!!isn.atual,atual:isn?isn.atual:'',
+resumoEnvio:isn?(isn.enviados+' enviado(s) · '+isn.nFalhas+' com falha · '+fmtSize(isn.bytes)+(isn.puladosAntes?' · '+isn.puladosAntes+' pulado(s) (já enviados antes)':'')):'',
+hasFim:!!isn&&isn.estado!=='executando',relHref:ipst.id?'/_importar/'+encodeURIComponent(ipst.id)+'/relatorio.csv':'#',
+hasEstErro:!!isn&&!!isn.erro,estErro:isn?isn.erro:'',
+falhas:(isn&&isn.falhas||[]).map(x=>({arq:x.arquivo,erro:x.erro})),hasFalhas:!!isn&&isn.nFalhas>0,nFalhas:isn?isn.nFalhas:0};
 // vigia de assinaturas
 const vgV=(s.vg.todos||[]).find(x=>x.perfil===perfil);
 const vgNovos=(s.vg.todos||[]).reduce((n,v)=>n+v.eventos.filter(e=>e.id>(s.vg.vistos[v.perfil]!=null?s.vg.vistos[v.perfil]:v.ultimoEvento)).length,0);
@@ -2101,7 +2230,7 @@ hasRes:!!res0,noRes:!res0&&!loading,res,tabs,tabResumo:s.tab==='resumo',tabJson:
 jsonCopyAll:()=>this.copy(JSON.stringify(res0?res0.body:{},null,2)),jsonCollapse:()=>this.setState({collapsed:allPaths(res0?res0.body:{},'$',{})}),jsonExpand:()=>this.setState({collapsed:{}}),
 nexts,hasNexts:nexts.length>0,
 hasLinks:links.length>0&&eff==='assinatura',links,linksNote:linkSrc?(linkSrc.conviteEnviado?'Convite enviado por e-mail (conviteEnviado = true). Os links abaixo também valem.':'Nenhum e-mail foi enviado (conviteEnviado = false, padrão). Envie cada link ao signatário.'):'',
-dt,pt,md,stv,dl,wiz,al,asv,api,hist,dg:dgn,prot,pf,bx,cm,lote,fumaca,vg,
+dt,pt,md,stv,dl,wiz,al,asv,api,hist,dg:dgn,prot,pf,bx,cm,lote,fumaca,vg,ip:ipv,
 logOpen:s.logOpen,logFav:s.logFav,onLogFav:e=>this.setState({logFav:e.target.checked}),logRows:lrows,logEmpty:lrows.length===0&&!sel,hasLogSel:!!sel,showLogList:!sel,ld,
 paletteOpen:s.paletteOpen,paletteQ:s.paletteQ,onPaletteQ:e=>this.setState({paletteQ:e.target.value}),palItems,palEmpty:palItems.length===0,closePalette:()=>this.setState({paletteOpen:false}),stop:e=>{if(e&&e.stopPropagation)e.stopPropagation();},
 toast:s.toast,toastCls:s.toast?'':'off'

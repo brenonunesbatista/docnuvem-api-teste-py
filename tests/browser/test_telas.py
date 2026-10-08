@@ -397,3 +397,46 @@ def test_baixar_pasta_com_filtros_de_status_e_data(pagina: Pagina, upstream: Ups
     assert "status=assinado" in caminho
     assert "dataInicio=2026-01-01" in caminho
     assert "dataFim=2026-03-31" in caminho
+
+
+def test_importar_pasta_mostra_o_plano_confirma_e_envia(
+    pagina: Pagina, upstream: Upstream, tmp_path: Path
+) -> None:
+    page = pagina.page
+    origem = tmp_path / "cliente"
+    (origem / "Contratos").mkdir(parents=True)
+    (origem / "raiz.pdf").write_bytes(b"%PDF raiz")
+    (origem / "Contratos" / "um.pdf").write_bytes(b"%PDF um")
+    (origem / "programa.exe").write_bytes(b"MZ")
+    upstream.respostas[IMPORTAR] = (200, '{"documentoId": 5}')
+    pagina.ir("Importar pasta")
+    page.fill("#ip-origem", str(origem))
+    page.fill("#ip-pasta", "Cliente X")
+    pagina.botao("Ver o que será enviado").click()
+    expect(page.locator("main")).to_contain_text("2 arquivo(s) em 2 pasta(s)")
+    expect(page.locator("main")).to_contain_text("extensão não aceita (.exe)")
+    expect(page.locator("main")).to_contain_text("/Meus documentos/Cliente X")  # o plano é visível
+    assert _enviadas(upstream, *IMPORTAR) == []  # ver o plano nunca envia
+    page.fill("#ip-int", "0")
+    pagina.botao("Enviar 2 arquivo(s)").click()
+    expect(page.locator("main [role=alertdialog]")).to_contain_text("API não permite excluir")
+    assert _enviadas(upstream, *IMPORTAR) == []
+    pagina.botao("Confirmar e enviar").click()
+    expect(page.locator("main")).to_contain_text("2 enviado(s)")
+    assert len(_enviadas(upstream, *IMPORTAR)) == 2
+    # um segundo envio da mesma pasta não duplica nada
+    pagina.botao("Ver o que será enviado").click()
+    expect(page.locator("main")).to_contain_text("2 já enviado(s) antes")
+    expect(pagina.botao("Enviar 0 arquivo(s)")).to_be_disabled()
+
+
+def test_importar_pasta_nao_envia_em_perfil_somente_leitura(pagina: Pagina, tmp_path: Path) -> None:
+    page = pagina.page
+    (tmp_path / "a.pdf").write_bytes(b"x")
+    page.select_option("#perfil", "leitura")
+    pagina.ir("Importar pasta")
+    page.fill("#ip-origem", str(tmp_path))
+    page.fill("#ip-pasta", "X")
+    pagina.botao("Ver o que será enviado").click()
+    expect(page.locator("main .dangerbox")).to_contain_text("somente leitura")
+    expect(pagina.botao("Enviar 1 arquivo(s)")).to_be_disabled()

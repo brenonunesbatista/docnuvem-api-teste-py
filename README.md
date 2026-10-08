@@ -74,6 +74,11 @@ Opções: `--porta N`, `--nao-abrir`, `--sem-historico`, `--dados PASTA`.
   refazendo a árvore), com filtro opcional de status e de período. Você escolhe o destino por uma janela ou digitando o caminho;
   há "só contar" antes de baixar, andamento, cancelamento e um relatório CSV. Nunca sobrescreve
   arquivos. Só lê da API, então vale até em perfil protegido.
+- **Importar pasta**: envia uma pasta do computador para o Docnuvem, refazendo as subpastas. Mostra
+  antes o plano (de onde → para onde, o que será ignorado e por quê), pede confirmação, envia com
+  intervalo, para sozinho após falhas seguidas e gera relatório CSV. O programa anota o que já enviou
+  (por perfil e destino) e um segundo envio da mesma pasta pula o que já foi. Perfil somente leitura
+  não importa.
 - **Vigia de assinaturas pendentes**: em segundo plano, consulta de tempos em tempos (a partir de
   5 min) os documentos pendentes do perfil e registra quem assinou ou visualizou, documento
   concluído, expirado ou cancelado e prazo perto de acabar. Mostra o contador no menu e pode

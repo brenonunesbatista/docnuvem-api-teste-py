@@ -46,6 +46,13 @@ from docnuvem_tester.config import (
     salvar_perfil,
 )
 from docnuvem_tester.download import ErroDownload, GerenciadorDownload, validar_destino
+from docnuvem_tester.importar_pasta import (
+    ErroImportacao,
+    GerenciadorImportacao,
+    Registro,
+    validar_origem,
+)
+from docnuvem_tester.importar_pasta import ensaio as ensaio_importacao
 from docnuvem_tester.lote import ErroLote, GerenciadorLote, preparar
 from docnuvem_tester.roteiro import rodar_fumaca
 from docnuvem_tester.vigia import ErroVigia, GerenciadorVigia
@@ -604,6 +611,8 @@ class Servidor(ThreadingHTTPServer):
         self.downloads = GerenciadorDownload()
         self.lotes = GerenciadorLote()
         self.vigias = GerenciadorVigia()
+        registro = Registro(historico.arquivo.parent / "importados.jsonl") if historico else None
+        self.importacoes = GerenciadorImportacao(registro)
         self.historico = historico
         self.cliente = cliente or httpx.Client(timeout=TIMEOUT)
         self._cliente_proprio = cliente is None
@@ -721,6 +730,11 @@ class Handler(BaseHTTPRequestHandler):
             return self._perfis()
         if caminho.startswith("/_status/"):
             return self._status(unquote(caminho[len("/_status/") :]), parse_qs(partes.query))
+        if caminho.startswith("/_importar/"):
+            resto = unquote(caminho[len("/_importar/") :])
+            if resto.endswith("/relatorio.csv"):
+                return self._ip_relatorio(resto[: -len("/relatorio.csv")])
+            return self._ip_estado(resto)
         if caminho == "/_vigia":
             return self._json({"vigias": [v.snapshot() for v in self.server.vigias.todos()]})
         if caminho == "/_arquivo-teste":
@@ -748,6 +762,12 @@ class Handler(BaseHTTPRequestHandler):
             return self._hist_gravar()
         if caminho == "/_historico/favorito":
             return self._hist_favorito()
+        if caminho == "/_importar/ensaio":
+            return self._ip_ensaio()
+        if caminho == "/_importar/iniciar":
+            return self._ip_iniciar()
+        if caminho.startswith("/_importar/") and caminho.endswith("/cancelar"):
+            return self._ip_cancelar(unquote(caminho[len("/_importar/") : -len("/cancelar")]))
         if caminho == "/_vigia/iniciar":
             return self._vigia_iniciar()
         if caminho in ("/_vigia/parar", "/_vigia/agora"):
@@ -814,6 +834,119 @@ class Handler(BaseHTTPRequestHandler):
                 "editavel": self.server.arquivo_config is not None,
                 "arquivoConfig": str(self.server.arquivo_config or ""),
             }
+        )
+
+    def _ip_campos(self, dado: dict[str, Any]) -> dict[str, Any] | None:
+        """Lê e valida os campos comuns do ensaio e do envio; responde o erro e devolve None."""
+        alvo = self._perfil_do_corpo(dado)
+        if alvo is None:
+            return None
+        try:
+            origem = validar_origem(str(dado.get("origem", "")))
+        except ErroImportacao as exc:
+            self._json({"ok": False, "erro": str(exc)}, 400)
+            return None
+        return {
+            "nome": alvo[0],
+            "perfil": alvo[1],
+            "origem": origem,
+            "subpastas": dado.get("subpastas") is True,
+            "pasta_pai": str(dado.get("pastaPai") or ""),
+            "pasta": str(dado.get("pasta") or ""),
+            "tipo": str(dado.get("tipo") or ""),
+            "pular_enviados": dado.get("pularEnviados") is not False,
+        }
+
+    def _ip_ensaio(self) -> None:
+        dado = self._corpo_json()
+        if dado is None:
+            return
+        c = self._ip_campos(dado)
+        if c is None:
+            return
+        try:
+            r = ensaio_importacao(
+                c["origem"],
+                subpastas=c["subpastas"],
+                pasta_pai=c["pasta_pai"],
+                pasta=c["pasta"],
+                perfil=c["nome"],
+                registro=self.server.importacoes.registro,
+                pular_enviados=c["pular_enviados"],
+            )
+        except ErroImportacao as exc:
+            return self._json({"ok": False, "erro": str(exc)}, 400)
+        self._json({"ok": True, **r})
+
+    def _ip_iniciar(self) -> None:
+        dado = self._corpo_json()
+        if dado is None:
+            return
+        c = self._ip_campos(dado)
+        if c is None:
+            return
+        perfil: PerfilConfig = c["perfil"]
+        if perfil.protecao == "bloquear":
+            return self._json(
+                {"ok": False, "erro": "Perfil protegido (só leitura): não dá para importar."}, 403
+            )
+        if dado.get("confirmarEnvio") is not True:
+            return self._json(
+                {"ok": False, "erro": "O envio de arquivos precisa de confirmação."}, 428
+            )
+        if perfil.protecao == "confirmar" and dado.get("confirmarProtecao") is not True:
+            return self._json(
+                {"ok": False, "erro": "Perfil protegido: confirme que quer importar em produção."},
+                428,
+            )
+        try:
+            intervalo = int(dado.get("intervaloMs", 300))
+        except (TypeError, ValueError):
+            return self._json({"ok": False, "erro": "Intervalo inválido."}, 400)
+        try:
+            imp = self.server.importacoes.iniciar(
+                self.server.cliente,
+                c["nome"],
+                perfil,
+                origem=c["origem"],
+                subpastas=c["subpastas"],
+                pasta_pai=c["pasta_pai"],
+                pasta=c["pasta"],
+                tipo=c["tipo"],
+                pular_enviados=c["pular_enviados"],
+                intervalo_ms=intervalo,
+            )
+        except ErroImportacao as exc:
+            return self._json(
+                {"ok": False, "erro": str(exc)}, 409 if "andamento" in str(exc) else 400
+            )
+        self._json({"ok": True, "id": imp.id})
+
+    def _ip_estado(self, id_: str) -> None:
+        imp = self.server.importacoes.obter(id_)
+        if imp is None:
+            return self._texto(404, "Importação desconhecida.")
+        self._json(imp.snapshot())
+
+    def _ip_cancelar(self, id_: str) -> None:
+        if not self._origem_ok():
+            return self._texto(403, "Origem não permitida.")
+        imp = self.server.importacoes.obter(id_)
+        if imp is None:
+            return self._texto(404, "Importação desconhecida.")
+        imp.cancelar.set()
+        self._json({"ok": True})
+
+    def _ip_relatorio(self, id_: str) -> None:
+        imp = self.server.importacoes.obter(id_)
+        if imp is None:
+            return self._texto(404, "Importação desconhecida.")
+        carimbo = datetime.now().strftime("%Y%m%d-%H%M%S")
+        self._enviar(
+            200,
+            imp.relatorio_csv(),
+            "text/csv; charset=utf-8",
+            {"Content-Disposition": f'attachment; filename="docnuvem-importacao-{carimbo}.csv"'},
         )
 
     def _vigia_iniciar(self) -> None:
