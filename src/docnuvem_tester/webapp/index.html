@@ -1066,7 +1066,7 @@ const numBR=s=>/^-?(\d{1,3}(\.\d{3})+|\d+)(,\d+)?$/.test(s||'');
 const isoDT=s=>/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(s||'')&&!isNaN(new Date(s).getTime());
 const fmtDT=d=>{if(!d)return '—';try{return new Date(d).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});}catch(e){return String(d);}};
 const fmtT=d=>{try{return new Date(d).toLocaleTimeString('pt-BR');}catch(e){return '';}};
-const fmtSize=n=>n>1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.round(n/1024))+' KB';
+const fmtSize=n=>n>=1048576?(n/1048576).toFixed(Number.isInteger(n/1048576)?0:1)+' MB':Math.max(1,Math.round(n/1024))+' KB';
 const money=n=>String(n);
 const skey=v=>String(v==null?'':v).toLowerCase();
 const stl=(k,d)=>STL[k]||d||k||'—';
@@ -1074,6 +1074,8 @@ const sti=k=>STI[k]||ICON.minus;
 const stc=k=>STC[k]||'mu';
 const KNOWN_T=['TEXTO','TEXTO_LONGO','DATA','NUMERICO','CHECKBOX','SELECT'];
 const normTipo=t=>{const u=String(t||'TEXTO').toUpperCase();return u==='PARAGRAFO'?'TEXTO_LONGO':u==='DATA_VENCIMENTO'?'DATA':u;};
+// Uma resposta fora do formato (ex.: sem a lista) vira lista vazia em vez de derrubar a página.
+const normLista=(sc,b)=>{b=b&&typeof b==='object'?b:{};const k=sc==='documentos'?'documentos':sc==='pastas'?'diretorios':'modelos';return Object.assign({total:0,pagina:0,tamanho:0,temMais:false},b,{[k]:Array.isArray(b[k])?b[k]:[]});};
 const normModelos=a=>(a||[]).map(m=>Object.assign({},m,{codigo:m.codigo||String(m.id||''),geravelPorApi:!!m.geravelPorApi,variaveis:(m.variaveis||[]).map(v=>{const t=normTipo(v.tipo);return Object.assign({},v,{tipo:t,aceitaPorApi:!!v.aceitaPorApi&&KNOWN_T.indexOf(t)>=0,preenchidoPeloDestinatario:!!v.preenchidoPeloDestinatario});})}));
 
 function reqView(req,perfil){
@@ -1607,7 +1609,7 @@ if(ok){const b=out.r.body||{};
 if(b.documentoId&&['importar','envio','template'].indexOf(sc)>=0)patch.lastDoc=Object.assign({},st.lastDoc,{[perfil]:b.documentoId});
 if(b.codigoMatricula&&['alunoSolicitar','alunoStatus'].indexOf(sc)>=0)patch.lastMat=String(b.codigoMatricula);
 if(sc==='assinatura'&&b.assinaturaId)patch.lastAss=Object.assign({},st.lastAss,{[perfil]:b.assinaturaId});
-if(['documentos','pastas','modelos'].indexOf(sc)>=0)lists=Object.assign({},lists,{[sc]:b});
+if(['documentos','pastas','modelos'].indexOf(sc)>=0)lists=Object.assign({},lists,{[sc]:normLista(sc,b)});
 if(st.screen==='fluxo'){
 if(sc==='importar'){patch.wizStep=1;patch.forms=Object.assign({},st.forms,{assinatura:Object.assign({},st.forms.assinatura,{documentoId:String(b.documentoId)})});}
 if(sc==='assinatura')patch.wizStep=2;}}
@@ -1907,7 +1909,7 @@ const DGN={ok:['ok',ICON.check,'Tudo certo'],aviso:['wn',ICON.alert,'Atenção']
 const DGI={ok:['ok',ICON.check,'OK'],aviso:['wn',ICON.alert,'Atenção'],erro:['er',ICON.x,'Falhou'],info:['mu',ICON.clock,'Informação'],pulado:['mu',ICON.minus,'Pulado']};
 const dgItens=(dgs.itens||[]).map(it=>{const k=DGI[it.nivel]||DGI.info;return {titulo:it.titulo,cls:k[0],icon:k[1],label:k[2],detalhe:it.detalhe,causa:it.causa,hasCause:!!it.causa,hasList:!!(it.lista&&it.lista.length),lista:(it.lista||[]).map(m=>({codigo:m.codigo,nome:m.nome,cls:m.geravel?'ok':'mu',txt:m.geravel?'gerável por API':'não gerável por API'})),causaLabel:(it.nivel==='aviso'||it.nivel==='erro')?'Causa provável:':'Observação:'};});
 const dgk=dgs.erroLocal?['er',ICON.alert,'Servidor local sem resposta']:dgs.busy&&!dgs.nivel?['mu',ICON.refresh,'Verificando…']:dgs.nivel?DGN[dgs.nivel]:['mu',ICON.minus,'Ainda não verificado'];
-const dg={cls:dgk[0],icon:dgk[1],label:dgk[2],busy:!!dgs.busy,notBusy:!dgs.busy,empty:!dgs.itens&&!dgs.busy&&!dgs.erroLocal,hasErr:!!dgs.erroLocal,err:dgs.erroLocal||'',has:!!dgs.itens,items:dgItens,
+const dgn={cls:dgk[0],icon:dgk[1],label:dgk[2],busy:!!dgs.busy,notBusy:!dgs.busy,empty:!dgs.itens&&!dgs.busy&&!dgs.erroLocal,hasErr:!!dgs.erroLocal,err:dgs.erroLocal||'',has:!!dgs.itens,items:dgItens,
 quando:dgs.verificadoEm?fmtT(dgs.verificadoEm):'',run:()=>this.diagnosticar(),
 copy:()=>this.copy(['DIAGNÓSTICO DA INSTÂNCIA · Docnuvem API Tester','Perfil: '+perfil+' (instância: '+(dgs.instancia||'?')+')','Servidor: '+(dgs.baseUrl||'?'),'Quando: '+(dgs.verificadoEm?new Date(dgs.verificadoEm).toLocaleString('pt-BR'):'?'),'Geral: '+dgk[2],''].concat((dgs.itens||[]).map(it=>'['+(DGI[it.nivel]||DGI.info)[2]+'] '+it.titulo+': '+it.detalhe+(it.lista?it.lista.map(m=>'\n    - '+m.nome+' ('+m.codigo+')'+(m.geravel?' [gerável por API]':'')).join(''):'')+(it.causa?'\n    Causa provável: '+it.causa:''))).join('\n'),'Diagnóstico copiado.')};
 // baixar pasta
@@ -2092,7 +2094,7 @@ hasRes:!!res0,noRes:!res0&&!loading,res,tabs,tabResumo:s.tab==='resumo',tabJson:
 jsonCopyAll:()=>this.copy(JSON.stringify(res0?res0.body:{},null,2)),jsonCollapse:()=>this.setState({collapsed:allPaths(res0?res0.body:{},'$',{})}),jsonExpand:()=>this.setState({collapsed:{}}),
 nexts,hasNexts:nexts.length>0,
 hasLinks:links.length>0&&eff==='assinatura',links,linksNote:linkSrc?(linkSrc.conviteEnviado?'Convite enviado por e-mail (conviteEnviado = true). Os links abaixo também valem.':'Nenhum e-mail foi enviado (conviteEnviado = false, padrão). Envie cada link ao signatário.'):'',
-dt,pt,md,stv,dl,wiz,al,asv,api,hist,dg,prot,pf,bx,cm,lote,fumaca,vg,
+dt,pt,md,stv,dl,wiz,al,asv,api,hist,dg:dgn,prot,pf,bx,cm,lote,fumaca,vg,
 logOpen:s.logOpen,logFav:s.logFav,onLogFav:e=>this.setState({logFav:e.target.checked}),logRows:lrows,logEmpty:lrows.length===0&&!sel,hasLogSel:!!sel,showLogList:!sel,ld,
 paletteOpen:s.paletteOpen,paletteQ:s.paletteQ,onPaletteQ:e=>this.setState({paletteQ:e.target.value}),palItems,palEmpty:palItems.length===0,closePalette:()=>this.setState({paletteOpen:false}),stop:e=>{if(e&&e.stopPropagation)e.stopPropagation();},
 toast:s.toast,toastCls:s.toast?'':'off'

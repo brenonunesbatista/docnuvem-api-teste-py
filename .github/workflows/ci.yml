@@ -25,6 +25,20 @@ jobs:
       - run: mypy
       - run: pytest
 
+  navegador:
+    # Abre a página num navegador de verdade (Chromium do Playwright) contra a API falsa.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev,browser]"
+      - run: playwright install --with-deps chromium
+      - run: pytest -m browser
+        env:
+          DOCNUVEM_BROWSER_CHANNEL: ""
+
   contrato:
     # Compara a API real com o que a ferramenta conhece. Só roda na agenda ou à mão.
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'

@@ -8,8 +8,30 @@
 - **Versão:** a do artifact em 2026-10-07 (contrato 0.2.47).
 - **SHA-256:** `3f160299989dc595cf434dac7b7f3e6fd20ed015a2d99e075c3eac09dffe0f10`
 - **Não edite o arquivo.** Ele é minificado e gerado.
-- **Licença do runtime em si:** não verificada. Confirme os termos antes de distribuir o projeto
-  fora da equipe.
+
+### Situação da licença do runtime em si: **não confirmada**
+
+Verificado em 2026-10-08:
+
+- O arquivo só traz avisos de licença do **React** (MIT, Facebook). Não há nenhum aviso, nome ou
+  termo próprio do runtime (nenhuma menção a Anthropic ou a uma licença).
+- Uma busca pública não achou documentação sobre a licença do `dc-runtime.js` nem sobre reuso do
+  que o tipo Design exporta.
+- As Condições da Anthropic atribuem ao usuário os direitos sobre o que o Claude gera, mas com ressalvas
+  ("se houver", "na medida permitida em lei"), e não tratam desse arquivo em particular. Isso não substitui
+  uma confirmação.
+
+**Consequência prática:** para uso interno da equipe, o risco é pequeno. **Antes de entregar o
+`.exe` ou o pacote a terceiros**, obtenha uma resposta por escrito.
+
+### Pergunta pronta para enviar (suporte da Anthropic ou responsável jurídico)
+
+> Criei uma ferramenta interna usando o tipo "Design" do Claude (artifacts). A página publicada carrega
+> um arquivo `dc-runtime.js` (cerca de 188 KB, com o React MIT embutido). Copiei esse arquivo e passei a
+> distribuí-lo junto com uma ferramenta que escrevi (executável e pacote Python), sem alterá-lo.
+> 1) Os termos permitem copiar e redistribuir o `dc-runtime.js` assim? 2) Se sim, há aviso de
+> licença/atribuição que devo incluir? 3) Se não, existe uma versão do runtime com licença que permita
+> redistribuição?
 
 ### Como atualizar
 

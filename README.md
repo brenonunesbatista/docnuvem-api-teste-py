@@ -135,6 +135,7 @@ O executável leva junto o runtime da página; veja a questão da licença em
 ```bash
 pip install -e ".[dev]"
 pytest              # testes (sem rede)
+pip install -e ".[browser]" && pytest -m browser   # testes que abrem a página num navegador
 ruff check . && ruff format --check .
 mypy
 docnuvem-spec       # compara a API atual com o que a ferramenta conhece

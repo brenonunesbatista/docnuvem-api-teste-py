@@ -48,8 +48,10 @@ Legenda: ✅ feito · 🔜 próximo · ⬜ planejado.
 
 ## Próximos passos sugeridos
 
-- **Licença do `dc-runtime.js`** (bloqueia entregar o `.exe` a terceiros).
-- **Testes de navegador** (Playwright) para proteger a página.
+- **Licença do `dc-runtime.js`** (bloqueia entregar o `.exe` a terceiros): investigada, **sem
+  confirmação pública**; pergunta pronta em `webapp/THIRD_PARTY.md`. Falta a resposta por escrito.
+- ✅ **Testes de navegador** (Playwright): feitos, `pytest -m browser` (22 testes). Já acharam 4 defeitos
+  da página (veja o histórico do git).
 - Roteiros de teste que o usuário monta e salva (hoje só há o teste de fumaça fixo).
 
 ## Decisões em aberto

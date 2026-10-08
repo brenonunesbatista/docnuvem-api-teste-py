@@ -18,6 +18,10 @@ dev = [
     "ruff>=0.6",
     "mypy>=1.9",
 ]
+# Testes que abrem a página num navegador: pytest -m browser (veja tests/browser/conftest.py).
+browser = [
+    "playwright>=1.45",
+]
 
 [project.scripts]
 docnuvem-web = "docnuvem_tester.web:main"
@@ -31,7 +35,8 @@ docnuvem_tester = ["webapp/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q"
+addopts = "-q -m 'not browser'"
+markers = ["browser: abre a página num navegador (mais lento); rode com `pytest -m browser`"]
 
 [tool.ruff]
 line-length = 100
