@@ -46,13 +46,19 @@ Legenda: ✅ feito · 🔜 próximo · ⬜ planejado.
 4. ✅ **Runtime da página:** avaliado em [runtime-da-pagina.md](runtime-da-pagina.md). Conclusão: não
    trocar agora; antes, confirmar a licença e criar testes de navegador.
 
-## Próximos passos sugeridos
+## Próximos passos
 
-- **Licença do `dc-runtime.js`** (bloqueia entregar o `.exe` a terceiros): investigada, **sem
-  confirmação pública**; pergunta pronta em `webapp/THIRD_PARTY.md`. Falta a resposta por escrito.
-- ✅ **Testes de navegador** (Playwright): feitos, `pytest -m browser` (22 testes). Já acharam 4 defeitos
-  da página (veja o histórico do git).
-- Roteiros de teste que o usuário monta e salva (hoje só há o teste de fumaça fixo).
+Nenhum planejado. As quatro etapas estão feitas.
+
+- ✅ **Testes de navegador** (Playwright): feitos, `pytest -m browser` (22 testes). Já acharam 3 defeitos
+  da página.
+
+**Descartados em 2026-10-08** (sem interesse por ora):
+
+- Roteiros de teste que o usuário monta e salva (fica só o teste de fumaça fixo).
+- Obter a confirmação da licença do `dc-runtime.js`. Só importa se o `.exe` ou o pacote for entregue a
+  terceiros; a situação e a pergunta pronta continuam em `webapp/THIRD_PARTY.md` para o dia em que
+  isso mudar.
 
 ## Decisões em aberto
 
