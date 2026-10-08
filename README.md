@@ -84,6 +84,11 @@ Opções: `--porta N`, `--nao-abrir`, `--sem-historico`, `--dados PASTA`.
   intervalo, para sozinho após falhas seguidas e gera relatório CSV. O programa anota o que já enviou
   (por perfil e destino) e um segundo envio da mesma pasta pula o que já foi. Perfil somente leitura
   não importa.
+- **Painel das instâncias**: todos os perfis de uma vez (API, token, tempo, modelos, pendentes),
+  atualizado sozinho, com atalho para trocar de perfil e abrir o diagnóstico. Inclui o **monitor de
+  disponibilidade**: em segundo plano verifica os perfis marcados e registra queda, erro, token
+  recusado, lentidão e recuperação (só depois de confirmar em duas verificações seguidas, para não
+  alarmar à toa), com histórico em barrinhas, contador no menu e notificação opcional do navegador.
 - **Vigia de assinaturas pendentes**: em segundo plano, consulta de tempos em tempos (a partir de
   5 min) os documentos pendentes do perfil e registra quem assinou ou visualizou, documento
   concluído, expirado ou cancelado e prazo perto de acabar. Mostra o contador no menu e pode

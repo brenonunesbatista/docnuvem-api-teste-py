@@ -54,6 +54,7 @@ from docnuvem_tester.importar_pasta import (
 )
 from docnuvem_tester.importar_pasta import ensaio as ensaio_importacao
 from docnuvem_tester.lote import ErroLote, GerenciadorLote, preparar
+from docnuvem_tester.monitor import ErroMonitor, Monitor, Painel
 from docnuvem_tester.pastas import ErroPastas, Pastas
 from docnuvem_tester.roteiro import rodar_fumaca
 from docnuvem_tester.vigia import ErroVigia, GerenciadorVigia
@@ -307,6 +308,7 @@ def verificar_status(cliente: httpx.Client, perfil: PerfilConfig) -> dict[str, A
         "nivel": "offline",
         "api": {"ok": False, "ms": None, "status": None},
         "token": {"ok": None, "ms": None, "status": None},
+        "modelos": None,
     }
     t0 = time.perf_counter()
     try:
@@ -333,6 +335,13 @@ def verificar_status(cliente: httpx.Client, perfil: PerfilConfig) -> dict[str, A
         return res
     tok_ms = round((time.perf_counter() - t1) * 1000)
     res["token"].update(ok=r2.status_code == 200, ms=tok_ms, status=r2.status_code)
+    if r2.status_code == 200:
+        try:
+            lista = [m for m in r2.json().get("modelos") or [] if isinstance(m, dict)]
+            geraveis = sum(1 for m in lista if m.get("geravelPorApi"))
+            res["modelos"] = {"total": len(lista), "geraveis": geraveis}
+        except (ValueError, AttributeError):
+            pass
     if r2.status_code in (401, 403):
         res["nivel"] = "token"
     elif r2.status_code >= 400:
@@ -613,6 +622,7 @@ class Servidor(ThreadingHTTPServer):
         self.lotes = GerenciadorLote()
         self.vigias = GerenciadorVigia()
         self.pastas = Pastas()
+        self.painel = Painel()
         registro = Registro(historico.arquivo.parent / "importados.jsonl") if historico else None
         self.importacoes = GerenciadorImportacao(registro)
         self.historico = historico
@@ -622,6 +632,7 @@ class Servidor(ThreadingHTTPServer):
         self.hosts_permitidos = {f"127.0.0.1:{porta}", f"localhost:{porta}", f"[::1]:{porta}"}
         self._status_cache: dict[str, tuple[float, dict[str, Any]]] = {}
         self._status_lock = threading.Lock()
+        self.monitor = Monitor(self.cliente, lambda: self.cfg, verificar_status)
 
     def status_de(self, nome: str, perfil: PerfilConfig, forcar: bool = False) -> dict[str, Any]:
         agora = time.monotonic()
@@ -634,6 +645,12 @@ class Servidor(ThreadingHTTPServer):
             self._status_cache[nome] = (agora, res)
         return res
 
+    def handle_error(self, request: Any, client_address: Any) -> None:
+        """Navegador que desiste da conexão (aba fechada, recarga) é normal: sem barulho."""
+        if isinstance(sys.exc_info()[1], ConnectionError | TimeoutError):
+            return
+        super().handle_error(request, client_address)
+
     def editar_config(self, acao: Callable[[Path], AppConfig]) -> None:
         """Aplica uma edição ao config.json e passa a usar a configuração nova."""
         if self.arquivo_config is None:
@@ -643,9 +660,11 @@ class Servidor(ThreadingHTTPServer):
         with self._status_lock:
             self._status_cache.clear()
         self.pastas.esquecer()
+        self.painel.esquecer()
 
     def server_close(self) -> None:
         self.vigias.parar_todos()
+        self.monitor.parar()
         super().server_close()
         if self._cliente_proprio:
             self.cliente.close()
@@ -740,6 +759,14 @@ class Handler(BaseHTTPRequestHandler):
             return self._ip_estado(resto)
         if caminho == "/_vigia":
             return self._json({"vigias": [v.snapshot() for v in self.server.vigias.todos()]})
+        if caminho == "/_painel":
+            forcar = parse_qs(partes.query).get("forcar", [""])[0] == "1"
+            itens = self.server.painel.todos(
+                self.server.cliente, self.server.cfg, verificar_status, forcar
+            )
+            return self._json({"perfis": itens, "padrao": self.server.cfg.perfilPadrao})
+        if caminho == "/_monitor":
+            return self._json(self.server.monitor.snapshot())
         if caminho == "/_pastas/filhos":
             return self._pastas_filhos(parse_qs(partes.query))
         if caminho == "/_arquivo-teste":
@@ -773,6 +800,10 @@ class Handler(BaseHTTPRequestHandler):
             return self._ip_iniciar()
         if caminho.startswith("/_importar/") and caminho.endswith("/cancelar"):
             return self._ip_cancelar(unquote(caminho[len("/_importar/") : -len("/cancelar")]))
+        if caminho == "/_monitor/iniciar":
+            return self._monitor_iniciar()
+        if caminho in ("/_monitor/parar", "/_monitor/agora"):
+            return self._monitor_acao(caminho.rsplit("/", 1)[1])
         if caminho == "/_vigia/iniciar":
             return self._vigia_iniciar()
         if caminho in ("/_vigia/parar", "/_vigia/agora"):
@@ -953,6 +984,32 @@ class Handler(BaseHTTPRequestHandler):
             "text/csv; charset=utf-8",
             {"Content-Disposition": f'attachment; filename="docnuvem-importacao-{carimbo}.csv"'},
         )
+
+    def _monitor_iniciar(self) -> None:
+        dado = self._corpo_json()
+        if dado is None:
+            return
+        bruto = dado.get("perfis", [])
+        if not isinstance(bruto, list) or not all(isinstance(p, str) for p in bruto):
+            return self._json({"ok": False, "erro": "perfis deve ser uma lista de nomes."}, 400)
+        try:
+            intervalo = int(dado.get("intervaloMin", 5))
+        except (TypeError, ValueError):
+            return self._json({"ok": False, "erro": "Intervalo inválido."}, 400)
+        try:
+            self.server.monitor.iniciar(set(bruto), intervalo)
+        except ErroMonitor as exc:
+            return self._json({"ok": False, "erro": str(exc)}, 400)
+        self._json({"ok": True})
+
+    def _monitor_acao(self, acao: str) -> None:
+        if self._corpo_json() is None:
+            return
+        if acao == "parar":
+            self.server.monitor.parar()
+        else:
+            self.server.monitor.agora()
+        self._json({"ok": True})
 
     def _vigia_iniciar(self) -> None:
         dado = self._corpo_json()

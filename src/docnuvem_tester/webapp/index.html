@@ -292,6 +292,11 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
 .pkr:hover{background:var(--sf2)}
 .pkr.on{background:var(--acs);color:var(--act);font-weight:700}
 .pkn{flex:1;text-align:left;border:0;background:transparent;padding:6px 8px;font-size:14px;color:inherit;border-radius:8px;overflow-wrap:anywhere}
+.hb{display:inline-block;width:8px;height:18px;border-radius:2px;background:var(--sf2);margin-right:2px}
+.hb.ok{background:var(--ok)}
+.hb.wn{background:var(--wn)}
+.hb.er{background:var(--er)}
+.beats{display:flex;flex-wrap:wrap;gap:2px 0;align-items:center}
 .modalb{padding:20px;gap:12px}
 .modalb p{margin:0;font-size:14px}
 .pfr{display:flex;flex-direction:column;gap:6px;border:1px solid var(--ln);border-radius:12px;padding:12px 14px;background:var(--sf)}
@@ -396,6 +401,55 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
               <p class="muted small">Verificado às {{dg.quando}}.</p>
             </sc-if>
           </section>
+        </sc-if>
+
+        <!-- ===== PAINEL DAS INSTÂNCIAS ===== -->
+        <sc-if value="{{show.painel}}" hint-placeholder-val="{{ false }}">
+          <section class="card">
+            <div class="row"><h2>Instâncias</h2><sc-if value="{{pn.has}}" hint-placeholder-val="{{ false }}"><span class="pill {{pn.resumoCls}}">{{pn.resumo}}</span></sc-if><span class="grow"></span><button class="btn pri sm" type="button" onClick="{{pn.atualizar}}" disabled="{{pn.busy}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.refresh}}"/></svg>Atualizar tudo</button></div>
+            <p class="muted small">Cada perfil do config.json, verificado ao mesmo tempo, só com leituras. Atualiza sozinho a cada 45 segundos enquanto esta tela está aberta.</p>
+            <sc-if value="{{pn.busy}}" hint-placeholder-val="{{ false }}"><div class="loadbar"><span class="spin"></span>Verificando as instâncias…</div></sc-if>
+            <sc-if value="{{pn.hasErr}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{pn.err}}</span></div></sc-if>
+            <div class="diag">
+              <sc-for list="{{pn.rows}}" as="r" hint-placeholder-count="3">
+                <div class="{{r.card}}">
+                  <div class="row"><strong>{{r.id}}</strong><span class="pill {{r.cls}}">{{r.label}}</span><span class="pill {{r.protCls}}">{{r.prot}}</span><sc-if value="{{r.emUso}}" hint-placeholder-val="{{ false }}"><span class="pill mu">em uso</span></sc-if></div>
+                  <dl class="kvs"><dt>Instância</dt><dd>{{r.instancia}}</dd><dt>Tempo da API</dt><dd>{{r.api}}</dd><dt>Modelos</dt><dd>{{r.modelos}}</dd><dt>Assinaturas pendentes</dt><dd>{{r.pendentes}}</dd><dt>Verificado às</dt><dd>{{r.quando}}</dd></dl>
+                  <div class="row"><button class="btn sm" type="button" onClick="{{r.usar}}">Usar este perfil</button><button class="btn sm" type="button" onClick="{{r.diag}}">Diagnóstico</button></div>
+                </div>
+              </sc-for>
+            </div>
+          </section>
+          <section class="card">
+            <div class="row"><h2>Monitor de disponibilidade</h2><span class="pill {{mn.cls}}">{{mn.label}}</span><span class="grow"></span><button class="btn sm" type="button" onClick="{{vg.notif}}">{{vg.notifLabel}}</button></div>
+            <p class="muted small">Em segundo plano, repete a verificação dos perfis marcados e registra quando uma instância cai, perde o token, dá erro ou fica lenta, e quando volta ao normal. Uma mudança só vira evento depois de confirmada em duas verificações seguidas. Funciona enquanto o programa estiver aberto.</p>
+            <div class="fields">
+              <div class="field"><label class="lbl"><span>Perfis monitorados</span></label>
+                <div class="row" style="gap:8px 18px"><sc-for list="{{mn.perfis}}" as="p" hint-placeholder-count="3"><label class="sw"><input type="checkbox" checked="{{p.on}}" onChange="{{p.toggle}}"><span class="track"></span><span class="swt">{{p.id}}</span></label></sc-for></div></div>
+              <div class="field"><label class="lbl" for="mn-int"><span>Verificar</span></label><select id="mn-int" value="{{mn.intervalo}}" onChange="{{mn.onIntervalo}}"><sc-for list="{{mn.intervaloOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.value}}" selected="{{o.selected}}">{{o.label}}</option></sc-for></select></div>
+            </div>
+            <sc-if value="{{mn.hasErr}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{mn.err}}</span></div></sc-if>
+            <div class="row"><button class="btn pri" type="button" onClick="{{mn.iniciar}}">{{mn.iniciarLabel}}</button><sc-if value="{{mn.ativo}}" hint-placeholder-val="{{ false }}"><button class="btn" type="button" onClick="{{mn.agora}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.refresh}}"/></svg>Verificar agora</button><button class="btn dng" type="button" onClick="{{mn.parar}}">Parar</button></sc-if></div>
+          </section>
+          <sc-if value="{{mn.has}}" hint-placeholder-val="{{ false }}">
+            <section class="card">
+              <h2>Situação</h2>
+              <div class="muted small">{{mn.resumo}}</div>
+              <div class="diag">
+                <sc-for list="{{mn.estados}}" as="e" hint-placeholder-count="3">
+                  <div class="pfr">
+                    <div class="row"><strong>{{e.id}}</strong><span class="pill {{e.cls}}">{{e.label}}</span><span class="muted small">{{e.desde}} · último: {{e.ultimoMs}}</span></div>
+                    <div class="beats" aria-label="Histórico das últimas verificações"><sc-for list="{{e.beats}}" as="b" hint-placeholder-count="10"><span class="hb {{b.cls}}" title="{{b.title}}"></span></sc-for></div>
+                  </div>
+                </sc-for>
+              </div>
+            </section>
+            <section class="card">
+              <h2>Eventos</h2>
+              <sc-if value="{{mn.semEventos}}" hint-placeholder-val="{{ false }}"><div class="empty"><strong>Nenhum evento</strong><span>Tudo estável desde que o monitor começou.</span></div></sc-if>
+              <sc-if value="{{mn.hasEventos}}" hint-placeholder-val="{{ false }}"><div class="dglist" style="max-height:420px"><sc-for list="{{mn.eventos}}" as="e" hint-placeholder-count="3"><div class="mi"><span class="pill {{e.cls}}">{{e.label}}</span><strong>{{e.perfil}}</strong><span class="muted small" style="flex-basis:100%">{{e.detalhe}} · {{e.quando}}</span></div></sc-for></div></sc-if>
+            </section>
+          </sc-if>
         </sc-if>
 
         <!-- ===== IMPORTAR PASTA ===== -->
@@ -1117,10 +1171,11 @@ comparar:{label:'Comparar instâncias',title:'Comparar instâncias',sub:'Lê doi
 lote:{label:'Lote para escolas',title:'Lote para escolas',sub:'Importe um CSV de alunos: valide, solicite o envio de documentos em massa (e-mail real) ou consulte os pendentes.',d:ICON.cap,grp:''},
 fumaca:{label:'Teste de fumaça',title:'Teste de fumaça',sub:'Roteiro de ponta a ponta para um cliente novo: importa um PDF de teste, assina sem e-mail, confere e cancela.',d:ICON.zap,grp:''},
 vigia:{label:'Vigia de assinaturas',title:'Vigia de assinaturas pendentes',sub:'Acompanha em segundo plano os documentos com assinatura pendente e avisa quando algo muda ou o prazo está perto de acabar. Só leituras.',d:ICON.clock,grp:''},
+painel:{label:'Painel das instâncias',title:'Painel das instâncias',sub:'Todos os perfis de uma vez (API, token, modelos e pendentes) e um monitor que avisa quando alguma instância cai, perde o token ou fica lenta. Só leituras.',d:ICON.layout,grp:''},
 diagnostico:{label:'Diagnóstico',title:'Diagnóstico da instância',sub:'Confere, só com leituras, se o perfil está pronto para uso e mostra a causa provável de cada problema.',d:ICON.pulse,grp:'Suporte'},
 perfis:{label:'Perfis',title:'Perfis',sub:'Crie, edite e remova os perfis do config.json: nome, instância, endereço, token e proteção.',d:ICON.gear,grp:''}
 };
-const ORDER=['inicio','fluxo','importar','envio','importarPasta','modelos','template','assinatura','cancelar','documentos','pastas','status','download','baixarPasta','alunoSolicitar','alunoStatus','comparar','lote','fumaca','vigia','diagnostico','perfis'];
+const ORDER=['inicio','fluxo','importar','envio','importarPasta','modelos','template','assinatura','cancelar','documentos','pastas','status','download','baixarPasta','alunoSolicitar','alunoStatus','comparar','lote','fumaca','vigia','painel','diagnostico','perfis'];
 const AUTO=['documentos','pastas','modelos'];
 let LIVE=null;const FILEBLOB=new WeakMap();
 const BASE='https://api.docnuvem.example';
@@ -1246,7 +1301,7 @@ lote:{csvNome:'',csvTexto:'',modo:'enviar',intervalo:'500',confirmando:false},
 fumaca:{ok:false},
 baixar:{diretorioId:'',subpastas:true,estrutura:true,conflito:'renomear',destino:'',status:'',dataInicio:'',dataFim:''},
 perfis:{aberto:false,original:'',nome:'',instancia:'',baseUrl:'',token:'',protecao:'',erro:'',salvando:false,rm:''}},
-results:{},loading:{},lists:{},diag:{},bx:{id:'',snap:null,erro:'',escolhendo:false},cmp:{busy:false,res:null,erro:''},pk:{aberto:false,alvo:null,cache:{},exp:{},sel:null},ip:{ens:null,erro:'',busy:false,escolhendo:false,id:'',snap:null},vg:{todos:[],vistos:{},notif:false,erro:''},lt:{val:null,erro:'',validando:false,id:'',snap:null},fm:{busy:false,res:null,erro:''},protPend:null,tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
+results:{},loading:{},lists:{},diag:{},bx:{id:'',snap:null,erro:'',escolhendo:false},cmp:{busy:false,res:null,erro:''},pk:{aberto:false,alvo:null,cache:{},exp:{},sel:null},pn:{res:null,busy:false,erro:''},mn:{snap:null,vistos:null,sel:{},intervalo:'5',erro:''},ip:{ens:null,erro:'',busy:false,escolhendo:false,id:'',snap:null},vg:{todos:[],vistos:{},notif:false,erro:''},lt:{val:null,erro:'',validando:false,id:'',snap:null},fm:{busy:false,res:null,erro:''},protPend:null,tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
 paletteOpen:false,paletteQ:'',toast:'',wizStep:0,lastMat:'',openSol:null,navMin:false,
 lastDoc:{},lastAss:{},
 sort:{documentos:{k:'criadoEm',d:-1},pastas:{k:'caminho',d:1}},openModelo:'',dragging:false,newSg:sg};
@@ -1259,7 +1314,9 @@ this._iv=setInterval(()=>{if(this.state.screen==='download'&&this.state.results.
 this._api=setInterval(()=>this.checarApi(false),60000);
 this._vgN={};
 try{const vistos=JSON.parse(localStorage.getItem('docnuvem-vigia-vistos')||'{}');const n=localStorage.getItem('docnuvem-vigia-notif')==='1'&&('Notification' in window)&&Notification.permission==='granted';this.setState({vg:Object.assign({},this.state.vg,{vistos,notif:n})});}catch(e){}
-this._vgp=setInterval(()=>this.vgAtualizar(),15000);
+this._vgp=setInterval(()=>{this.vgAtualizar();this.mnAtualizar();},15000);
+this._pnp=setInterval(()=>{if(this.state.screen==='painel')this.pnAtualizar(false);},45000);
+try{const v=localStorage.getItem('docnuvem-monitor-vistos');if(v!=null)this.setState({mn:Object.assign({},this.state.mn,{vistos:Number(v)})});}catch(e){}
 fetch('/_perfis',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{
 if(!j||!Array.isArray(j.perfis)||!j.perfis.length){this.setState({boot:'sem'});return;}
 this.aplicarPerfis(j,{inicial:true});
@@ -1270,7 +1327,7 @@ o=o||{};LIVE=j;PERFIS={};const st=this.state,lastDoc={},lastAss={};
 j.perfis.forEach(p=>{PERFIS[p.id]={mascara:p.tokenMascarado,baseUrl:p.baseUrl,instancia:p.instancia,protegido:p.protegido||''};lastDoc[p.id]=(st.lastDoc&&st.lastDoc[p.id])||null;lastAss[p.id]=(st.lastAss&&st.lastAss[p.id])||null;});
 const padrao=PERFIS[j.padrao]?j.padrao:j.perfis[0].id;
 if(o.inicial){let dest=j.pastaDownloads||'';try{dest=localStorage.getItem('docnuvem-destino')||dest;}catch(e){}
-this.setState({forms:Object.assign({},st.forms,{baixar:Object.assign({},st.forms.baixar,{destino:dest})}),boot:'ok',perfil:padrao,lastDoc,lastAss,results:{},lists:{},hist:{ligado:!!j.historico,arquivo:j.arquivoHistorico||'',confirmar:false}});this.checarApi(true);setTimeout(()=>this.vgAtualizar(),300);return;}
+this.setState({forms:Object.assign({},st.forms,{baixar:Object.assign({},st.forms.baixar,{destino:dest})}),boot:'ok',perfil:padrao,lastDoc,lastAss,results:{},lists:{},hist:{ligado:!!j.historico,arquivo:j.arquivoHistorico||'',confirmar:false}});this.checarApi(true);setTimeout(()=>{this.vgAtualizar();this.mnAtualizar();},300);return;}
 let perfil=st.perfil;
 if(!PERFIS[perfil])perfil=(o.renomeado&&PERFIS[o.renomeado])?o.renomeado:padrao;
 this.setState({perfil,lastDoc,lastAss,results:{},lists:{},apiSt:{},diag:{}});
@@ -1312,10 +1369,10 @@ const s=this.state,f=s.forms.vigia;
 this.cfgCall('/_vigia/iniciar','POST',{perfil:s.perfil,intervaloMin:Number(f.intervalo),alertaHoras:Number(f.alerta),ids:f.ids}).then(r=>{
 if(!r.ok){this.setState({vg:Object.assign({},this.state.vg,{erro:r.erro||'Não foi possível iniciar.'})});return;}
 this.setState({vg:Object.assign({},this.state.vg,{erro:''})});
-setTimeout(()=>this.vgAtualizar(),800);
+this.vgSeguir(0);
 });
 }
-vgAcao(acao){this.cfgCall('/_vigia/'+acao,'POST',{perfil:this.state.perfil}).then(r=>{if(!r.ok)this.aviso(r.erro||'Não foi possível.');setTimeout(()=>this.vgAtualizar(),acao==='agora'?1200:300);});}
+vgAcao(acao){const v0=(this.state.vg.todos||[]).find(x=>x.perfil===this.state.perfil),antes=v0?v0.ciclos:0;this.cfgCall('/_vigia/'+acao,'POST',{perfil:this.state.perfil}).then(r=>{if(!r.ok)this.aviso(r.erro||'Não foi possível.');if(acao==='agora')this.vgSeguir(antes);else setTimeout(()=>this.vgAtualizar(),300);});}
 vgNotif(){
 const st=this.state.vg;
 if(st.notif){this.setState({vg:Object.assign({},st,{notif:false})});try{localStorage.setItem('docnuvem-vigia-notif','0');}catch(e){}return;}
@@ -1327,6 +1384,41 @@ try{localStorage.setItem('docnuvem-vigia-notif',ok?'1':'0');}catch(e){}
 this.aviso(ok?'Avisos do navegador ligados.':'O navegador não permitiu notificações.');
 });
 }
+pnAtualizar(forcar){
+if(!LIVE||this.state.pn.busy)return;
+this.setState({pn:Object.assign({},this.state.pn,{busy:true,erro:''})});
+fetch('/_painel'+(forcar?'?forcar=1':''),{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error('HTTP '+r.status))).then(j=>this.setState({pn:{res:j,busy:false,erro:''}})).catch(e=>this.setState({pn:Object.assign({},this.state.pn,{busy:false,erro:'Não consegui atualizar o painel: '+e.message})}));
+}
+mnSalvar(v){try{localStorage.setItem('docnuvem-monitor-vistos',String(v));}catch(e){}}
+mnAtualizar(){
+if(!LIVE)return;
+fetch('/_monitor',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(sn=>{
+if(!sn)return;
+const st=this.state;let vistos=st.mn.vistos;
+const base=this._mnN!=null?this._mnN:(vistos!=null?vistos:sn.ultimoEvento);
+const novos=sn.eventos.filter(e=>e.id>base);
+this._mnN=sn.ultimoEvento;
+if(vistos==null||st.screen==='painel'){if(vistos!==sn.ultimoEvento){vistos=sn.ultimoEvento;this.mnSalvar(vistos);}}
+this.setState({mn:Object.assign({},this.state.mn,{snap:sn,vistos})});
+if(novos.length){const u=novos[0];
+this.aviso('Monitor: '+novos.length+' novo(s) evento(s). '+u.perfil+': '+u.detalhe);
+try{if(this.state.vg.notif&&'Notification' in window&&Notification.permission==='granted')new Notification('Docnuvem · monitor',{body:u.perfil+': '+u.detalhe});}catch(e){}}
+}).catch(()=>{});
+}
+mnIniciar(){
+const st=this.state,ids=Object.keys(PERFIS).filter(id=>st.mn.sel[id]!==false);
+this.cfgCall('/_monitor/iniciar','POST',{perfis:ids,intervaloMin:Number(st.mn.intervalo)}).then(r=>{
+if(!r.ok){this.setState({mn:Object.assign({},this.state.mn,{erro:r.erro||'Não foi possível iniciar.'})});return;}
+this.setState({mn:Object.assign({},this.state.mn,{erro:''})});
+this.mnSeguir();
+});
+}
+mnAcao(acao){this.cfgCall('/_monitor/'+acao,'POST',{}).then(r=>{if(!r.ok)this.aviso(r.erro||'Não foi possível.');if(acao==='agora')this.mnSeguir();else setTimeout(()=>this.mnAtualizar(),300);});}
+// Depois de iniciar ou pedir "verificar agora", olha a cada segundo até a verificação chegar.
+mnSeguir(){clearInterval(this._mnr);let n=0;const antes=(this.state.mn.snap&&this.state.mn.snap.ciclos)||0;
+this._mnr=setInterval(()=>{n++;this.mnAtualizar();const sn=this.state.mn.snap;if((sn&&sn.ciclos>antes)||n>=20)clearInterval(this._mnr);},1000);}
+vgSeguir(antes){clearInterval(this._vgr);let n=0;
+this._vgr=setInterval(()=>{n++;this.vgAtualizar();const v=(this.state.vg.todos||[]).find(x=>x.perfil===this.state.perfil);if((v&&v.ciclos>antes)||n>=20)clearInterval(this._vgr);},1000);}
 pkAbrir(alvo){this.setState({pk:Object.assign({},this.state.pk,{aberto:true,alvo,sel:null})});this.pkCarregar(0);}
 pkCarregar(pai){
 const k=this.state.perfil+'|'+pai,c=this.state.pk.cache[k];
@@ -1494,7 +1586,7 @@ if(f.rm!==id){this.setF('perfis',{rm:id});clearTimeout(this._rm);this._rm=setTim
 this.setF('perfis',{rm:''});
 this.cfgCall('/_config/perfil/'+encodeURIComponent(id),'DELETE').then(r=>{if(!r.ok){this.aviso(r.erro||'Não foi possível remover.');return;}this.recarregarPerfis({}).then(()=>this.aviso('Perfil "'+id+'" removido do config.json.'));});
 }
-componentWillUnmount(){clearInterval(this._iv);clearInterval(this._api);clearInterval(this._bxp);clearInterval(this._ltp);clearInterval(this._vgp);clearInterval(this._ipp);}
+componentWillUnmount(){clearInterval(this._iv);clearInterval(this._api);clearInterval(this._bxp);clearInterval(this._ltp);clearInterval(this._vgp);clearInterval(this._ipp);clearInterval(this._pnp);clearInterval(this._mnr);clearInterval(this._vgr);}
 
 eff(){const s=this.state;return s.screen==='fluxo'?['importar','assinatura','resultado'][s.wizStep]:s.screen;}
 setF(sc,patch){const s=this.state;this.setState({forms:Object.assign({},s.forms,{[sc]:Object.assign({},s.forms[sc],patch)})});}
@@ -1507,7 +1599,7 @@ goWith(sc,patch,runIt){
 const s=this.state;
 const forms=patch?Object.assign({},s.forms,{[sc]:Object.assign({},s.forms[sc],patch)}):s.forms;
 this.setState({screen:sc,prev:s.screen===sc?s.prev:s.screen,forms,paletteOpen:false,tab:'resumo'});
-setTimeout(()=>{const st=this.state;const e=this.eff();if(runIt||(AUTO.indexOf(sc)>=0&&!st.lists[sc]&&!st.loading[sc]))this.run(e);if(LIVE&&e==='template'&&!st.lists.modelos&&!st.loading.modelos)this.run('modelos');if(LIVE&&sc==='diagnostico'&&!st.diag[st.perfil])this.diagnosticar();if(LIVE&&sc==='vigia')this.vgAtualizar();},0);
+setTimeout(()=>{const st=this.state;const e=this.eff();if(runIt||(AUTO.indexOf(sc)>=0&&!st.lists[sc]&&!st.loading[sc]))this.run(e);if(LIVE&&e==='template'&&!st.lists.modelos&&!st.loading.modelos)this.run('modelos');if(LIVE&&sc==='diagnostico'&&!st.diag[st.perfil])this.diagnosticar();if(LIVE&&sc==='vigia')this.vgAtualizar();if(LIVE&&sc==='painel'){this.pnAtualizar(false);this.mnAtualizar();}},0);
 }
 go(sc){this.goWith(sc,null,false);}
 back(){const s=this.state;this.go(s.prev&&s.prev!==s.screen?s.prev:'inicio');}
@@ -1581,7 +1673,7 @@ if(t&&(t.type==='file'||t.type==='checkbox'||t.type==='search'))return;
 if(s.logOpen)return;
 e.preventDefault();this.send();}
 };
-send(){const sc=this.eff();if(sc==='inicio'||sc==='resultado'||sc==='diagnostico'||sc==='perfis'||sc==='baixarPasta'||sc==='comparar'||sc==='lote'||sc==='fumaca'||sc==='vigia'||sc==='importarPasta')return;if(this.state.loading[sc])return;const p=this.plan(sc);if(p.ready)this.run(sc);}
+send(){const sc=this.eff();if(sc==='inicio'||sc==='resultado'||sc==='diagnostico'||sc==='perfis'||sc==='baixarPasta'||sc==='comparar'||sc==='lote'||sc==='fumaca'||sc==='vigia'||sc==='importarPasta'||sc==='painel')return;if(this.state.loading[sc])return;const p=this.plan(sc);if(p.ready)this.run(sc);}
 
 plan(sc){
 const s=this.state,f=s.forms[sc]||{},perfil=s.perfil,v=s.validar;
@@ -1811,7 +1903,7 @@ const res0=s.results[eff];
 const loading=!!s.loading[eff];
 const show={};ORDER.concat(['resultado']).forEach(i=>{show[i]=eff===i;});
 show.fluxo=s.screen==='fluxo';
-show.form=eff!=='inicio'&&eff!=='resultado'&&eff!=='diagnostico'&&eff!=='perfis'&&eff!=='baixarPasta'&&eff!=='comparar'&&eff!=='lote'&&eff!=='fumaca'&&eff!=='vigia'&&eff!=='importarPasta';
+show.form=eff!=='inicio'&&eff!=='resultado'&&eff!=='diagnostico'&&eff!=='perfis'&&eff!=='baixarPasta'&&eff!=='comparar'&&eff!=='lote'&&eff!=='fumaca'&&eff!=='vigia'&&eff!=='importarPasta'&&eff!=='painel';
 const T=(sc,k,o)=>this.fld(sc,k,o);
 const last=s.lastDoc[perfil],lastA=s.lastAss[perfil];
 const docLast=(sc)=>({useLast:true,lastLabel:last?'Usar último documentoId ('+last+')':'Nenhum documentoId recente',lastDisabled:!last,onLast:()=>this.setF(sc,{documentoId:String(last)})});
@@ -2094,6 +2186,40 @@ destinoAtual:bxs?bxs.destino:'',hasRel:!!bxs&&!!bxs.relatorio,relatorio:bxs?bxs.
 amostra:(bxs&&bxs.amostra||[]).map(n=>({n})),hasAmostra:!!bxs&&!!(bxs.amostra||[]).length&&!!bxs.ensaio,
 falhas:(bxs&&bxs.falhas||[]).map(x=>({id:x.documentoId,nome:x.nome||'(sem nome)',erro:x.erro})),hasFalhas:!!bxs&&bxs.nFalhas>0,nFalhas:bxs?bxs.nFalhas:0,
 copyFalhas:()=>this.copy((bxs?bxs.falhas:[]).map(x=>x.documentoId+' · '+x.nome+' · '+x.erro).join('\n'),'Falhas copiadas.')};
+// painel das instâncias e monitor
+const PNN={ok:['ok','Online'],lento:['wn','Lenta'],token:['er','Token recusado'],erro:['er','Com erro'],offline:['er','Fora do ar']};
+const pnRes=s.pn.res;
+const prot2={'':'Livre',confirmar:'Produção · confirma',bloquear:'Produção · só leitura'};
+const pnRows=(pnRes?pnRes.perfis:[]).map(r=>{const k=PNN[r.nivel]||['mu',r.nivel];return {id:r.perfil,cls:k[0],label:k[1],card:r.perfil===perfil?'pfr on':'pfr',emUso:r.perfil===perfil,
+instancia:r.instancia,baseUrl:r.baseUrl,prot:prot2[r.protegido||''],protCls:r.protegido?(r.protegido==='bloquear'?'er':'wn'):'mu',
+api:r.api&&r.api.ms!=null?r.api.ms+' ms':(r.api&&r.api.erro?'sem resposta':'—'),
+modelos:r.modelos?r.modelos.total+' ('+r.modelos.geraveis+' geráveis por API)':'—',
+pendentes:r.pendentes!=null?String(r.pendentes):'—',
+quando:fmtT(r.verificadoEm),
+usar:()=>{this.setState({perfil:r.perfil,results:{},lists:{}});setTimeout(()=>this.checarApi(true),0);},
+diag:()=>{this.setState({perfil:r.perfil,results:{},lists:{}});this.go('diagnostico');}};});
+const pnOk=pnRows.filter(r=>r.cls==='ok').length;
+const pnn={
+has:!!pnRes,rows:pnRows,busy:s.pn.busy,idle:!s.pn.busy,atualizar:()=>this.pnAtualizar(true),hasErr:!!s.pn.erro,err:s.pn.erro,
+resumo:pnRes?(pnOk+' de '+pnRows.length+' instância(s) online'+(pnRows.length-pnOk?' · '+(pnRows.length-pnOk)+' com atenção':'')):'',
+resumoCls:pnRes?(pnOk===pnRows.length?'ok':'wn'):'mu'};
+const mns=s.mn.snap;
+const MNT={queda:['er','Queda'],erro:['er','Erro'],token:['er','Token recusado'],lenta:['wn','Lenta'],recuperou:['ok','Recuperou']};
+const mnAtivo=!!mns&&mns.ativo;
+const mnVistos=s.mn.vistos;
+const mnNovos=mns?mns.eventos.filter(e=>e.id>(mnVistos!=null?mnVistos:mns.ultimoEvento)).length:0;
+const mnv={
+perfis:Object.keys(PERFIS).map(id=>({id,on:s.mn.sel[id]!==false,toggle:e=>this.setState({mn:Object.assign({},s.mn,{sel:Object.assign({},s.mn.sel,{[id]:e.target.checked})})})})),
+intervalo:s.mn.intervalo,
+intervaloOpts:[['1','a cada 1 min'],['5','a cada 5 min'],['10','a cada 10 min'],['30','a cada 30 min'],['60','a cada hora']].map(a=>({value:a[0],label:a[1],selected:s.mn.intervalo===a[0]})),
+onIntervalo:e=>this.setState({mn:Object.assign({},s.mn,{intervalo:e.target.value})}),
+ativo:mnAtivo,iniciarLabel:mnAtivo?'Aplicar e reiniciar':'Iniciar monitor',iniciar:()=>this.mnIniciar(),parar:()=>this.mnAcao('parar'),agora:()=>this.mnAcao('agora'),
+hasErr:!!s.mn.erro,err:s.mn.erro,
+cls:mnAtivo?'ok':'mu',label:mnAtivo?'Monitorando':'Desligado',has:!!mns&&mns.perfis.length>0,
+resumo:mns?(mns.perfis.length+' perfil(is) · '+mns.ciclos+' verificação(ões)'+(mns.ultima?' · última às '+fmtT(mns.ultima):'')+(mnAtivo&&mns.proxima?' · próxima às '+fmtT(mns.proxima):'')):'',
+estados:(mns?mns.perfis:[]).map(id=>{const e=(mns.estado||{})[id]||{nivel:''},k=PNN[e.nivel]||['mu','—'];const h=(mns.historico||{})[id]||[];
+return {id,cls:k[0],label:k[1],desde:e.desde?'desde '+fmtDT(e.desde):'',beats:h.map(b=>{const c=(PNN[b.nivel]||['mu'])[0];return {cls:c==='mu'?'':c,title:fmtT(b.ts)+' · '+(PNN[b.nivel]||[0,b.nivel])[1]+(b.ms!=null?' · '+b.ms+' ms':'')};}),ultimoMs:h.length&&h[h.length-1].ms!=null?h[h.length-1].ms+' ms':'—'};}),
+eventos:(mns?mns.eventos:[]).map(e=>{const t=MNT[e.tipo]||['mu',e.tipo];return {cls:t[0],label:t[1],quando:fmtDT(e.ts),perfil:e.perfil,detalhe:e.detalhe};}),hasEventos:!!mns&&mns.eventos.length>0,semEventos:!!mns&&mns.eventos.length===0&&mns.perfis.length>0};
 // seletor de pastas
 const pkk=s.pk,pkAl=pkk.alvo,pkSel=pkk.sel,pkRaiz={id:0,nome:'Meus documentos',caminho:'/Meus documentos'};
 const pkRows=[];
@@ -2293,7 +2419,7 @@ const noPrev=!p.req;
 return {
 theme:s.theme,bannerCls:car?'':'live',modeTitle:sem?'Sem servidor local':car?'Conectando':'API real',modeText:sem?'esta página precisa do programa docnuvem-web: rode "docnuvem-web" no terminal e abra o endereço que ele mostra.':car?'procurando o servidor local…':'as chamadas atingem a API de verdade, com os tokens do config.json. O token fica no servidor local e aparece sempre mascarado.',loadText:'Chamando a API…',themeIcon:s.theme==='dark'?ICON.sun:ICON.moon,themeLabel:s.theme==='dark'?'Mudar para tema claro':'Mudar para tema escuro',toggleTheme:()=>this.setTema(s.theme==='dark'?'light':'dark'),
 ic:ICON,onKey:this.onKey,sideCls:s.navMin?'min':'',sideOpen:!s.navMin,sideLabel:s.navMin?'Expandir menu':'Recolher menu',toggleSide:()=>this.toggleSide(),openPalette:()=>this.openPalette(),
-nav:ORDER.map(id=>({id,label:(id==='vigia'&&vgNovos>0)?META[id].label+' ('+vgNovos+')':META[id].label,d:META[id].d,hasGrp:!!META[id].grp,grp:META[id].grp,cur:s.screen===id?'page':'false',go:()=>this.go(id)})),
+nav:ORDER.map(id=>({id,label:(id==='vigia'&&vgNovos>0)?META[id].label+' ('+vgNovos+')':(id==='painel'&&mnNovos>0)?META[id].label+' ('+mnNovos+')':META[id].label,d:META[id].d,hasGrp:!!META[id].grp,grp:META[id].grp,cur:s.screen===id?'page':'false',go:()=>this.go(id)})),
 perfil,perfilOpts:Object.keys(PERFIS).map(k=>({value:k,label:k,selected:k===perfil})),
 onPerfil:e=>{const v=e.target.value;this.setState({perfil:v,results:{},lists:{},collapsed:{}});setTimeout(()=>{const sc=this.eff();if(AUTO.indexOf(sc)>=0)this.run(sc);if(LIVE&&sc==='template')this.run('modelos');if(LIVE&&sc==='diagnostico'&&!this.state.diag[v])this.diagnosticar();this.checarApi(true);},0);},
 tokenMask:mask(perfil),revogado:false,validar:s.validar,validarOff:!s.validar&&show.form,onValidar:e=>this.setState({validar:e.target.checked}),
@@ -2313,7 +2439,7 @@ hasRes:!!res0,noRes:!res0&&!loading,res,tabs,tabResumo:s.tab==='resumo',tabJson:
 jsonCopyAll:()=>this.copy(JSON.stringify(res0?res0.body:{},null,2)),jsonCollapse:()=>this.setState({collapsed:allPaths(res0?res0.body:{},'$',{})}),jsonExpand:()=>this.setState({collapsed:{}}),
 nexts,hasNexts:nexts.length>0,
 hasLinks:links.length>0&&eff==='assinatura',links,linksNote:linkSrc?(linkSrc.conviteEnviado?'Convite enviado por e-mail (conviteEnviado = true). Os links abaixo também valem.':'Nenhum e-mail foi enviado (conviteEnviado = false, padrão). Envie cada link ao signatário.'):'',
-dt,pt,md,stv,dl,wiz,al,asv,api,hist,dg:dgn,prot,pf,bx,cm,lote,fumaca,vg,ip:ipv,pk,
+dt,pt,md,stv,dl,wiz,al,asv,api,hist,dg:dgn,prot,pf,bx,cm,lote,fumaca,vg,ip:ipv,pk,pn:pnn,mn:mnv,
 logOpen:s.logOpen,logFav:s.logFav,onLogFav:e=>this.setState({logFav:e.target.checked}),logRows:lrows,logEmpty:lrows.length===0&&!sel,hasLogSel:!!sel,showLogList:!sel,ld,
 paletteOpen:s.paletteOpen,paletteQ:s.paletteQ,onPaletteQ:e=>this.setState({paletteQ:e.target.value}),palItems,palEmpty:palItems.length===0,closePalette:()=>this.setState({paletteOpen:false}),stop:e=>{if(e&&e.stopPropagation)e.stopPropagation();},
 toast:s.toast,toastCls:s.toast?'':'off'

@@ -536,3 +536,62 @@ def test_estrutura_de_pastas_quando_a_api_nao_deixa_listar(
     modal = page.locator("[role=dialog][aria-label*='estrutura']")
     expect(modal).to_contain_text("Digite o caminho")  # a saída: continuar digitando
     expect(modal.get_by_role("button", name="Usar esta pasta")).to_be_disabled()
+
+
+# ------------------------------------------------ painel e monitor ---
+
+
+def test_painel_mostra_todas_as_instancias_de_uma_vez(pagina: Pagina, upstream: Upstream) -> None:
+    page = pagina.page
+    modelos = [{"id": 1, "geravelPorApi": True}, {"id": 2}]
+    upstream.dinamicas[("GET", "/api/modelos")] = lambda q: (
+        (401, "{}") if q["instancia"][0] == "ruim" else (200, json.dumps({"modelos": modelos}))
+    )
+    upstream.respostas[("GET", "/api/documentos")] = (
+        200,
+        json.dumps({"total": 9, "documentos": []}),
+    )
+    pagina.ir("Painel das instâncias")
+    cartoes = page.locator(".pfr")
+    expect(cartoes).to_have_count(5)
+    expect(page.locator("main")).to_contain_text("3 de 5 instância(s) online")
+    expect(cartoes.filter(has_text="ruim")).to_contain_text("Token recusado")
+    expect(cartoes.filter(has_text="fora")).to_contain_text("Fora do ar")
+    ok = cartoes.filter(has_text="cliente1")
+    expect(ok).to_contain_text("Online")
+    expect(ok).to_contain_text("2 (1 geráveis por API)")
+    expect(ok).to_contain_text("9")  # pendentes
+
+
+def test_painel_troca_de_perfil_e_abre_o_diagnostico(pagina: Pagina) -> None:
+    page = pagina.page
+    pagina.ir("Painel das instâncias")
+    cartao = page.locator(".pfr").filter(has_text="ruim")
+    cartao.get_by_role("button", name="Diagnóstico").click()
+    expect(page.locator("#perfil")).to_have_value("ruim")
+    expect(page.locator("main")).to_contain_text("Instância do perfil ruim")
+
+
+def test_monitor_avisa_o_que_ja_esta_com_problema_e_para(pagina: Pagina) -> None:
+    page = pagina.page
+    pagina.ir("Painel das instâncias")
+    page.locator("label.sw", has_text="prod").click()  # tira prod e leitura da vigilância
+    page.locator("label.sw", has_text="leitura").click()
+    pagina.botao("Iniciar monitor").click()
+    expect(page.locator("main")).to_contain_text("Monitorando")
+    eventos = page.locator("main .dglist .mi")
+    expect(eventos).to_have_count(2)
+    expect(eventos.filter(has_text="Queda")).to_contain_text("fora")
+    expect(eventos.filter(has_text="Token recusado")).to_contain_text("ruim")
+    expect(page.locator(".hb").first).to_be_visible()  # o histórico das verificações
+    pagina.botao("Parar").click()
+    expect(page.locator("main")).to_contain_text("Desligado")
+
+
+def test_monitor_recusa_iniciar_sem_nenhum_perfil(pagina: Pagina) -> None:
+    page = pagina.page
+    pagina.ir("Painel das instâncias")
+    for nome in ("cliente1", "ruim", "fora", "prod", "leitura"):
+        page.locator("label.sw", has_text=nome).click()
+    pagina.botao("Iniciar monitor").click()
+    expect(page.locator("main .dangerbox")).to_contain_text("ao menos um perfil")

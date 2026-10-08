@@ -356,3 +356,21 @@ def test_historico_desligado(app_sem_historico: App) -> None:
     assert app.http.post("/_historico", json=entrada(1)).json()["ok"] is False
     assert app.http.get("/_historico").json()["itens"] == []
     assert app.http.get("/_historico/exportar?formato=json").json() == []
+
+
+def test_conexao_abandonada_pelo_navegador_nao_imprime_erro(
+    app: App, capsys: pytest.CaptureFixture[str]
+) -> None:
+    try:
+        raise ConnectionAbortedError("o navegador fechou a aba")
+    except ConnectionAbortedError:
+        app.servidor.handle_error(None, ("127.0.0.1", 1234))
+    assert capsys.readouterr().err == ""
+
+
+def test_erro_de_verdade_continua_aparecendo(app: App, capsys: pytest.CaptureFixture[str]) -> None:
+    try:
+        raise ValueError("bug de verdade")
+    except ValueError:
+        app.servidor.handle_error(None, ("127.0.0.1", 1234))
+    assert "bug de verdade" in capsys.readouterr().err
