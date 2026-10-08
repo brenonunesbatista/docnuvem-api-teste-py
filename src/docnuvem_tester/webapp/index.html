@@ -521,6 +521,9 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
             <p class="muted small">O servidor local lista os documentos da pasta, pede o link temporário de cada um à API e grava os arquivos no seu computador. Só faz leituras na API, por isso funciona até em perfil protegido.</p>
             <div class="fields">
               <div class="field"><label class="lbl" for="bx-dir"><span>Pasta no Docnuvem</span><code class="api">diretorioId</code><span class="req">obrigatório</span></label><input id="bx-dir" type="text" value="{{bx.diretorioId}}" placeholder="12345" autocomplete="off" disabled="{{bx.ocupado}}" onInput="{{bx.onDir}}"><span class="hint">Número da pasta: veja na tela Pastas ou na coluna de pasta dos Documentos. Use 0 para a raiz de Meus documentos.</span></div>
+              <div class="field"><label class="lbl" for="bx-st"><span>Status</span><code class="api">status</code><span class="tag">opcional</span></label><select id="bx-st" value="{{bx.status}}" disabled="{{bx.ocupado}}" onChange="{{bx.onStatus}}"><sc-for list="{{bx.statusOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.value}}" selected="{{o.selected}}">{{o.label}}</option></sc-for></select></div>
+              <div class="field"><label class="lbl" for="bx-di"><span>De</span><code class="api">dataInicio</code><span class="tag">opcional</span></label><input id="bx-di" type="date" value="{{bx.dataInicio}}" disabled="{{bx.ocupado}}" onInput="{{bx.onDataInicio}}"></div>
+              <div class="field"><label class="lbl" for="bx-df"><span>Até</span><code class="api">dataFim</code><span class="tag">opcional</span></label><input id="bx-df" type="date" value="{{bx.dataFim}}" disabled="{{bx.ocupado}}" onInput="{{bx.onDataFim}}"></div>
               <div class="field"><label class="sw"><input type="checkbox" checked="{{bx.subpastas}}" disabled="{{bx.ocupado}}" onChange="{{bx.onSub}}"><span class="track"></span><span class="swt">Incluir as subpastas</span></label></div>
               <div class="field"><label class="sw"><input type="checkbox" checked="{{bx.estrutura}}" disabled="{{bx.semEstrutura}}" onChange="{{bx.onEst}}"><span class="track"></span><span class="swt">Refazer as subpastas no computador</span></label><span class="hint">Desligado, tudo é salvo na mesma pasta.</span></div>
             </div>
@@ -541,6 +544,7 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
               <div class="row"><h2>Andamento</h2><span class="pill {{bx.cls}}">{{bx.label}}</span><span class="grow"></span><sc-if value="{{bx.isFim}}" hint-placeholder-val="{{ false }}"><button class="btn sm" type="button" onClick="{{bx.abrir}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.folder}}"/></svg>Abrir a pasta</button></sc-if></div>
               <sc-if value="{{bx.ocupado}}" hint-placeholder-val="{{ false }}"><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{bx.pct}}"><span style="{{bx.barStyle}}"></span></div><div class="muted small">{{bx.progresso}}</div></sc-if>
               <sc-if value="{{bx.hasAtual}}" hint-placeholder-val="{{ false }}"><div class="muted small" style="overflow-wrap:anywhere">Agora: {{bx.atual}}</div></sc-if>
+              <sc-if value="{{bx.hasFiltros}}" hint-placeholder-val="{{ false }}"><div class="muted small">Filtros: {{bx.filtros}}</div></sc-if>
               <div class="bxn"><strong>{{bx.resumo}}</strong></div>
               <sc-if value="{{bx.hasEstErro}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{bx.estErro}}</span></div></sc-if>
               <sc-if value="{{bx.hasAviso}}" hint-placeholder-val="{{ false }}"><div class="muted small">{{bx.aviso}}</div></sc-if>
@@ -1163,7 +1167,7 @@ comparar:{a:'',b:'',tipo:'modelos'},
 vigia:{ids:'',intervalo:'10',alerta:'48'},
 lote:{csvNome:'',csvTexto:'',modo:'enviar',intervalo:'500',confirmando:false},
 fumaca:{ok:false},
-baixar:{diretorioId:'',subpastas:true,estrutura:true,conflito:'renomear',destino:''},
+baixar:{diretorioId:'',subpastas:true,estrutura:true,conflito:'renomear',destino:'',status:'',dataInicio:'',dataFim:''},
 perfis:{aberto:false,original:'',nome:'',instancia:'',baseUrl:'',token:'',protecao:'',erro:'',salvando:false,rm:''}},
 results:{},loading:{},lists:{},diag:{},bx:{id:'',snap:null,erro:'',escolhendo:false},cmp:{busy:false,res:null,erro:''},vg:{todos:[],vistos:{},notif:false,erro:''},lt:{val:null,erro:'',validando:false,id:'',snap:null},fm:{busy:false,res:null,erro:''},protPend:null,tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
 paletteOpen:false,paletteQ:'',toast:'',wizStep:0,lastMat:'',openSol:null,navMin:false,
@@ -1293,7 +1297,7 @@ bxIniciar(ensaio){
 const s=this.state,f=s.forms.baixar;
 if(s.bx.snap&&(s.bx.snap.estado==='listando'||s.bx.snap.estado==='baixando'))return;
 this.setState({bx:{id:'',snap:null,erro:'',escolhendo:false}});
-this.cfgCall('/_baixar/iniciar','POST',{perfil:s.perfil,diretorioId:f.diretorioId,subpastas:!!f.subpastas,estrutura:!!f.estrutura,conflito:f.conflito,destino:f.destino,ensaio:!!ensaio}).then(r=>{
+this.cfgCall('/_baixar/iniciar','POST',{perfil:s.perfil,diretorioId:f.diretorioId,subpastas:!!f.subpastas,estrutura:!!f.estrutura,conflito:f.conflito,destino:f.destino,ensaio:!!ensaio,status:f.status,dataInicio:f.dataInicio,dataFim:f.dataFim}).then(r=>{
 if(!r.ok){this.setState({bx:{id:'',snap:null,erro:r.erro||'Não foi possível iniciar.',escolhendo:false}});return;}
 if(!ensaio){try{localStorage.setItem('docnuvem-destino',f.destino);}catch(e){}}
 this.setState({bx:{id:r.id,snap:{estado:'listando',total:0,feitos:0,baixados:0,pulados:0,nFalhas:0,falhas:[],bytes:0,ensaio:!!ensaio,destino:f.destino},erro:'',escolhendo:false}});
@@ -1922,6 +1926,9 @@ diretorioId:fb.diretorioId,onDir:this.hf('baixar','diretorioId'),
 subpastas:!!fb.subpastas,onSub:this.hf('baixar','subpastas'),
 estrutura:!!fb.estrutura,onEst:this.hf('baixar','estrutura'),semEstrutura:!fb.subpastas,
 destino:fb.destino,onDestino:this.hf('baixar','destino'),
+status:fb.status,onStatus:e=>this.setF('baixar',{status:e.target.value}),dataInicio:fb.dataInicio,onDataInicio:this.hf('baixar','dataInicio'),dataFim:fb.dataFim,onDataFim:this.hf('baixar','dataFim'),
+statusOpts:[['','Todos os status'],['pendente','Pendente'],['assinado','Assinado'],['expirado','Expirado'],['cancelado','Cancelado'],['sem_assinatura','Sem assinatura']].map(a=>({value:a[0],label:a[1],selected:fb.status===a[0]})),
+filtros:bxs?bxs.filtros:'',hasFiltros:!!bxs&&!!bxs.filtros,
 conflitoOpts:[['renomear','Manter os dois (acrescenta o número ao nome novo)'],['pular','Pular o arquivo que já existe']].map(a=>({value:a[0],label:a[1],selected:fb.conflito===a[0]})),onConflito:e=>this.setF('baixar',{conflito:e.target.value}),
 escolher:()=>this.bxEscolher(),escolherLabel:s.bx.escolhendo?'Aguardando a janela…':'Escolher pasta…',escolherOff:s.bx.escolhendo||bxAtivo,
 contar:()=>this.bxIniciar(true),baixar:()=>this.bxIniciar(false),parado:!bxAtivo,ocupado:bxAtivo,

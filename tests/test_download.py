@@ -465,3 +465,49 @@ def test_diretorio_zero_sem_arvore_cai_para_pasta_unica(
     fim = _baixar(app, tmp_path / "saida", diretorioId=0, subpastas=True, estrutura=True)
     assert fim["baixados"] == 1
     assert (tmp_path / "saida" / "a.pdf").is_file()
+
+
+def test_filtros_vao_para_a_listagem(app: App, upstream: Upstream, tmp_path: Path) -> None:
+    _preparar(upstream, (1, "a.pdf", 5))
+    fim = _baixar(
+        app, tmp_path / "saida", status="assinado", dataInicio="2026-01-01", dataFim="2026-03-31"
+    )
+    assert fim["baixados"] == 1
+    assert fim["filtros"] == "status assinado, a partir de 2026-01-01, até 2026-03-31"
+    listagem = next(c for c in upstream.recebidas if c["rota"] == "/api/documentos")
+    assert "status=assinado" in listagem["path"]
+    assert "dataInicio=2026-01-01" in listagem["path"]
+    assert "dataFim=2026-03-31" in listagem["path"]
+
+
+def test_sem_filtros_nada_extra_e_enviado(app: App, upstream: Upstream, tmp_path: Path) -> None:
+    _preparar(upstream, (1, "a.pdf", 5))
+    _baixar(app, tmp_path / "saida", status="", dataInicio="", dataFim="")
+    listagem = next(c for c in upstream.recebidas if c["rota"] == "/api/documentos")
+    for chave in ("status", "dataInicio", "dataFim"):
+        assert chave not in listagem["path"]  # a API recusa parâmetro vazio
+
+
+def test_filtros_valem_tambem_no_ensaio(app: App, upstream: Upstream, tmp_path: Path) -> None:
+    _preparar(upstream, (1, "a.pdf", 5))
+    fim = _baixar(app, tmp_path / "saida", ensaio=True, status="pendente")
+    assert (fim["estado"], fim["baixados"]) == ("concluido", 0)
+    assert (
+        "status=pendente"
+        in next(c for c in upstream.recebidas if c["rota"] == "/api/documentos")["path"]
+    )
+
+
+@pytest.mark.parametrize(
+    ("campos", "trecho"),
+    [
+        ({"status": "apagado"}, "Status inválido"),
+        ({"dataInicio": "01/02/2026"}, "dataInicio deve estar no formato"),
+        ({"dataFim": "2026-13-40"}, "dataFim deve estar no formato"),
+        ({"dataInicio": "2026-05-01", "dataFim": "2026-04-01"}, "data inicial vem depois"),
+    ],
+)
+def test_filtros_invalidos(app: App, tmp_path: Path, campos: dict[str, Any], trecho: str) -> None:
+    r = _iniciar(app, tmp_path / "saida", **campos)
+    assert r["_status"] == 400
+    assert trecho in r["erro"]

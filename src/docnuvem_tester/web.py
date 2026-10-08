@@ -1057,6 +1057,9 @@ class Handler(BaseHTTPRequestHandler):
                 estrutura=dado.get("estrutura") is True,
                 conflito=conflito,
                 ensaio=ensaio,
+                status=str(dado.get("status") or ""),
+                data_inicio=str(dado.get("dataInicio") or ""),
+                data_fim=str(dado.get("dataFim") or ""),
             )
         except ErroDownload as exc:
             return self._json(

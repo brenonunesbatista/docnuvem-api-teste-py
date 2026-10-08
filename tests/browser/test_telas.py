@@ -376,3 +376,24 @@ def test_perfis_criar_editar_e_remover(abrir: Any, app_cfg: App) -> None:
     card.get_by_role("button", name="Remover").click()
     card.get_by_role("button", name="Confirmar remoção").click()  # exige o segundo clique
     expect(page.locator(".pfr")).to_have_count(2)
+
+
+def test_baixar_pasta_com_filtros_de_status_e_data(pagina: Pagina, upstream: Upstream) -> None:
+    page = pagina.page
+    upstream.respostas[("GET", "/api/documentos")] = (
+        200,
+        json.dumps(
+            {"total": 1, "temMais": False, "documentos": [{"documentoId": 1, "diretorioId": 5}]}
+        ),
+    )
+    pagina.ir("Baixar pasta")
+    page.fill("#bx-dir", "5")
+    page.select_option("#bx-st", "assinado")
+    page.fill("#bx-di", "2026-01-01")
+    page.fill("#bx-df", "2026-03-31")
+    pagina.botao("Só contar os documentos").click()
+    expect(page.locator("main")).to_contain_text("Filtros: status assinado, a partir de 2026-01-01")
+    caminho = _enviadas(upstream, "GET", "/api/documentos")[0]["path"]
+    assert "status=assinado" in caminho
+    assert "dataInicio=2026-01-01" in caminho
+    assert "dataFim=2026-03-31" in caminho

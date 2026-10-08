@@ -14,6 +14,7 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +30,27 @@ TIMEOUT_ARQUIVO = httpx.Timeout(120.0, connect=15.0)
 _INVALIDOS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 _RESERVADOS = {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)),
                *(f"LPT{i}" for i in range(1, 10))}  # fmt: skip
+
+
+STATUS_VALIDOS = ("pendente", "assinado", "expirado", "cancelado", "sem_assinatura")
+
+
+def validar_filtros(status: str, data_inicio: str, data_fim: str) -> None:
+    """Confere os filtros do download (os mesmos da listagem de documentos)."""
+    if status and status not in STATUS_VALIDOS:
+        raise ErroDownload("Status inválido. Use: " + ", ".join(STATUS_VALIDOS) + ".")
+    datas = {}
+    for nome, valor in (("dataInicio", data_inicio), ("dataFim", data_fim)):
+        if not valor:
+            continue
+        try:
+            datas[nome] = datetime.strptime(valor, "%Y-%m-%d")
+        except ValueError as exc:
+            raise ErroDownload(
+                f"{nome} deve estar no formato aaaa-mm-dd (ex.: 2026-01-31)."
+            ) from exc
+    if len(datas) == 2 and datas["dataInicio"] > datas["dataFim"]:
+        raise ErroDownload("A data inicial vem depois da data final.")
 
 
 class ErroDownload(Exception):
@@ -78,6 +100,9 @@ class Trabalho:
     estrutura: bool
     conflito: str  # "renomear" | "pular"
     ensaio: bool
+    status: str = ""
+    data_inicio: str = ""
+    data_fim: str = ""
     estado: str = "listando"  # listando | baixando | concluido | cancelado | erro
     total: int = 0
     baixados: int = 0
@@ -100,6 +125,16 @@ class Trabalho:
     def ativo(self) -> bool:
         return self.estado in ("listando", "baixando")
 
+    def descricao_filtros(self) -> str:
+        partes = []
+        if self.status:
+            partes.append(f"status {self.status}")
+        if self.data_inicio:
+            partes.append(f"a partir de {self.data_inicio}")
+        if self.data_fim:
+            partes.append(f"até {self.data_fim}")
+        return ", ".join(partes)
+
     def snapshot(self) -> dict[str, Any]:
         with self.lock:
             feitos = self.baixados + self.pulados + len(self.falhas)
@@ -109,6 +144,7 @@ class Trabalho:
                 "diretorioId": self.diretorio_id,
                 "destino": str(self.destino),
                 "ensaio": self.ensaio,
+                "filtros": self.descricao_filtros(),
                 "estado": self.estado,
                 "total": self.total,
                 "feitos": feitos,
@@ -151,7 +187,11 @@ class GerenciadorDownload:
         estrutura: bool,
         conflito: str,
         ensaio: bool,
+        status: str = "",
+        data_inicio: str = "",
+        data_fim: str = "",
     ) -> Trabalho:
+        validar_filtros(status, data_inicio, data_fim)
         with self._lock:
             if any(t.ativo for t in self._trabalhos.values()):
                 raise ErroDownload("Já existe um download em andamento. Aguarde ou cancele.")
@@ -164,6 +204,9 @@ class GerenciadorDownload:
                 estrutura=estrutura,
                 conflito=conflito,
                 ensaio=ensaio,
+                status=status,
+                data_inicio=data_inicio,
+                data_fim=data_fim,
             )
             self._trabalhos[t.id] = t
         threading.Thread(target=executar, args=(t, cliente, perfil), daemon=True).start()
@@ -208,19 +251,21 @@ def listar_documentos(
     for pagina in range(MAX_PAGINAS):
         if t.cancelar.is_set():
             break
-        dado = _pagina(
-            cliente,
-            base,
-            "/api/documentos",
-            auth,
-            {
-                "instancia": instancia,
-                "diretorioId": t.diretorio_id,
-                "incluirSubpastas": "true" if t.subpastas else "false",
-                "pagina": pagina,
-                "tamanho": TAMANHO_PAGINA,
-            },
-        )
+        params: dict[str, Any] = {
+            "instancia": instancia,
+            "diretorioId": t.diretorio_id,
+            "incluirSubpastas": "true" if t.subpastas else "false",
+            "pagina": pagina,
+            "tamanho": TAMANHO_PAGINA,
+        }
+        for chave, valor in (
+            ("status", t.status),
+            ("dataInicio", t.data_inicio),
+            ("dataFim", t.data_fim),
+        ):
+            if valor:  # filtro vazio nunca é enviado (a API recusa "status=")
+                params[chave] = valor
+        dado = _pagina(cliente, base, "/api/documentos", auth, params)
         lote = [d for d in dado.get("documentos") or [] if isinstance(d, dict)]
         docs.extend(lote)
         with t.lock:
