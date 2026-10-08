@@ -54,6 +54,7 @@ from docnuvem_tester.importar_pasta import (
 )
 from docnuvem_tester.importar_pasta import ensaio as ensaio_importacao
 from docnuvem_tester.lote import ErroLote, GerenciadorLote, preparar
+from docnuvem_tester.pastas import ErroPastas, Pastas
 from docnuvem_tester.roteiro import rodar_fumaca
 from docnuvem_tester.vigia import ErroVigia, GerenciadorVigia
 
@@ -611,6 +612,7 @@ class Servidor(ThreadingHTTPServer):
         self.downloads = GerenciadorDownload()
         self.lotes = GerenciadorLote()
         self.vigias = GerenciadorVigia()
+        self.pastas = Pastas()
         registro = Registro(historico.arquivo.parent / "importados.jsonl") if historico else None
         self.importacoes = GerenciadorImportacao(registro)
         self.historico = historico
@@ -640,6 +642,7 @@ class Servidor(ThreadingHTTPServer):
             self.cfg = acao(self.arquivo_config)
         with self._status_lock:
             self._status_cache.clear()
+        self.pastas.esquecer()
 
     def server_close(self) -> None:
         self.vigias.parar_todos()
@@ -737,6 +740,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._ip_estado(resto)
         if caminho == "/_vigia":
             return self._json({"vigias": [v.snapshot() for v in self.server.vigias.todos()]})
+        if caminho == "/_pastas/filhos":
+            return self._pastas_filhos(parse_qs(partes.query))
         if caminho == "/_arquivo-teste":
             return self._arquivo_teste(parse_qs(partes.query))
         if caminho.startswith("/_lote/"):
@@ -994,6 +999,24 @@ class Handler(BaseHTTPRequestHandler):
         else:
             v.agora()
         self._json({"ok": True})
+
+    def _pastas_filhos(self, query: dict[str, list[str]]) -> None:
+        """Subpastas imediatas de uma pasta (0 = raiz), para o seletor de pastas da página."""
+        nome = query.get("perfil", [""])[0]
+        perfil = self.server.cfg.perfis.get(nome)
+        if perfil is None:
+            return self._json({"ok": False, "erro": f'Perfil desconhecido: "{nome}".'}, 404)
+        try:
+            pai = int(query.get("pai", ["0"])[0])
+            if pai < 0:
+                raise ValueError
+        except ValueError:
+            return self._json({"ok": False, "erro": "pai deve ser um número (0 é a raiz)."}, 400)
+        try:
+            r = self.server.pastas.filhos(self.server.cliente, nome, perfil, pai)
+        except ErroPastas as exc:
+            return self._json({"ok": False, "erro": str(exc)}, 502)
+        self._json({"ok": True, **r})
 
     def _arquivo_teste(self, query: dict[str, list[str]]) -> None:
         """PDF válido de teste, com o tamanho (bytes) e o número de páginas pedidos."""

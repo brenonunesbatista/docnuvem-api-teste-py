@@ -440,3 +440,99 @@ def test_importar_pasta_nao_envia_em_perfil_somente_leitura(pagina: Pagina, tmp_
     pagina.botao("Ver o que será enviado").click()
     expect(page.locator("main .dangerbox")).to_contain_text("somente leitura")
     expect(pagina.botao("Enviar 1 arquivo(s)")).to_be_disabled()
+
+
+# ------------------------------------------------- estrutura de pastas ---
+
+OFICIAL_PASTAS = ("GET", "/api/diretorios")
+SINC_PASTAS = ("POST", "/api/sync/listarDiretoriosFilhos")
+
+
+def _arvore_de_pastas(upstream: Upstream) -> None:
+    """Meus documentos > Contratos (10) > 2024 (12); Atas (11). O endpoint oficial recusa."""
+    filhos = {
+        "0": [
+            (10, "Contratos", "/Meus documentos/Contratos"),
+            (11, "Atas", "/Meus documentos/Atas"),
+        ],
+        "10": [(12, "2024", "/Meus documentos/Contratos/2024")],
+    }
+
+    def sinc(q: dict[str, list[str]]) -> tuple[int, str]:
+        itens = [
+            {"id": i, "nome": n, "caminhoNomesPais": c, "lixeira": False}
+            for i, n, c in filhos.get(q["diretorioPaiId"][0], [])
+        ]
+        return 200, json.dumps({"diretorios": itens, "temMais": False})
+
+    upstream.respostas[OFICIAL_PASTAS] = (401, "")
+    upstream.dinamicas[SINC_PASTAS] = sinc
+
+
+def test_escolher_a_pasta_na_estrutura_ao_criar_de_modelo(
+    pagina: Pagina, upstream: Upstream
+) -> None:
+    page = pagina.page
+    _arvore_de_pastas(upstream)
+    pagina.ir("Criar de modelo")
+    page.get_by_role("button", name="Escolher na estrutura de pastas…").first.click()
+    modal = page.locator("[role=dialog][aria-label*='estrutura']")
+    expect(modal).to_contain_text("Estrutura de pastas")
+    expect(modal.get_by_role("button", name="Atas", exact=True)).to_be_visible()
+    expect(modal).to_contain_text("endpoint do sincronizador")  # avisa de onde veio a lista
+    modal.get_by_role("button", name="Expandir Contratos").click()  # carrega o nível de baixo
+    modal.get_by_role("button", name="2024", exact=True).click()
+    expect(modal).to_contain_text("/Meus documentos/Contratos/2024")
+    modal.get_by_role("button", name="Usar esta pasta").click()
+    expect(modal).to_have_count(0)
+    expect(page.locator("#f-template-nomePasta")).to_have_value("2024")
+    expect(page.locator("#f-template-nomePastaPai")).to_have_value("/Meus documentos/Contratos")
+
+
+def test_na_estrutura_a_raiz_so_vale_quando_o_campo_e_um_id(
+    pagina: Pagina, upstream: Upstream
+) -> None:
+    page = pagina.page
+    _arvore_de_pastas(upstream)
+    modal = page.locator("[role=dialog][aria-label*='estrutura']")
+    pagina.ir("Criar de modelo")  # campo de nome de pasta: a raiz não serve
+    page.get_by_role("button", name="Escolher na estrutura de pastas…").first.click()
+    modal.get_by_role("button", name="Meus documentos (raiz)").click()
+    expect(modal).to_contain_text("A raiz não pode ser a pasta do formulário")
+    expect(modal.get_by_role("button", name="Usar esta pasta")).to_be_disabled()
+    page.keyboard.press("Escape")
+    expect(modal).to_have_count(0)  # Esc fecha
+    pagina.ir("Baixar pasta")  # campo de ID: a raiz é o 0
+    page.get_by_role("button", name="Escolher na estrutura de pastas…").click()
+    modal.get_by_role("button", name="Meus documentos (raiz)").click()
+    modal.get_by_role("button", name="Usar esta pasta").click()
+    expect(page.locator("#bx-dir")).to_have_value("0")
+    page.get_by_role("button", name="Escolher na estrutura de pastas…").click()
+    modal.get_by_role("button", name="Atas", exact=True).click()
+    modal.get_by_role("button", name="Usar esta pasta").click()
+    expect(page.locator("#bx-dir")).to_have_value("11")
+
+
+def test_estrutura_de_pastas_no_importar_pasta(pagina: Pagina, upstream: Upstream) -> None:
+    page = pagina.page
+    _arvore_de_pastas(upstream)
+    pagina.ir("Importar pasta")
+    page.get_by_role("button", name="Escolher na estrutura de pastas…").click()
+    modal = page.locator("[role=dialog][aria-label*='estrutura']")
+    modal.get_by_role("button", name="Contratos", exact=True).click()
+    modal.get_by_role("button", name="Usar esta pasta").click()
+    expect(page.locator("#ip-pasta")).to_have_value("Contratos")
+    expect(page.locator("#ip-pai")).to_have_value("/Meus documentos")
+
+
+def test_estrutura_de_pastas_quando_a_api_nao_deixa_listar(
+    pagina: Pagina, upstream: Upstream
+) -> None:
+    page = pagina.page
+    upstream.respostas[OFICIAL_PASTAS] = (401, "")
+    upstream.respostas[SINC_PASTAS] = (401, "")
+    pagina.ir("Criar de modelo")
+    page.get_by_role("button", name="Escolher na estrutura de pastas…").first.click()
+    modal = page.locator("[role=dialog][aria-label*='estrutura']")
+    expect(modal).to_contain_text("Digite o caminho")  # a saída: continuar digitando
+    expect(modal.get_by_role("button", name="Usar esta pasta")).to_be_disabled()

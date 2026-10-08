@@ -287,6 +287,11 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
 .bar{height:10px;border-radius:99px;background:var(--sf2);overflow:hidden}
 .bar>span{display:block;height:100%;background:var(--ac);border-radius:99px;transition:width .3s}
 .bxn{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px}
+.pklist{overflow:auto;max-height:50vh;padding:6px;border:1px solid var(--ln);border-radius:10px;background:var(--sf)}
+.pkr{display:flex;align-items:center;gap:2px;border-radius:8px}
+.pkr:hover{background:var(--sf2)}
+.pkr.on{background:var(--acs);color:var(--act);font-weight:700}
+.pkn{flex:1;text-align:left;border:0;background:transparent;padding:6px 8px;font-size:14px;color:inherit;border-radius:8px;overflow-wrap:anywhere}
 .modalb{padding:20px;gap:12px}
 .modalb p{margin:0;font-size:14px}
 .pfr{display:flex;flex-direction:column;gap:6px;border:1px solid var(--ln);border-radius:12px;padding:12px 14px;background:var(--sf)}
@@ -407,7 +412,7 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
           <section class="card">
             <h2>2. Para onde enviar</h2>
             <div class="fields">
-              <div class="field"><label class="lbl" for="ip-pasta"><span>Pasta no Docnuvem</span><code class="api">nomePasta</code><span class="req">obrigatório</span></label><input id="ip-pasta" type="text" value="{{ip.pasta}}" placeholder="Cliente X" autocomplete="off" disabled="{{ip.ocupado}}" onInput="{{ip.onPasta}}"><span class="hint">Criada se não existir. As subpastas ficam dentro dela.</span></div>
+              <div class="field"><label class="lbl" for="ip-pasta"><span>Pasta no Docnuvem</span><code class="api">nomePasta</code><span class="req">obrigatório</span></label><input id="ip-pasta" type="text" value="{{ip.pasta}}" placeholder="Cliente X" autocomplete="off" disabled="{{ip.ocupado}}" onInput="{{ip.onPasta}}"><button class="link" type="button" onClick="{{ip.escolherPasta}}" disabled="{{ip.ocupado}}">Escolher na estrutura de pastas…</button><span class="hint">Criada se não existir. As subpastas ficam dentro dela.</span></div>
               <div class="field"><label class="lbl" for="ip-pai"><span>Pasta pai</span><code class="api">nomePastaPai</code><span class="tag">opcional</span></label><input id="ip-pai" type="text" value="{{ip.pastaPai}}" placeholder="/Meus documentos/Contratos" autocomplete="off" disabled="{{ip.ocupado}}" onInput="{{ip.onPai}}"><span class="hint">Se vazia, o que está na raiz da pasta vai para a raiz do Docnuvem e as subpastas usam /Meus documentos.</span></div>
               <div class="field"><label class="lbl" for="ip-tipo"><span>Tipo de documento</span><code class="api">tipo</code><span class="tag">opcional</span></label><input id="ip-tipo" type="text" value="{{ip.tipo}}" placeholder="Contrato" autocomplete="off" disabled="{{ip.ocupado}}" onInput="{{ip.onTipo}}"></div>
               <div class="field"><label class="sw"><input type="checkbox" checked="{{ip.pular}}" disabled="{{ip.ocupado}}" onChange="{{ip.onPular}}"><span class="track"></span><span class="swt">Pular arquivos já enviados antes</span></label><span class="hint">O programa anota no computador o que enviou, por perfil e destino. Um arquivo alterado conta como novo.</span></div>
@@ -570,7 +575,7 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
             <h2>O que baixar</h2>
             <p class="muted small">O servidor local lista os documentos da pasta, pede o link temporário de cada um à API e grava os arquivos no seu computador. Só faz leituras na API, por isso funciona até em perfil protegido.</p>
             <div class="fields">
-              <div class="field"><label class="lbl" for="bx-dir"><span>Pasta no Docnuvem</span><code class="api">diretorioId</code><span class="req">obrigatório</span></label><input id="bx-dir" type="text" value="{{bx.diretorioId}}" placeholder="12345" autocomplete="off" disabled="{{bx.ocupado}}" onInput="{{bx.onDir}}"><span class="hint">Número da pasta: veja na tela Pastas ou na coluna de pasta dos Documentos. Use 0 para a raiz de Meus documentos.</span></div>
+              <div class="field"><label class="lbl" for="bx-dir"><span>Pasta no Docnuvem</span><code class="api">diretorioId</code><span class="req">obrigatório</span></label><input id="bx-dir" type="text" value="{{bx.diretorioId}}" placeholder="12345" autocomplete="off" disabled="{{bx.ocupado}}" onInput="{{bx.onDir}}"><button class="link" type="button" onClick="{{bx.escolherPasta}}" disabled="{{bx.ocupado}}">Escolher na estrutura de pastas…</button><span class="hint">Número da pasta: escolha na estrutura ou veja na tela Pastas. Use 0 para a raiz de Meus documentos.</span></div>
               <div class="field"><label class="lbl" for="bx-st"><span>Status</span><code class="api">status</code><span class="tag">opcional</span></label><select id="bx-st" value="{{bx.status}}" disabled="{{bx.ocupado}}" onChange="{{bx.onStatus}}"><sc-for list="{{bx.statusOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.value}}" selected="{{o.selected}}">{{o.label}}</option></sc-for></select></div>
               <div class="field"><label class="lbl" for="bx-di"><span>De</span><code class="api">dataInicio</code><span class="tag">opcional</span></label><input id="bx-di" type="date" value="{{bx.dataInicio}}" disabled="{{bx.ocupado}}" onInput="{{bx.onDataInicio}}"></div>
               <div class="field"><label class="lbl" for="bx-df"><span>Até</span><code class="api">dataFim</code><span class="tag">opcional</span></label><input id="bx-df" type="date" value="{{bx.dataFim}}" disabled="{{bx.ocupado}}" onInput="{{bx.onDataFim}}"></div>
@@ -1026,6 +1031,26 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
     </div>
   </sc-if>
 
+  <!-- ===== SELETOR DE PASTAS ===== -->
+  <sc-if value="{{pk.open}}" hint-placeholder-val="{{ false }}">
+    <div class="pal" onClick="{{pk.fechar}}">
+      <div class="palb modalb" role="dialog" aria-label="Escolher pasta na estrutura da plataforma" onClick="{{stop}}" style="max-height:85vh">
+        <h2 style="font-size:17px">Estrutura de pastas · {{perfil}}</h2>
+        <p class="muted small">{{pk.dica}}</p>
+        <div class="pklist" role="tree">
+          <sc-for list="{{pk.rows}}" as="r" hint-placeholder-count="5">
+            <sc-if value="{{r.isRow}}" hint-placeholder-val="{{ true }}"><div class="pkr {{r.cls}}" style="{{r.pad}}" role="treeitem"><button class="ib" type="button" aria-label="{{r.label}}" onClick="{{r.toggle}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true" style="{{r.chevStyle}}"><path d="{{r.chev}}"/></svg></button><button class="pkn" type="button" onClick="{{r.pick}}">{{r.nome}}</button></div></sc-if>
+            <sc-if value="{{r.isMsg}}" hint-placeholder-val="{{ false }}"><div class="muted small" style="{{r.pad}};padding-top:4px;padding-bottom:4px">{{r.texto}}</div></sc-if>
+          </sc-for>
+        </div>
+        <sc-if value="{{pk.hasFonte}}" hint-placeholder-val="{{ false }}"><div class="muted small">{{pk.fonteTxt}}</div></sc-if>
+        <div class="muted small" style="overflow-wrap:anywhere">Selecionada: <code>{{pk.selTxt}}</code></div>
+        <sc-if value="{{pk.raizAviso}}" hint-placeholder-val="{{ false }}"><div class="muted small">A raiz não pode ser a pasta do formulário: escolha uma subpasta.</div></sc-if>
+        <div class="row"><span class="grow"></span><button class="btn" type="button" onClick="{{pk.fechar}}">Cancelar</button><button class="btn pri" type="button" onClick="{{pk.usar}}" disabled="{{pk.naoPodeUsar}}">Usar esta pasta</button></div>
+      </div>
+    </div>
+  </sc-if>
+
   <div class="toast {{toastCls}}" role="status" aria-live="polite">{{toast}}</div>
 </div>
 </x-dc>
@@ -1221,7 +1246,7 @@ lote:{csvNome:'',csvTexto:'',modo:'enviar',intervalo:'500',confirmando:false},
 fumaca:{ok:false},
 baixar:{diretorioId:'',subpastas:true,estrutura:true,conflito:'renomear',destino:'',status:'',dataInicio:'',dataFim:''},
 perfis:{aberto:false,original:'',nome:'',instancia:'',baseUrl:'',token:'',protecao:'',erro:'',salvando:false,rm:''}},
-results:{},loading:{},lists:{},diag:{},bx:{id:'',snap:null,erro:'',escolhendo:false},cmp:{busy:false,res:null,erro:''},ip:{ens:null,erro:'',busy:false,escolhendo:false,id:'',snap:null},vg:{todos:[],vistos:{},notif:false,erro:''},lt:{val:null,erro:'',validando:false,id:'',snap:null},fm:{busy:false,res:null,erro:''},protPend:null,tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
+results:{},loading:{},lists:{},diag:{},bx:{id:'',snap:null,erro:'',escolhendo:false},cmp:{busy:false,res:null,erro:''},pk:{aberto:false,alvo:null,cache:{},exp:{},sel:null},ip:{ens:null,erro:'',busy:false,escolhendo:false,id:'',snap:null},vg:{todos:[],vistos:{},notif:false,erro:''},lt:{val:null,erro:'',validando:false,id:'',snap:null},fm:{busy:false,res:null,erro:''},protPend:null,tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
 paletteOpen:false,paletteQ:'',toast:'',wizStep:0,lastMat:'',openSol:null,navMin:false,
 lastDoc:{},lastAss:{},
 sort:{documentos:{k:'criadoEm',d:-1},pastas:{k:'caminho',d:1}},openModelo:'',dragging:false,newSg:sg};
@@ -1301,6 +1326,35 @@ this.setState({vg:Object.assign({},this.state.vg,{notif:ok})});
 try{localStorage.setItem('docnuvem-vigia-notif',ok?'1':'0');}catch(e){}
 this.aviso(ok?'Avisos do navegador ligados.':'O navegador não permitiu notificações.');
 });
+}
+pkAbrir(alvo){this.setState({pk:Object.assign({},this.state.pk,{aberto:true,alvo,sel:null})});this.pkCarregar(0);}
+pkCarregar(pai){
+const k=this.state.perfil+'|'+pai,c=this.state.pk.cache[k];
+if(c&&(c.carregando||(c.pastas&&!c.erro)))return;
+const gravar=v=>{const pk=this.state.pk;this.setState({pk:Object.assign({},pk,{cache:Object.assign({},pk.cache,{[k]:v})})});};
+gravar({carregando:true});
+fetch('/_pastas/filhos?perfil='+encodeURIComponent(this.state.perfil)+'&pai='+pai,{cache:'no-store'}).then(r=>r.json()).then(j=>gravar(j.ok?{pastas:j.pastas,fonte:j.fonte}:{erro:j.erro||'Não foi possível listar as pastas.'})).catch(e=>gravar({erro:'O servidor local não respondeu: '+e.message}));
+}
+pkToggle(id){
+const pk=this.state.pk,k=this.state.perfil+'|'+id,exp=Object.assign({},pk.exp,{[k]:!pk.exp[k]});
+this.setState({pk:Object.assign({},pk,{exp})});
+if(exp[k])this.pkCarregar(id);
+}
+pkFechar(){this.setState({pk:Object.assign({},this.state.pk,{aberto:false})});}
+pkUsar(){
+const pk=this.state.pk,row=pk.sel,al=pk.alvo;if(!row||!al)return;
+if(al.modo==='id'){
+if(al.sc==='baixar')this.setF('baixar',{diretorioId:String(row.id)});
+else if(al.sc==='documentos')this.setF('documentos',{diretorioId:String(row.id),pagina:'0'});
+else if(al.sc==='pastas')this.setF('pastas',{diretorioPaiId:String(row.id),pagina:'0'});
+}else{
+if(row.id===0)return;
+const cam=row.caminho||'',pai=cam.endsWith('/'+row.nome)?cam.slice(0,cam.length-row.nome.length-1):'';
+if(al.sc==='importarPasta')this.ipSet({pasta:row.nome,pastaPai:pai});
+else this.setF(al.sc,{nomePasta:row.nome,nomePastaPai:pai});
+}
+this.pkFechar();
+this.aviso('Pasta escolhida: '+(row.caminho||row.nome));
 }
 ipSet(patch){
 const s=this.state,f=Object.assign({},s.forms.importarPasta,patch,{confirmando:false});
@@ -1515,11 +1569,12 @@ if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&String(e.key).toLowerCase()==='b'){e.pre
 if(e.key==='/'&&!typing){e.preventDefault();this.openPalette();return;}
 if(e.key==='Escape'){
 if(s.protPend){this.setState({protPend:null});return;}
+if(s.pk.aberto){this.pkFechar();return;}
 if(s.paletteOpen){this.setState({paletteOpen:false});return;}
 if(s.logOpen){if(s.logSel)this.setState({logSel:null});else this.setState({logOpen:false});return;}
 this.back();return;}
 if(e.key==='Enter'&&!e.shiftKey){
-if(s.protPend)return;
+if(s.protPend||s.pk.aberto)return;
 if(s.paletteOpen){const f=this._pal&&this._pal[0];if(f){e.preventDefault();f.go();}return;}
 if(tag==='TEXTAREA'||tag==='BUTTON'||tag==='A'||tag==='SELECT')return;
 if(t&&(t.type==='file'||t.type==='checkbox'||t.type==='search'))return;
@@ -1769,7 +1824,7 @@ if(eff==='importar'||eff==='envio'){
 C({title:'1. Arquivo',drop:true});
 if(eff==='importar')C({title:'2. Destino e identificação',fields:[
 T('importar','nomeArquivo',{label:'Nome do arquivo',api:'nomeArquivo',req:true,hint:'Com extensão. Vem do arquivo escolhido; o que você editar não é sobrescrito.',onInput:fromFile('importar'),placeholder:'contrato.pdf'}),
-T('importar','nomePasta',{label:'Pasta de destino',api:'nomePasta',req:true,placeholder:'Contratos',half:true}),
+T('importar','nomePasta',{label:'Pasta de destino',api:'nomePasta',req:true,placeholder:'Contratos',half:true,useLast:true,lastLabel:'Escolher na estrutura de pastas…',lastDisabled:false,onLast:()=>this.pkAbrir({modo:'caminho',sc:'importar'})}),
 T('importar','nomePastaPai',{label:'Pasta pai',api:'nomePastaPai',tag:'opcional',hint:'Cria a árvore se não existir. Aceita caminhos como /Meus documentos/Contratos.',placeholder:'/Meus documentos/Contratos',half:true}),
 T('importar','tipo',{label:'Tipo de documento',api:'tipo',tag:'opcional',hint:'Nome ou id. Exemplos: Contrato, Aditivo, 3.',placeholder:'Contrato'})]});
 else C({title:'2. Identificação',fields:[T('envio','nomeArquivo',{label:'Nome do arquivo',api:'nomeArquivo',req:true,hint:'Com extensão.',onInput:fromFile('envio'),placeholder:'documento.pdf'})]});
@@ -1781,7 +1836,7 @@ mSel=this.models().find(x=>x.codigo===f.modelo);
 const falt=(res0&&res0.body&&res0.body.variaveisFaltantes)||[];
 C({title:'Modelo',fields:[T('template','modelo',{label:'Modelo',api:'modelo',req:true,kind:'select',hint:mSel?mSel.descricao:'Escolha para montar o formulário.',options:[{value:'',label:'Escolha um modelo…'}].concat(this.models().map(x=>({value:x.codigo,label:x.codigo+' — '+x.nome+(x.geravelPorApi?'':' (não gerável por API)')}))),onInput:e=>this.setF('template',{modelo:e.target.value,vars:{}})})]});
 C({title:'Campos fixos do documento',sub:'Valem para qualquer modelo.',tone:'fixed',fields:[
-T('template','nomePasta',{label:'Pasta',api:'nomePasta',req:true,hint:'Precisa já existir: este endpoint não cria pasta.',half:true,placeholder:'Contratos'}),
+T('template','nomePasta',{label:'Pasta',api:'nomePasta',req:true,hint:'Precisa já existir: este endpoint não cria pasta.',half:true,placeholder:'Contratos',useLast:true,lastLabel:'Escolher na estrutura de pastas…',lastDisabled:false,onLast:()=>this.pkAbrir({modo:'caminho',sc:'template'})}),
 T('template','nomePastaPai',{label:'Pasta pai',api:'nomePastaPai',tag:'opcional',half:true,placeholder:'/Meus documentos'}),
 T('template','nomeArquivo',{label:'Nome do arquivo',api:'nomeArquivo',tag:'opcional',half:true}),
 T('template','referenciaExterna',{label:'Referência externa',api:'referenciaExterna',tag:'até 64',half:true,hint:(f.referenciaExterna||'').length+'/64 caracteres'}),
@@ -1838,7 +1893,7 @@ T('cancelar','motivo',{label:'Motivo',api:'motivo',tag:'opcional',kind:'area'}),
 T('cancelar','confirm',{label:'Confirmação',api:'digite o ID',req:true,hint:'Digite o mesmo assinaturaId para liberar o botão.',placeholder:'repita o assinaturaId'})]});
 }
 if(eff==='documentos')C({title:'Filtros',sub:'Campos vazios não são enviados.',fields:[
-T('documentos','diretorioId',{label:'Pasta (ID)',api:'diretorioId',half:true,placeholder:'302',hint:'Pegue em “Pastas”.'}),
+T('documentos','diretorioId',{label:'Pasta (ID)',api:'diretorioId',half:true,placeholder:'302',hint:'Escolha na estrutura ou pegue em “Pastas”.',useLast:true,lastLabel:'Escolher na estrutura de pastas…',lastDisabled:false,onLast:()=>this.pkAbrir({modo:'id',sc:'documentos'})}),
 T('documentos','incluirSubpastas',{kind:'switch',label:'Incluir subpastas',api:'incluirSubpastas',switchText:f.incluirSubpastas?'Sim':'Não',half:true}),
 T('documentos','status',{label:'Status',api:'status',half:true,listId:'status-list',placeholder:'pendente',hint:'pendente, assinado, expirado, cancelado, sem_assinatura'}),
 T('documentos','dataInicio',{label:'Data inicial',api:'dataInicio',inputType:'date',half:true}),
@@ -1846,7 +1901,7 @@ T('documentos','dataFim',{label:'Data final',api:'dataFim',inputType:'date',half
 T('documentos','pagina',{label:'Página',api:'pagina',half:true,hint:'Começa em 0'}),
 T('documentos','tamanho',{label:'Tamanho',api:'tamanho',half:true,hint:'Até 200; padrão 50'})]});
 if(eff==='pastas')C({title:'Filtros',sub:'Campos vazios não são enviados.',fields:[
-T('pastas','diretorioPaiId',{label:'Pasta pai (ID)',api:'diretorioPaiId',half:true,placeholder:'302'}),
+T('pastas','diretorioPaiId',{label:'Pasta pai (ID)',api:'diretorioPaiId',half:true,placeholder:'302',useLast:true,lastLabel:'Escolher na estrutura de pastas…',lastDisabled:false,onLast:()=>this.pkAbrir({modo:'id',sc:'pastas'})}),
 T('pastas','nome',{label:'Nome',api:'nome',half:true,placeholder:'Contratos'}),
 T('pastas','caminho',{label:'Caminho',api:'caminho',hint:'Partes do caminho, sem diferenciar maiúsculas. Ex.: contratos/loca',placeholder:'contratos/loca'}),
 T('pastas','pagina',{label:'Página',api:'pagina',half:true,hint:'Começa em 0'}),
@@ -2022,7 +2077,7 @@ status:fb.status,onStatus:e=>this.setF('baixar',{status:e.target.value}),dataIni
 statusOpts:[['','Todos os status'],['pendente','Pendente'],['assinado','Assinado'],['expirado','Expirado'],['cancelado','Cancelado'],['sem_assinatura','Sem assinatura']].map(a=>({value:a[0],label:a[1],selected:fb.status===a[0]})),
 filtros:bxs?bxs.filtros:'',hasFiltros:!!bxs&&!!bxs.filtros,
 conflitoOpts:[['renomear','Manter os dois (acrescenta o número ao nome novo)'],['pular','Pular o arquivo que já existe']].map(a=>({value:a[0],label:a[1],selected:fb.conflito===a[0]})),onConflito:e=>this.setF('baixar',{conflito:e.target.value}),
-escolher:()=>this.bxEscolher(),escolherLabel:s.bx.escolhendo?'Aguardando a janela…':'Escolher pasta…',escolherOff:s.bx.escolhendo||bxAtivo,
+escolher:()=>this.bxEscolher(),escolherPasta:()=>this.pkAbrir({modo:'id',sc:'baixar'}),escolherLabel:s.bx.escolhendo?'Aguardando a janela…':'Escolher pasta…',escolherOff:s.bx.escolhendo||bxAtivo,
 contar:()=>this.bxIniciar(true),baixar:()=>this.bxIniciar(false),parado:!bxAtivo,ocupado:bxAtivo,
 hasErr:!!s.bx.erro,err:s.bx.erro,
 has:!!bxs,cls:bxs?(bxCls[bxs.estado]||'mu'):'mu',label:bxs?(bxTxt[bxs.estado]||bxs.estado):'',
@@ -2039,6 +2094,34 @@ destinoAtual:bxs?bxs.destino:'',hasRel:!!bxs&&!!bxs.relatorio,relatorio:bxs?bxs.
 amostra:(bxs&&bxs.amostra||[]).map(n=>({n})),hasAmostra:!!bxs&&!!(bxs.amostra||[]).length&&!!bxs.ensaio,
 falhas:(bxs&&bxs.falhas||[]).map(x=>({id:x.documentoId,nome:x.nome||'(sem nome)',erro:x.erro})),hasFalhas:!!bxs&&bxs.nFalhas>0,nFalhas:bxs?bxs.nFalhas:0,
 copyFalhas:()=>this.copy((bxs?bxs.falhas:[]).map(x=>x.documentoId+' · '+x.nome+' · '+x.erro).join('\n'),'Falhas copiadas.')};
+// seletor de pastas
+const pkk=s.pk,pkAl=pkk.alvo,pkSel=pkk.sel,pkRaiz={id:0,nome:'Meus documentos',caminho:'/Meus documentos'};
+const pkRows=[];
+const pkPad=d=>'padding-left:'+(6+d*18)+'px';
+const pkWalk=(pai,d)=>{
+const c=pkk.cache[perfil+'|'+pai];if(!c)return;
+if(c.carregando)pkRows.push({isMsg:true,isRow:false,texto:'Carregando…',pad:pkPad(d)});
+else if(c.erro)pkRows.push({isMsg:true,isRow:false,texto:c.erro,pad:pkPad(d)});
+else if(!c.pastas.length)pkRows.push({isMsg:true,isRow:false,texto:'(sem subpastas)',pad:pkPad(d)});
+else c.pastas.forEach(q=>{
+const ex=!!pkk.exp[perfil+'|'+q.id];
+pkRows.push({isRow:true,isMsg:false,nome:q.nome,pad:pkPad(d),cls:pkSel&&pkSel.id===q.id?'on':'',chev:ICON.chev,chevStyle:ex?'transform:rotate(90deg)':'',toggle:()=>this.pkToggle(q.id),pick:()=>this.setState({pk:Object.assign({},pkk,{sel:q})}),label:(ex?'Recolher ':'Expandir ')+q.nome});
+if(ex)pkWalk(q.id,d+1);
+});
+};
+if(pkk.aberto){
+pkRows.push({isRow:true,isMsg:false,nome:pkRaiz.nome+' (raiz)',pad:pkPad(0),cls:pkSel&&pkSel.id===0?'on':'',chev:ICON.chev,chevStyle:'transform:rotate(90deg)',toggle:()=>{},pick:()=>this.setState({pk:Object.assign({},pkk,{sel:pkRaiz})}),label:'Raiz'});
+pkWalk(0,1);
+}
+const pkRaizC=pkk.cache[perfil+'|0'];
+const pk={
+open:!!pkk.aberto,fechar:()=>this.pkFechar(),rows:pkRows,usar:()=>this.pkUsar(),
+dica:pkAl&&pkAl.modo==='id'?'Clique numa pasta para usar o ID dela. Use a seta para ver as subpastas.':'Clique numa pasta para escolhê-la: ela vira o nome da pasta e a “pasta pai” do formulário. Use a seta para ver as subpastas.',
+selTxt:pkSel?(pkSel.caminho||pkSel.nome)+(pkAl&&pkAl.modo==='id'?'  (ID '+pkSel.id+')':''):'nenhuma',
+raizAviso:!!pkSel&&pkSel.id===0&&!!pkAl&&pkAl.modo!=='id',
+naoPodeUsar:!pkSel||(!!pkAl&&pkAl.modo!=='id'&&pkSel.id===0),
+hasFonte:!!pkRaizC&&pkRaizC.fonte==='sincronizador',
+fonteTxt:'Lista obtida pelo endpoint do sincronizador (somente leitura), porque o endpoint de pastas da API recusou este perfil.'};
 // importar pasta
 const fip=s.forms.importarPasta,ipst=s.ip,ens=ipst.ens,isn=ipst.snap;
 const ipAtivo=!!isn&&isn.estado==='executando';
@@ -2053,7 +2136,7 @@ pasta:fip.pasta,onPasta:e=>this.ipSet({pasta:e.target.value}),
 tipo:fip.tipo,onTipo:e=>this.ipSet({tipo:e.target.value}),
 pular:!!fip.pular,onPular:e=>this.ipSet({pular:e.target.checked}),
 intervalo:fip.intervalo,onIntervalo:e=>this.setF('importarPasta',{intervalo:e.target.value}),
-escolher:()=>this.ipEscolher(),escolherLabel:ipst.escolhendo?'Aguardando a janela…':'Escolher pasta…',escolherOff:ipst.escolhendo||ipAtivo,
+escolher:()=>this.ipEscolher(),escolherPasta:()=>this.pkAbrir({modo:'caminho',sc:'importarPasta'}),escolherLabel:ipst.escolhendo?'Aguardando a janela…':'Escolher pasta…',escolherOff:ipst.escolhendo||ipAtivo,
 verificar:()=>this.ipEnsaio(),verificarOff:ipst.busy||ipAtivo,busy:ipst.busy,
 hasErr:!!ipst.erro,err:ipst.erro,
 has:!!ens,
@@ -2230,7 +2313,7 @@ hasRes:!!res0,noRes:!res0&&!loading,res,tabs,tabResumo:s.tab==='resumo',tabJson:
 jsonCopyAll:()=>this.copy(JSON.stringify(res0?res0.body:{},null,2)),jsonCollapse:()=>this.setState({collapsed:allPaths(res0?res0.body:{},'$',{})}),jsonExpand:()=>this.setState({collapsed:{}}),
 nexts,hasNexts:nexts.length>0,
 hasLinks:links.length>0&&eff==='assinatura',links,linksNote:linkSrc?(linkSrc.conviteEnviado?'Convite enviado por e-mail (conviteEnviado = true). Os links abaixo também valem.':'Nenhum e-mail foi enviado (conviteEnviado = false, padrão). Envie cada link ao signatário.'):'',
-dt,pt,md,stv,dl,wiz,al,asv,api,hist,dg:dgn,prot,pf,bx,cm,lote,fumaca,vg,ip:ipv,
+dt,pt,md,stv,dl,wiz,al,asv,api,hist,dg:dgn,prot,pf,bx,cm,lote,fumaca,vg,ip:ipv,pk,
 logOpen:s.logOpen,logFav:s.logFav,onLogFav:e=>this.setState({logFav:e.target.checked}),logRows:lrows,logEmpty:lrows.length===0&&!sel,hasLogSel:!!sel,showLogList:!sel,ld,
 paletteOpen:s.paletteOpen,paletteQ:s.paletteQ,onPaletteQ:e=>this.setState({paletteQ:e.target.value}),palItems,palEmpty:palItems.length===0,closePalette:()=>this.setState({paletteOpen:false}),stop:e=>{if(e&&e.stopPropagation)e.stopPropagation();},
 toast:s.toast,toastCls:s.toast?'':'off'

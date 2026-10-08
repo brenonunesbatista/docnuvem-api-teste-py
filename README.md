@@ -74,6 +74,11 @@ Opções: `--porta N`, `--nao-abrir`, `--sem-historico`, `--dados PASTA`.
   refazendo a árvore), com filtro opcional de status e de período. Você escolhe o destino por uma janela ou digitando o caminho;
   há "só contar" antes de baixar, andamento, cancelamento e um relatório CSV. Nunca sobrescreve
   arquivos. Só lê da API, então vale até em perfil protegido.
+- **Estrutura de pastas**: nos campos de pasta (criar de modelo, importar arquivo, importar pasta, baixar
+  pasta, documentos e pastas) o link "Escolher na estrutura de pastas…" abre a árvore da plataforma,
+  carregada por nível, e preenche o campo no lugar de digitar o caminho. Usa o endpoint de pastas da
+  API e, se ela o recusar para o perfil, o endpoint de listagem do sincronizador (só leitura); se
+  nenhum funcionar, avisa e dá para digitar.
 - **Importar pasta**: envia uma pasta do computador para o Docnuvem, refazendo as subpastas. Mostra
   antes o plano (de onde → para onde, o que será ignorado e por quê), pede confirmação, envia com
   intervalo, para sozinho após falhas seguidas e gera relatório CSV. O programa anota o que já enviou
