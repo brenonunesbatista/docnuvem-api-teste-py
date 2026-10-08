@@ -53,6 +53,14 @@ Nenhum planejado. As quatro etapas estão feitas.
 - ✅ **Testes de navegador** (Playwright): feitos, `pytest -m browser` (22 testes). Já acharam 3 defeitos
   da página.
 
+**Extras feitos depois das quatro etapas (2026-10-08):**
+
+- ✅ Filtros de status e período no "Baixar pasta".
+- ✅ "Importar pasta" do computador para o Docnuvem, refazendo as subpastas.
+- ✅ Seletor da estrutura de pastas da plataforma nos campos de pasta (usa o endpoint de listagem do
+  sincronizador quando `/api/diretorios` recusa o perfil).
+- ✅ Painel das instâncias e monitor de disponibilidade.
+
 **Descartados em 2026-10-08** (sem interesse por ora):
 
 - Roteiros de teste que o usuário monta e salva (fica só o teste de fumaça fixo).
