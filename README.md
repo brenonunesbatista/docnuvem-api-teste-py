@@ -74,11 +74,16 @@ Opções: `--porta N`, `--nao-abrir`, `--sem-historico`, `--dados PASTA`.
   refazendo a árvore), com filtro opcional de status e de período. Você escolhe o destino por uma janela ou digitando o caminho;
   há "só contar" antes de baixar, andamento, cancelamento e um relatório CSV. Nunca sobrescreve
   arquivos. Só lê da API, então vale até em perfil protegido.
+- **Login de usuário por instância**: em **Perfis** (ou no seletor de pastas, quando a API pede) o botão
+  "Entrar com usuário…" faz o login do sincronizador com o SEU usuário nessa instância. Cada instância tem
+  os seus próprios usuários, então o login é por perfil. O login registra este computador como
+  dispositivo na instância (um identificador fixo, para não criar um novo a cada vez).
+  Usuários com verificação em duas etapas não conseguem entrar.
 - **Estrutura de pastas**: nos campos de pasta (criar de modelo, importar arquivo, importar pasta, baixar
-  pasta, documentos e pastas) o link "Escolher na estrutura de pastas…" abre a árvore da plataforma,
-  carregada por nível, e preenche o campo no lugar de digitar o caminho. Usa o endpoint de pastas da
-  API e, se ela o recusar para o perfil, o endpoint de listagem do sincronizador (só leitura); se
-  nenhum funcionar, avisa e dá para digitar.
+  pasta, documentos e pastas) o link "Escolher na estrutura de pastas…" abre um seletor em cartões, com
+  caminho clicável, filtro e uma gaveta no celular, e preenche o campo no lugar de digitar o caminho.
+  Usa o endpoint de pastas da API e, se ela o recusar, o endpoint de listagem do sincronizador (só
+  leitura), com o token do seu usuário quando você já entrou; se nada funcionar, avisa e dá para digitar.
 - **Importar pasta**: envia uma pasta do computador para o Docnuvem, refazendo as subpastas. Mostra
   antes o plano (de onde → para onde, o que será ignorado e por quê), pede confirmação, envia com
   intervalo, para sozinho após falhas seguidas e gera relatório CSV. O programa anota o que já enviou
@@ -124,6 +129,16 @@ Opções: `--porta N`, `--nao-abrir`, `--sem-historico`, `--dados PASTA`.
   `instancia` (minúsculo). A página só vê o token mascarado.
 - O servidor só atende `127.0.0.1`, só aceita pedidos da própria página e só repassa os
   endpoints da ferramenta.
+
+### Segredos
+
+- `config.json` (tokens da instância e do usuário), `config.json.bak` e `config.json.tmp` ficam **fora do
+  git** (`.gitignore`). Não coloque o projeto numa pasta sincronizada (OneDrive e similares): os tokens
+  iriam para a nuvem.
+- A **senha do usuário nunca é gravada**: vai da tela direto para a API e some. Só o token fica no
+  `config.json`. A API recebe a senha na URL (limitação dela); por isso erros são limpos antes de aparecer.
+- Nenhum token (da instância ou do usuário) chega ao navegador: a página só vê os últimos 4 caracteres.
+- Para revogar um login, use "Sair" no perfil: o token some do `config.json`.
 
 ### Dados locais
 

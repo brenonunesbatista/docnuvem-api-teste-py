@@ -446,6 +446,9 @@ def test_importar_pasta_nao_envia_em_perfil_somente_leitura(pagina: Pagina, tmp_
 
 OFICIAL_PASTAS = ("GET", "/api/diretorios")
 SINC_PASTAS = ("POST", "/api/sync/listarDiretoriosFilhos")
+LOGIN_SYNC = ("POST", "/api/sync/login")
+SENHA = "S3nha-MUITO-secreta!"
+TOKEN_USUARIO = "tok-USUARIO-0123456789"
 
 
 def _arvore_de_pastas(upstream: Upstream) -> None:
@@ -469,24 +472,59 @@ def _arvore_de_pastas(upstream: Upstream) -> None:
     upstream.dinamicas[SINC_PASTAS] = sinc
 
 
-def test_escolher_a_pasta_na_estrutura_ao_criar_de_modelo(
+def _seletor(page: Any) -> Any:
+    return page.locator("[role=dialog][aria-label*='estrutura']")
+
+
+def test_escolher_a_pasta_navegando_pela_estrutura(pagina: Pagina, upstream: Upstream) -> None:
+    page = pagina.page
+    _arvore_de_pastas(upstream)
+    pagina.ir("Criar de modelo")
+    page.get_by_role("button", name="Escolher na estrutura de pastas…").first.click()
+    modal = _seletor(page)
+    expect(modal).to_contain_text("Escolher pasta")
+    expect(modal.locator(".pkcard")).to_have_count(2)  # cartões, não uma lista aninhada
+    expect(modal).to_contain_text("endpoint de pastas da API recusou")  # avisa de onde veio
+    modal.get_by_role("button", name="Abrir Contratos").click()  # entra na pasta
+    expect(modal.locator(".pkcrumbs")).to_contain_text("Meus documentos")
+    expect(modal.locator(".pkcrumbs .cur")).to_have_text("Contratos")
+    expect(modal.locator(".pkcard")).to_have_count(1)
+    modal.get_by_role("button", name="Abrir 2024").click()
+    expect(modal.locator("[class*=empty]")).to_contain_text("não tem subpastas")
+    expect(modal).to_contain_text("/Meus documentos/Contratos/2024")  # a pasta atual
+    modal.get_by_role("button", name="Escolher esta pasta").click()
+    expect(modal).to_have_count(0)
+    expect(page.locator("#f-template-nomePasta")).to_have_value("2024")
+    expect(page.locator("#f-template-nomePastaPai")).to_have_value("/Meus documentos/Contratos")
+
+
+def test_escolher_direto_no_cartao_e_voltar_pelo_caminho(
     pagina: Pagina, upstream: Upstream
 ) -> None:
     page = pagina.page
     _arvore_de_pastas(upstream)
     pagina.ir("Criar de modelo")
     page.get_by_role("button", name="Escolher na estrutura de pastas…").first.click()
-    modal = page.locator("[role=dialog][aria-label*='estrutura']")
-    expect(modal).to_contain_text("Estrutura de pastas")
-    expect(modal.get_by_role("button", name="Atas", exact=True)).to_be_visible()
-    expect(modal).to_contain_text("endpoint do sincronizador")  # avisa de onde veio a lista
-    modal.get_by_role("button", name="Expandir Contratos").click()  # carrega o nível de baixo
-    modal.get_by_role("button", name="2024", exact=True).click()
-    expect(modal).to_contain_text("/Meus documentos/Contratos/2024")
-    modal.get_by_role("button", name="Usar esta pasta").click()
-    expect(modal).to_have_count(0)
-    expect(page.locator("#f-template-nomePasta")).to_have_value("2024")
-    expect(page.locator("#f-template-nomePastaPai")).to_have_value("/Meus documentos/Contratos")
+    modal = _seletor(page)
+    modal.get_by_role("button", name="Abrir Contratos").click()
+    modal.get_by_role("button", name="Meus documentos", exact=True).click()  # migalha de pão
+    expect(modal.locator(".pkcard")).to_have_count(2)
+    modal.get_by_role("button", name="Escolher Atas").click()  # sem precisar entrar
+    expect(page.locator("#f-template-nomePasta")).to_have_value("Atas")
+    expect(page.locator("#f-template-nomePastaPai")).to_have_value("/Meus documentos")
+
+
+def test_filtrar_as_pastas_do_nivel(pagina: Pagina, upstream: Upstream) -> None:
+    page = pagina.page
+    _arvore_de_pastas(upstream)
+    pagina.ir("Criar de modelo")
+    page.get_by_role("button", name="Escolher na estrutura de pastas…").first.click()
+    modal = _seletor(page)
+    modal.get_by_label("Filtrar as pastas desta pasta").fill("ata")
+    expect(modal.locator(".pkcard")).to_have_count(1)
+    expect(modal).to_contain_text("1 de 2 pasta(s)")
+    modal.get_by_label("Filtrar as pastas desta pasta").fill("zzz")
+    expect(modal).to_contain_text("Nenhuma pasta com esse nome")
 
 
 def test_na_estrutura_a_raiz_so_vale_quando_o_campo_e_um_id(
@@ -494,22 +532,19 @@ def test_na_estrutura_a_raiz_so_vale_quando_o_campo_e_um_id(
 ) -> None:
     page = pagina.page
     _arvore_de_pastas(upstream)
-    modal = page.locator("[role=dialog][aria-label*='estrutura']")
+    modal = _seletor(page)
     pagina.ir("Criar de modelo")  # campo de nome de pasta: a raiz não serve
     page.get_by_role("button", name="Escolher na estrutura de pastas…").first.click()
-    modal.get_by_role("button", name="Meus documentos (raiz)").click()
-    expect(modal).to_contain_text("A raiz não pode ser a pasta do formulário")
-    expect(modal.get_by_role("button", name="Usar esta pasta")).to_be_disabled()
+    expect(modal.get_by_role("button", name="Escolher esta pasta")).to_be_disabled()
+    expect(modal).to_contain_text("A raiz não serve como pasta do formulário")
     page.keyboard.press("Escape")
     expect(modal).to_have_count(0)  # Esc fecha
     pagina.ir("Baixar pasta")  # campo de ID: a raiz é o 0
     page.get_by_role("button", name="Escolher na estrutura de pastas…").click()
-    modal.get_by_role("button", name="Meus documentos (raiz)").click()
-    modal.get_by_role("button", name="Usar esta pasta").click()
+    modal.get_by_role("button", name="Escolher esta pasta (ID 0)").click()
     expect(page.locator("#bx-dir")).to_have_value("0")
     page.get_by_role("button", name="Escolher na estrutura de pastas…").click()
-    modal.get_by_role("button", name="Atas", exact=True).click()
-    modal.get_by_role("button", name="Usar esta pasta").click()
+    modal.get_by_role("button", name="Escolher Atas").click()
     expect(page.locator("#bx-dir")).to_have_value("11")
 
 
@@ -518,11 +553,29 @@ def test_estrutura_de_pastas_no_importar_pasta(pagina: Pagina, upstream: Upstrea
     _arvore_de_pastas(upstream)
     pagina.ir("Importar pasta")
     page.get_by_role("button", name="Escolher na estrutura de pastas…").click()
-    modal = page.locator("[role=dialog][aria-label*='estrutura']")
-    modal.get_by_role("button", name="Contratos", exact=True).click()
-    modal.get_by_role("button", name="Usar esta pasta").click()
+    modal = _seletor(page)
+    modal.get_by_role("button", name="Escolher Contratos").click()
     expect(page.locator("#ip-pasta")).to_have_value("Contratos")
     expect(page.locator("#ip-pai")).to_have_value("/Meus documentos")
+
+
+def test_seletor_de_pastas_e_responsivo_no_celular(pagina: Pagina, upstream: Upstream) -> None:
+    page = pagina.page
+    _arvore_de_pastas(upstream)
+    page.set_viewport_size({"width": 390, "height": 800})
+    pagina.ir("Criar de modelo")
+    page.get_by_role("button", name="Escolher na estrutura de pastas…").first.click()
+    modal = _seletor(page)
+    expect(modal.locator(".pkcard")).to_have_count(2)
+    caixa = modal.bounding_box()
+    assert caixa is not None
+    assert caixa["width"] >= 385  # ocupa a largura inteira, como uma gaveta
+    assert caixa["y"] + caixa["height"] >= 790  # encostada embaixo
+    cartoes = modal.locator(".pkcard")
+    primeiro, segundo = cartoes.nth(0).bounding_box(), cartoes.nth(1).bounding_box()
+    assert primeiro and segundo
+    assert segundo["y"] > primeiro["y"] + primeiro["height"] - 2  # uma coluna só
+    assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1")
 
 
 def test_estrutura_de_pastas_quando_a_api_nao_deixa_listar(
@@ -530,12 +583,119 @@ def test_estrutura_de_pastas_quando_a_api_nao_deixa_listar(
 ) -> None:
     page = pagina.page
     upstream.respostas[OFICIAL_PASTAS] = (401, "")
-    upstream.respostas[SINC_PASTAS] = (401, "")
+    upstream.respostas[SINC_PASTAS] = (500, "")
     pagina.ir("Criar de modelo")
     page.get_by_role("button", name="Escolher na estrutura de pastas…").first.click()
-    modal = page.locator("[role=dialog][aria-label*='estrutura']")
+    modal = _seletor(page)
     expect(modal).to_contain_text("Digite o caminho")  # a saída: continuar digitando
-    expect(modal.get_by_role("button", name="Usar esta pasta")).to_be_disabled()
+    expect(modal.get_by_role("button", name="Entrar com usuário…")).to_have_count(0)
+    expect(modal.get_by_role("button", name="Tentar de novo")).to_be_visible()
+
+
+# ------------------------------------------------------ login de usuário ---
+
+
+def _login_na_api(upstream: Upstream) -> None:
+    """A API só aceita a senha certa e, com o token do usuário, lista as pastas."""
+
+    def login(q: dict[str, list[str]]) -> tuple[int, str]:
+        if q["senha"][0] != SENHA:
+            return 401, '{"retorno": "Usuário ou senha inválidos"}'
+        return 200, json.dumps({"token": TOKEN_USUARIO})
+
+    upstream.dinamicas[LOGIN_SYNC] = login
+    upstream.respostas[OFICIAL_PASTAS] = (401, "")
+    pasta = {
+        "id": 77,
+        "nome": "Pasta do usuário",
+        "caminhoNomesPais": "/Meus documentos/Pasta do usuário",
+    }
+    upstream.por_token[(*SINC_PASTAS, f"Bearer {TOKEN_USUARIO}")] = (
+        200,
+        json.dumps({"diretorios": [pasta], "temMais": False}),
+    )
+    upstream.respostas[SINC_PASTAS] = (
+        401,
+        '{"retorno": "Esta instância exige login de usuário no sincronizador."}',
+    )
+
+
+def test_seletor_pede_login_e_depois_lista_as_pastas(
+    abrir: Any, app_cfg: App, upstream: Upstream
+) -> None:
+    pagina = abrir(app_cfg.base)
+    page = pagina.page
+    _login_na_api(upstream)
+    pagina.ir("Criar de modelo")
+    page.get_by_role("button", name="Escolher na estrutura de pastas…").first.click()
+    seletor = _seletor(page)
+    expect(seletor).to_contain_text("Entre com o seu usuário")
+    seletor.get_by_role("button", name="Entrar com usuário…").click()
+    login = page.locator("[role=dialog][aria-label*='Entrar']")
+    expect(login).to_contain_text("Entrar na instância do perfil a")
+    expect(login).to_contain_text("não é guardada")  # diz o que acontece com a senha
+    expect(login.get_by_role("button", name="Entrar", exact=True)).to_be_disabled()  # campos vazios
+    login.get_by_label("Usuário").fill("ana@cliente.com.br")
+    login.get_by_label("Senha").fill("senha errada")
+    login.get_by_role("button", name="Entrar", exact=True).click()
+    expect(login).to_contain_text("Usuário ou senha inválidos")
+    expect(login.get_by_label("Senha")).to_have_value("")  # a senha sai da tela ao enviar
+    login.get_by_label("Senha").fill(SENHA)
+    login.get_by_role("button", name="Entrar", exact=True).click()
+    expect(login).to_have_count(0)
+    expect(seletor.locator(".pkcard")).to_have_count(1)  # voltou ao seletor e já lista
+    expect(seletor.get_by_role("button", name="Abrir Pasta do usuário")).to_be_visible()
+    expect(seletor).to_contain_text("com o seu usuário")
+    # nada secreto ficou na página
+    html = page.content()
+    assert SENHA not in html and TOKEN_USUARIO not in html
+
+
+def test_perfis_mostra_o_usuario_e_permite_sair(
+    abrir: Any, app_cfg: App, upstream: Upstream
+) -> None:
+    pagina = abrir(app_cfg.base)
+    page = pagina.page
+    _login_na_api(upstream)
+    pagina.ir("Perfis")
+    cartao = page.locator(".pfr").first
+    expect(cartao).to_contain_text("Sem login de usuário")
+    cartao.get_by_role("button", name="Entrar com usuário…").click()
+    login = page.locator("[role=dialog][aria-label*='Entrar']")
+    login.get_by_label("Usuário").fill("ana@cliente.com.br")
+    login.get_by_label("Senha").fill(SENHA)
+    page.keyboard.press("Enter")  # Enter envia
+    expect(login).to_have_count(0)
+    expect(cartao).to_contain_text("ana@cliente.com.br")
+    expect(cartao.get_by_role("button", name="Trocar usuário…")).to_be_visible()
+    assert SENHA not in page.content() and TOKEN_USUARIO not in page.content()
+    cartao.get_by_role("button", name="Sair").click()
+    expect(cartao).to_contain_text("Sem login de usuário")
+    assert app_cfg.servidor.arquivo_config is not None
+    gravado = app_cfg.servidor.arquivo_config.read_text(encoding="utf-8")
+    assert SENHA not in gravado and TOKEN_USUARIO not in gravado
+
+
+def test_login_nao_funciona_em_perfil_somente_leitura(
+    abrir: Any, app_cfg: App, upstream: Upstream
+) -> None:
+    pagina = abrir(app_cfg.base)
+    page = pagina.page
+    _login_na_api(upstream)
+    app_cfg.http.post(
+        "/_config/perfil",
+        json={"original": "b", "nome": "b", "instancia": "b", "baseUrl": upstream.base, "token": "",
+              "protecao": "bloquear"},
+    )  # fmt: skip
+    page.reload()
+    page.wait_for_selector("#perfil option", state="attached")
+    pagina.ir("Perfis")
+    page.locator(".pfr").nth(1).get_by_role("button", name="Entrar com usuário…").click()
+    login = page.locator("[role=dialog][aria-label*='Entrar']")
+    expect(login).to_contain_text("somente leitura")
+    login.get_by_label("Usuário").fill("x")
+    login.get_by_label("Senha").fill("y")
+    expect(login.get_by_role("button", name="Entrar", exact=True)).to_be_disabled()
 
 
 # ------------------------------------------------ painel e monitor ---

@@ -287,16 +287,38 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
 .bar{height:10px;border-radius:99px;background:var(--sf2);overflow:hidden}
 .bar>span{display:block;height:100%;background:var(--ac);border-radius:99px;transition:width .3s}
 .bxn{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px}
-.pklist{overflow:auto;max-height:50vh;padding:6px;border:1px solid var(--ln);border-radius:10px;background:var(--sf)}
-.pkr{display:flex;align-items:center;gap:2px;border-radius:8px}
-.pkr:hover{background:var(--sf2)}
-.pkr.on{background:var(--acs);color:var(--act);font-weight:700}
-.pkn{flex:1;text-align:left;border:0;background:transparent;padding:6px 8px;font-size:14px;color:inherit;border-radius:8px;overflow-wrap:anywhere}
 .hb{display:inline-block;width:8px;height:18px;border-radius:2px;background:var(--sf2);margin-right:2px}
 .hb.ok{background:var(--ok)}
 .hb.wn{background:var(--wn)}
 .hb.er{background:var(--er)}
 .beats{display:flex;flex-wrap:wrap;gap:2px 0;align-items:center}
+.pkm{width:min(780px,100%);max-height:88vh;display:flex;flex-direction:column;gap:12px;padding:18px;background:var(--sf);border:1px solid var(--ln);border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.4);overflow:hidden}
+.pkhead{display:flex;align-items:center;gap:8px}
+.pkhead h2{font-size:17px;margin:0;flex:1}
+.pkcrumbs{display:flex;flex-wrap:wrap;align-items:center;gap:2px 4px;font-size:13.5px}
+.pkcrumbs .cr{border:0;background:var(--sf2);color:var(--tx);padding:4px 10px;border-radius:99px}
+.pkcrumbs .cr:hover{background:var(--acs);color:var(--act)}
+.pkcrumbs .cr.cur{background:var(--acs);color:var(--act);font-weight:700;cursor:default}
+.pkcrumbs .sep{color:var(--mu)}
+.pkgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;align-content:start;overflow:auto;padding:2px;min-height:96px}
+.pkcard{display:flex;align-items:stretch;border:1px solid var(--ln);border-radius:14px;background:var(--sf);transition:border-color .12s,box-shadow .12s,transform .12s}
+.pkcard:hover{border-color:var(--ac);box-shadow:0 6px 18px rgba(0,0,0,.18);transform:translateY(-1px)}
+.pkcard .abrir{flex:1;display:flex;align-items:center;gap:10px;border:0;background:transparent;color:inherit;text-align:left;padding:12px;border-radius:14px 0 0 14px;min-width:0}
+.pkcard .abrir .ic{color:var(--ac);flex:none;width:22px;height:22px}
+.pkcard .abrir span{overflow-wrap:anywhere;font-size:14px;line-height:1.25}
+.pkcard .usar{flex:none;border:0;border-left:1px solid var(--ln);background:transparent;color:var(--mu);padding:0 12px;border-radius:0 14px 14px 0}
+.pkcard .usar:hover{background:var(--acs);color:var(--act)}
+.sk{border-radius:14px;height:50px;background:linear-gradient(90deg,var(--sf2) 25%,var(--sf) 50%,var(--sf2) 75%);background-size:200% 100%;animation:skm 1.2s infinite linear}
+@keyframes skm{from{background-position:200% 0}to{background-position:-200% 0}}
+.pkfoot{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;border-top:1px solid var(--ln);padding-top:12px}
+.pkfoot .atual{flex:1 1 220px;min-width:0;font-size:13px;overflow-wrap:anywhere}
+.pal.sheet{align-items:center;padding:4vh 16px}
+@media (max-width:640px){
+.pal.sheet{align-items:flex-end;padding:0}
+.pkm{width:100%;max-height:92vh;border-radius:20px 20px 0 0;padding:16px}
+.pkgrid{grid-template-columns:1fr}
+.pkfoot .btn{flex:1 1 140px}
+}
 .modalb{padding:20px;gap:12px}
 .modalb p{margin:0;font-size:14px}
 .pfr{display:flex;flex-direction:column;gap:6px;border:1px solid var(--ln);border-radius:12px;padding:12px 14px;background:var(--sf)}
@@ -675,8 +697,8 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
               <sc-for list="{{pf.rows}}" as="r" hint-placeholder-count="3">
                 <div class="{{r.card}}">
                   <div class="row"><strong>{{r.id}}</strong><sc-if value="{{r.isDefault}}" hint-placeholder-val="{{ false }}"><span class="pill ok">padrão</span></sc-if><sc-if value="{{r.active}}" hint-placeholder-val="{{ false }}"><span class="pill mu">em uso</span></sc-if><span class="pill {{r.protCls}}">{{r.protTxt}}</span></div>
-                  <dl class="kvs"><dt>Instância</dt><dd>{{r.instancia}}</dd><dt>Endereço</dt><dd>{{r.baseUrl}}</dd><dt>Token</dt><dd>{{r.mascara}}</dd></dl>
-                  <div class="row"><button class="btn sm" type="button" onClick="{{r.edit}}" disabled="{{pf.naoEditavel}}">Editar</button><sc-if value="{{r.notDefault}}" hint-placeholder-val="{{ false }}"><button class="btn sm" type="button" onClick="{{r.setDefault}}" disabled="{{pf.naoEditavel}}">Tornar padrão</button></sc-if><span class="grow"></span><sc-if value="{{r.canRemove}}" hint-placeholder-val="{{ true }}"><button class="{{r.removeCls}}" type="button" onClick="{{r.remove}}" disabled="{{pf.naoEditavel}}">{{r.removeLabel}}</button></sc-if></div>
+                  <dl class="kvs"><dt>Instância</dt><dd>{{r.instancia}}</dd><dt>Endereço</dt><dd>{{r.baseUrl}}</dd><dt>Token</dt><dd>{{r.mascara}}</dd><dt>Usuário</dt><dd>{{r.usuarioTxt}}</dd></dl>
+                  <div class="row"><button class="btn sm" type="button" onClick="{{r.edit}}" disabled="{{pf.naoEditavel}}">Editar</button><button class="btn sm" type="button" onClick="{{r.entrar}}" disabled="{{pf.naoEditavel}}">{{r.entrarLabel}}</button><sc-if value="{{r.logado}}" hint-placeholder-val="{{ false }}"><button class="btn sm" type="button" onClick="{{r.sair}}">Sair</button></sc-if><sc-if value="{{r.notDefault}}" hint-placeholder-val="{{ false }}"><button class="btn sm" type="button" onClick="{{r.setDefault}}" disabled="{{pf.naoEditavel}}">Tornar padrão</button></sc-if><span class="grow"></span><sc-if value="{{r.canRemove}}" hint-placeholder-val="{{ true }}"><button class="{{r.removeCls}}" type="button" onClick="{{r.remove}}" disabled="{{pf.naoEditavel}}">{{r.removeLabel}}</button></sc-if></div>
                 </div>
               </sc-for>
             </div>
@@ -1087,20 +1109,44 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
 
   <!-- ===== SELETOR DE PASTAS ===== -->
   <sc-if value="{{pk.open}}" hint-placeholder-val="{{ false }}">
-    <div class="pal" onClick="{{pk.fechar}}">
-      <div class="palb modalb" role="dialog" aria-label="Escolher pasta na estrutura da plataforma" onClick="{{stop}}" style="max-height:85vh">
-        <h2 style="font-size:17px">Estrutura de pastas · {{perfil}}</h2>
-        <p class="muted small">{{pk.dica}}</p>
-        <div class="pklist" role="tree">
-          <sc-for list="{{pk.rows}}" as="r" hint-placeholder-count="5">
-            <sc-if value="{{r.isRow}}" hint-placeholder-val="{{ true }}"><div class="pkr {{r.cls}}" style="{{r.pad}}" role="treeitem"><button class="ib" type="button" aria-label="{{r.label}}" onClick="{{r.toggle}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true" style="{{r.chevStyle}}"><path d="{{r.chev}}"/></svg></button><button class="pkn" type="button" onClick="{{r.pick}}">{{r.nome}}</button></div></sc-if>
-            <sc-if value="{{r.isMsg}}" hint-placeholder-val="{{ false }}"><div class="muted small" style="{{r.pad}};padding-top:4px;padding-bottom:4px">{{r.texto}}</div></sc-if>
-          </sc-for>
+    <div class="pal sheet" onClick="{{pk.fechar}}">
+      <div class="pkm" role="dialog" aria-label="Escolher pasta na estrutura da plataforma" onClick="{{stop}}">
+        <div class="pkhead"><h2>Escolher pasta · {{perfil}}</h2><sc-if value="{{pk.temPai}}" hint-placeholder-val="{{ false }}"><button class="btn sm" type="button" onClick="{{pk.subir}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.up}}"/></svg>Subir um nível</button></sc-if><button class="ib" type="button" aria-label="Fechar" onClick="{{pk.fechar}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.x}}"/></svg></button></div>
+        <div class="pkcrumbs" aria-label="Caminho"><sc-for list="{{pk.crumbs}}" as="c" hint-placeholder-count="3"><span class="row" style="gap:4px;flex-wrap:nowrap"><sc-if value="{{c.first}}" hint-placeholder-val="{{ false }}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.folder}}"/></svg></sc-if><sc-if value="{{c.notCur}}" hint-placeholder-val="{{ false }}"><button class="cr" type="button" onClick="{{c.ir}}">{{c.nome}}</button><span class="sep">›</span></sc-if><sc-if value="{{c.cur}}" hint-placeholder-val="{{ false }}"><span class="cr cur">{{c.nome}}</span></sc-if></span></sc-for></div>
+        <div class="row" style="flex-wrap:nowrap"><input type="search" placeholder="Filtrar as pastas daqui…" value="{{pk.busca}}" onInput="{{pk.onBusca}}" aria-label="Filtrar as pastas desta pasta" autocomplete="off"><span class="muted small" style="white-space:nowrap">{{pk.contagem}}</span></div>
+        <div class="pkgrid">
+          <sc-if value="{{pk.carregando}}" hint-placeholder-val="{{ false }}"><sc-for list="{{pk.skeleton}}" as="n" hint-placeholder-count="6"><div class="sk"></div></sc-for></sc-if>
+          <sc-for list="{{pk.cards}}" as="q" hint-placeholder-count="6"><div class="pkcard"><button class="abrir" type="button" aria-label="{{q.abrirLabel}}" onClick="{{q.abrir}}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.folder}}"/></svg><span>{{q.nome}}</span></button><button class="usar" type="button" aria-label="{{q.usarLabel}}" title="Escolher esta pasta" onClick="{{q.usar}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.check}}"/></svg></button></div></sc-for>
         </div>
+        <sc-if value="{{pk.vazio}}" hint-placeholder-val="{{ false }}"><div class="empty small"><strong>Esta pasta não tem subpastas</strong><span>Você pode escolhê-la abaixo.</span></div></sc-if>
+        <sc-if value="{{pk.semResultado}}" hint-placeholder-val="{{ false }}"><div class="empty small"><strong>Nenhuma pasta com esse nome</strong></div></sc-if>
+        <sc-if value="{{pk.erro}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{pk.erroTxt}}</span></div><div class="row"><sc-if value="{{pk.precisaLogin}}" hint-placeholder-val="{{ false }}"><button class="btn pri" type="button" onClick="{{pk.entrar}}">Entrar com usuário…</button></sc-if><button class="btn" type="button" onClick="{{pk.tentar}}">Tentar de novo</button></div></sc-if>
         <sc-if value="{{pk.hasFonte}}" hint-placeholder-val="{{ false }}"><div class="muted small">{{pk.fonteTxt}}</div></sc-if>
-        <div class="muted small" style="overflow-wrap:anywhere">Selecionada: <code>{{pk.selTxt}}</code></div>
-        <sc-if value="{{pk.raizAviso}}" hint-placeholder-val="{{ false }}"><div class="muted small">A raiz não pode ser a pasta do formulário: escolha uma subpasta.</div></sc-if>
-        <div class="row"><span class="grow"></span><button class="btn" type="button" onClick="{{pk.fechar}}">Cancelar</button><button class="btn pri" type="button" onClick="{{pk.usar}}" disabled="{{pk.naoPodeUsar}}">Usar esta pasta</button></div>
+        <div class="muted small">{{pk.dica}}</div>
+        <div class="pkfoot">
+          <div class="atual"><span class="muted">Pasta atual:</span> <code>{{pk.atualTxt}}</code><sc-if value="{{pk.raizAviso}}" hint-placeholder-val="{{ false }}"><div class="muted small">A raiz não serve como pasta do formulário: entre em uma subpasta.</div></sc-if></div>
+          <button class="btn" type="button" onClick="{{pk.fechar}}">Cancelar</button>
+          <button class="btn pri" type="button" onClick="{{pk.escolher}}" disabled="{{pk.naoPodeEscolher}}">{{pk.escolherLabel}}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===== LOGIN DE USUÁRIO ===== -->
+  <sc-if value="{{lg.open}}" hint-placeholder-val="{{ false }}">
+    <div class="pal sheet" onClick="{{lg.fechar}}">
+      <div class="palb modalb" role="dialog" aria-label="Entrar com usuário na instância" onClick="{{stop}}">
+        <h2 style="font-size:17px">Entrar na instância do perfil {{lg.perfil}}</h2>
+        <p>Cada instância tem os seus próprios usuários. Use o usuário que você tem em <strong>{{lg.instancia}}</strong>.</p>
+        <p class="muted small">O login registra este computador como dispositivo na instância. A senha vai direto para a API e <strong>não é guardada</strong>; só o token fica no config.json, que não é publicado.</p>
+        <sc-if value="{{lg.bloqueado}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>Este perfil está protegido como somente leitura: não dá para entrar nele.</span></div></sc-if>
+        <sc-if value="{{lg.prod}}" hint-placeholder-val="{{ false }}"><div class="muted small">Este perfil está marcado como produção: ao entrar você confirma o registro do dispositivo.</div></sc-if>
+        <div class="fields">
+          <div class="field"><label class="lbl" for="lg-login"><span>Usuário</span></label><input id="lg-login" type="text" value="{{lg.login}}" autocomplete="off" disabled="{{lg.busy}}" onInput="{{lg.onLogin}}"></div>
+          <div class="field"><label class="lbl" for="lg-senha"><span>Senha</span></label><input id="lg-senha" type="password" value="{{lg.senha}}" autocomplete="new-password" disabled="{{lg.busy}}" onInput="{{lg.onSenha}}"></div>
+        </div>
+        <sc-if value="{{lg.hasErr}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{lg.err}}</span></div></sc-if>
+        <div class="row"><span class="grow"></span><button class="btn" type="button" onClick="{{lg.fechar}}">Cancelar</button><button class="btn pri" type="button" onClick="{{lg.entrar}}" disabled="{{lg.naoPode}}">Entrar</button></div>
       </div>
     </div>
   </sc-if>
@@ -1301,7 +1347,7 @@ lote:{csvNome:'',csvTexto:'',modo:'enviar',intervalo:'500',confirmando:false},
 fumaca:{ok:false},
 baixar:{diretorioId:'',subpastas:true,estrutura:true,conflito:'renomear',destino:'',status:'',dataInicio:'',dataFim:''},
 perfis:{aberto:false,original:'',nome:'',instancia:'',baseUrl:'',token:'',protecao:'',erro:'',salvando:false,rm:''}},
-results:{},loading:{},lists:{},diag:{},bx:{id:'',snap:null,erro:'',escolhendo:false},cmp:{busy:false,res:null,erro:''},pk:{aberto:false,alvo:null,cache:{},exp:{},sel:null},pn:{res:null,busy:false,erro:''},mn:{snap:null,vistos:null,sel:{},intervalo:'5',erro:''},ip:{ens:null,erro:'',busy:false,escolhendo:false,id:'',snap:null},vg:{todos:[],vistos:{},notif:false,erro:''},lt:{val:null,erro:'',validando:false,id:'',snap:null},fm:{busy:false,res:null,erro:''},protPend:null,tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
+results:{},loading:{},lists:{},diag:{},bx:{id:'',snap:null,erro:'',escolhendo:false},cmp:{busy:false,res:null,erro:''},pk:{aberto:false,alvo:null,cache:{},trilha:[],busca:''},lg:{aberto:false,perfil:'',login:'',senha:'',busy:false,erro:'',voltar:false},pn:{res:null,busy:false,erro:''},mn:{snap:null,vistos:null,sel:{},intervalo:'5',erro:''},ip:{ens:null,erro:'',busy:false,escolhendo:false,id:'',snap:null},vg:{todos:[],vistos:{},notif:false,erro:''},lt:{val:null,erro:'',validando:false,id:'',snap:null},fm:{busy:false,res:null,erro:''},protPend:null,tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
 paletteOpen:false,paletteQ:'',toast:'',wizStep:0,lastMat:'',openSol:null,navMin:false,
 lastDoc:{},lastAss:{},
 sort:{documentos:{k:'criadoEm',d:-1},pastas:{k:'caminho',d:1}},openModelo:'',dragging:false,newSg:sg};
@@ -1324,7 +1370,7 @@ if(j.historico)this.carregarHistorico();
 }).catch(()=>this.setState({boot:'sem'}));}
 aplicarPerfis(j,o){
 o=o||{};LIVE=j;PERFIS={};const st=this.state,lastDoc={},lastAss={};
-j.perfis.forEach(p=>{PERFIS[p.id]={mascara:p.tokenMascarado,baseUrl:p.baseUrl,instancia:p.instancia,protegido:p.protegido||''};lastDoc[p.id]=(st.lastDoc&&st.lastDoc[p.id])||null;lastAss[p.id]=(st.lastAss&&st.lastAss[p.id])||null;});
+j.perfis.forEach(p=>{PERFIS[p.id]={mascara:p.tokenMascarado,baseUrl:p.baseUrl,instancia:p.instancia,protegido:p.protegido||'',usuario:p.usuario||''};lastDoc[p.id]=(st.lastDoc&&st.lastDoc[p.id])||null;lastAss[p.id]=(st.lastAss&&st.lastAss[p.id])||null;});
 const padrao=PERFIS[j.padrao]?j.padrao:j.perfis[0].id;
 if(o.inicial){let dest=j.pastaDownloads||'';try{dest=localStorage.getItem('docnuvem-destino')||dest;}catch(e){}
 this.setState({forms:Object.assign({},st.forms,{baixar:Object.assign({},st.forms.baixar,{destino:dest})}),boot:'ok',perfil:padrao,lastDoc,lastAss,results:{},lists:{},hist:{ligado:!!j.historico,arquivo:j.arquivoHistorico||'',confirmar:false}});this.checarApi(true);setTimeout(()=>{this.vgAtualizar();this.mnAtualizar();},300);return;}
@@ -1419,22 +1465,24 @@ mnSeguir(){clearInterval(this._mnr);let n=0;const antes=(this.state.mn.snap&&thi
 this._mnr=setInterval(()=>{n++;this.mnAtualizar();const sn=this.state.mn.snap;if((sn&&sn.ciclos>antes)||n>=20)clearInterval(this._mnr);},1000);}
 vgSeguir(antes){clearInterval(this._vgr);let n=0;
 this._vgr=setInterval(()=>{n++;this.vgAtualizar();const v=(this.state.vg.todos||[]).find(x=>x.perfil===this.state.perfil);if((v&&v.ciclos>antes)||n>=20)clearInterval(this._vgr);},1000);}
-pkAbrir(alvo){this.setState({pk:Object.assign({},this.state.pk,{aberto:true,alvo,sel:null})});this.pkCarregar(0);}
-pkCarregar(pai){
+pkAbrir(alvo){
+const raiz={id:0,nome:'Meus documentos',caminho:'/Meus documentos'};
+this.setState({pk:Object.assign({},this.state.pk,{aberto:true,alvo,trilha:[raiz],busca:''})});
+this.pkCarregar(0);
+}
+pkCarregar(pai,forcar){
 const k=this.state.perfil+'|'+pai,c=this.state.pk.cache[k];
-if(c&&(c.carregando||(c.pastas&&!c.erro)))return;
+if(!forcar&&c&&(c.carregando||(c.pastas&&!c.erro)))return;
 const gravar=v=>{const pk=this.state.pk;this.setState({pk:Object.assign({},pk,{cache:Object.assign({},pk.cache,{[k]:v})})});};
 gravar({carregando:true});
-fetch('/_pastas/filhos?perfil='+encodeURIComponent(this.state.perfil)+'&pai='+pai,{cache:'no-store'}).then(r=>r.json()).then(j=>gravar(j.ok?{pastas:j.pastas,fonte:j.fonte}:{erro:j.erro||'Não foi possível listar as pastas.'})).catch(e=>gravar({erro:'O servidor local não respondeu: '+e.message}));
+fetch('/_pastas/filhos?perfil='+encodeURIComponent(this.state.perfil)+'&pai='+pai,{cache:'no-store'}).then(r=>r.json()).then(j=>gravar(j.ok?{pastas:j.pastas,fonte:j.fonte,credencial:j.credencial}:{erro:j.erro||'Não foi possível listar as pastas.',precisaLogin:!!j.precisaLogin})).catch(e=>gravar({erro:'O servidor local não respondeu: '+e.message}));
 }
-pkToggle(id){
-const pk=this.state.pk,k=this.state.perfil+'|'+id,exp=Object.assign({},pk.exp,{[k]:!pk.exp[k]});
-this.setState({pk:Object.assign({},pk,{exp})});
-if(exp[k])this.pkCarregar(id);
-}
+pkAtual(){const t=this.state.pk.trilha;return t[t.length-1]||{id:0,nome:'Meus documentos',caminho:'/Meus documentos'};}
+pkEntrar(q){const pk=this.state.pk;this.setState({pk:Object.assign({},pk,{trilha:pk.trilha.concat([q]),busca:''})});this.pkCarregar(q.id);}
+pkIrPara(i){const pk=this.state.pk;const t=pk.trilha.slice(0,i+1);this.setState({pk:Object.assign({},pk,{trilha:t,busca:''})});this.pkCarregar(t[t.length-1].id);}
 pkFechar(){this.setState({pk:Object.assign({},this.state.pk,{aberto:false})});}
-pkUsar(){
-const pk=this.state.pk,row=pk.sel,al=pk.alvo;if(!row||!al)return;
+pkEscolher(q){
+const pk=this.state.pk,row=q||this.pkAtual(),al=pk.alvo;if(!al)return;
 if(al.modo==='id'){
 if(al.sc==='baixar')this.setF('baixar',{diretorioId:String(row.id)});
 else if(al.sc==='documentos')this.setF('documentos',{diretorioId:String(row.id),pagina:'0'});
@@ -1448,6 +1496,23 @@ else this.setF(al.sc,{nomePasta:row.nome,nomePastaPai:pai});
 this.pkFechar();
 this.aviso('Pasta escolhida: '+(row.caminho||row.nome));
 }
+lgAbrir(perfil,voltar){this.setState({lg:{aberto:true,perfil,login:'',senha:'',busy:false,erro:'',voltar:!!voltar}});setTimeout(()=>{const i=document.getElementById('lg-login');if(i)i.focus();},60);}
+lgFechar(){this.setState({lg:Object.assign({},this.state.lg,{aberto:false,senha:''})});}
+lgEntrar(){
+const lg=this.state.lg;if(lg.busy)return;
+const {perfil,login,senha,voltar}=lg;
+// a senha sai do estado da página no mesmo instante em que é enviada
+this.setState({lg:Object.assign({},lg,{senha:'',busy:true,erro:''})});
+this.cfgCall('/_config/login','POST',{perfil,login,senha,confirmarProtecao:true}).then(r=>{
+if(!r.ok){this.setState({lg:Object.assign({},this.state.lg,{busy:false,erro:r.erro||'Não foi possível entrar.'})});return;}
+this.setState({lg:{aberto:false,perfil:'',login:'',senha:'',busy:false,erro:'',voltar:false}});
+this.recarregarPerfis({}).then(()=>{
+this.aviso('Entrou como '+r.usuario+' na instância do perfil '+perfil+'.');
+if(voltar){const pk=this.state.pk,cache=Object.assign({},pk.cache);Object.keys(cache).forEach(k=>{if(k.indexOf(perfil+'|')===0)delete cache[k];});this.setState({pk:Object.assign({},pk,{cache})});setTimeout(()=>this.pkCarregar(this.pkAtual().id,true),0);}
+});
+});
+}
+lgSair(perfil){this.cfgCall('/_config/login/'+encodeURIComponent(perfil),'DELETE').then(r=>{if(!r.ok){this.aviso(r.erro||'Não foi possível sair.');return;}this.recarregarPerfis({}).then(()=>this.aviso('Login do perfil '+perfil+' removido do config.json.'));});}
 ipSet(patch){
 const s=this.state,f=Object.assign({},s.forms.importarPasta,patch,{confirmando:false});
 this.setState({forms:Object.assign({},s.forms,{importarPasta:f}),ip:Object.assign({},s.ip,{ens:null,erro:''})});
@@ -1661,11 +1726,13 @@ if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&String(e.key).toLowerCase()==='b'){e.pre
 if(e.key==='/'&&!typing){e.preventDefault();this.openPalette();return;}
 if(e.key==='Escape'){
 if(s.protPend){this.setState({protPend:null});return;}
+if(s.lg.aberto){this.lgFechar();return;}
 if(s.pk.aberto){this.pkFechar();return;}
 if(s.paletteOpen){this.setState({paletteOpen:false});return;}
 if(s.logOpen){if(s.logSel)this.setState({logSel:null});else this.setState({logOpen:false});return;}
 this.back();return;}
 if(e.key==='Enter'&&!e.shiftKey){
+if(s.lg.aberto){e.preventDefault();this.lgEntrar();return;}
 if(s.protPend||s.pk.aberto)return;
 if(s.paletteOpen){const f=this._pal&&this._pal[0];if(f){e.preventDefault();f.go();}return;}
 if(tag==='TEXTAREA'||tag==='BUTTON'||tag==='A'||tag==='SELECT')return;
@@ -2221,33 +2288,41 @@ estados:(mns?mns.perfis:[]).map(id=>{const e=(mns.estado||{})[id]||{nivel:''},k=
 return {id,cls:k[0],label:k[1],desde:e.desde?'desde '+fmtDT(e.desde):'',beats:h.map(b=>{const c=(PNN[b.nivel]||['mu'])[0];return {cls:c==='mu'?'':c,title:fmtT(b.ts)+' · '+(PNN[b.nivel]||[0,b.nivel])[1]+(b.ms!=null?' · '+b.ms+' ms':'')};}),ultimoMs:h.length&&h[h.length-1].ms!=null?h[h.length-1].ms+' ms':'—'};}),
 eventos:(mns?mns.eventos:[]).map(e=>{const t=MNT[e.tipo]||['mu',e.tipo];return {cls:t[0],label:t[1],quando:fmtDT(e.ts),perfil:e.perfil,detalhe:e.detalhe};}),hasEventos:!!mns&&mns.eventos.length>0,semEventos:!!mns&&mns.eventos.length===0&&mns.perfis.length>0};
 // seletor de pastas
-const pkk=s.pk,pkAl=pkk.alvo,pkSel=pkk.sel,pkRaiz={id:0,nome:'Meus documentos',caminho:'/Meus documentos'};
-const pkRows=[];
-const pkPad=d=>'padding-left:'+(6+d*18)+'px';
-const pkWalk=(pai,d)=>{
-const c=pkk.cache[perfil+'|'+pai];if(!c)return;
-if(c.carregando)pkRows.push({isMsg:true,isRow:false,texto:'Carregando…',pad:pkPad(d)});
-else if(c.erro)pkRows.push({isMsg:true,isRow:false,texto:c.erro,pad:pkPad(d)});
-else if(!c.pastas.length)pkRows.push({isMsg:true,isRow:false,texto:'(sem subpastas)',pad:pkPad(d)});
-else c.pastas.forEach(q=>{
-const ex=!!pkk.exp[perfil+'|'+q.id];
-pkRows.push({isRow:true,isMsg:false,nome:q.nome,pad:pkPad(d),cls:pkSel&&pkSel.id===q.id?'on':'',chev:ICON.chev,chevStyle:ex?'transform:rotate(90deg)':'',toggle:()=>this.pkToggle(q.id),pick:()=>this.setState({pk:Object.assign({},pkk,{sel:q})}),label:(ex?'Recolher ':'Expandir ')+q.nome});
-if(ex)pkWalk(q.id,d+1);
-});
-};
-if(pkk.aberto){
-pkRows.push({isRow:true,isMsg:false,nome:pkRaiz.nome+' (raiz)',pad:pkPad(0),cls:pkSel&&pkSel.id===0?'on':'',chev:ICON.chev,chevStyle:'transform:rotate(90deg)',toggle:()=>{},pick:()=>this.setState({pk:Object.assign({},pkk,{sel:pkRaiz})}),label:'Raiz'});
-pkWalk(0,1);
-}
+const pkk=s.pk,pkAl=pkk.alvo,pkTrilha=pkk.trilha.length?pkk.trilha:[{id:0,nome:'Meus documentos',caminho:'/Meus documentos'}];
+const pkCur=pkTrilha[pkTrilha.length-1];
+const pkC=pkk.cache[perfil+'|'+pkCur.id];
+const pkBusca=(pkk.busca||'').trim().toLowerCase();
+const pkLista=(pkC&&pkC.pastas?pkC.pastas:[]).filter(q=>!pkBusca||q.nome.toLowerCase().indexOf(pkBusca)>=0);
 const pkRaizC=pkk.cache[perfil+'|0'];
+const pkModoId=!!pkAl&&pkAl.modo==='id';
 const pk={
-open:!!pkk.aberto,fechar:()=>this.pkFechar(),rows:pkRows,usar:()=>this.pkUsar(),
-dica:pkAl&&pkAl.modo==='id'?'Clique numa pasta para usar o ID dela. Use a seta para ver as subpastas.':'Clique numa pasta para escolhê-la: ela vira o nome da pasta e a “pasta pai” do formulário. Use a seta para ver as subpastas.',
-selTxt:pkSel?(pkSel.caminho||pkSel.nome)+(pkAl&&pkAl.modo==='id'?'  (ID '+pkSel.id+')':''):'nenhuma',
-raizAviso:!!pkSel&&pkSel.id===0&&!!pkAl&&pkAl.modo!=='id',
-naoPodeUsar:!pkSel||(!!pkAl&&pkAl.modo!=='id'&&pkSel.id===0),
+open:!!pkk.aberto,fechar:()=>this.pkFechar(),
+crumbs:pkTrilha.map((q,i)=>({nome:i===0?'Meus documentos':q.nome,cur:i===pkTrilha.length-1,notCur:i!==pkTrilha.length-1,first:i===0,ir:()=>this.pkIrPara(i)})),
+temPai:pkTrilha.length>1,subir:()=>this.pkIrPara(pkTrilha.length-2),
+busca:pkk.busca||'',onBusca:e=>this.setState({pk:Object.assign({},this.state.pk,{busca:e.target.value})}),
+cards:pkLista.map(q=>({nome:q.nome,abrirLabel:'Abrir '+q.nome,usarLabel:'Escolher '+q.nome,abrir:()=>this.pkEntrar(q),usar:()=>this.pkEscolher(q)})),
+carregando:!!pkC&&!!pkC.carregando,skeleton:[1,2,3,4,5,6],
+erro:!!pkC&&!!pkC.erro,erroTxt:pkC&&pkC.erro?pkC.erro:'',precisaLogin:!!pkC&&!!pkC.precisaLogin,
+entrar:()=>this.lgAbrir(perfil,true),tentar:()=>this.pkCarregar(pkCur.id,true),
+vazio:!!pkC&&!!pkC.pastas&&pkC.pastas.length===0,semResultado:!!pkC&&!!pkC.pastas&&pkC.pastas.length>0&&pkLista.length===0,
+contagem:pkC&&pkC.pastas?(pkBusca?pkLista.length+' de '+pkC.pastas.length+' pasta(s)':pkC.pastas.length+' pasta(s)'):'',
+atualTxt:pkCur.caminho||pkCur.nome,
+escolher:()=>this.pkEscolher(),escolherLabel:pkModoId?'Escolher esta pasta (ID '+pkCur.id+')':'Escolher esta pasta',
+naoPodeEscolher:!pkModoId&&pkCur.id===0,raizAviso:!pkModoId&&pkCur.id===0,
+dica:pkModoId?'Entre nas pastas e escolha a que você quer. O formulário recebe o ID dela (a raiz é o 0).':'Entre nas pastas e escolha a que você quer. O formulário recebe o nome da pasta e o caminho da pasta pai.',
 hasFonte:!!pkRaizC&&pkRaizC.fonte==='sincronizador',
-fonteTxt:'Lista obtida pelo endpoint do sincronizador (somente leitura), porque o endpoint de pastas da API recusou este perfil.'};
+fonteTxt:pkRaizC&&pkRaizC.credencial==='usuario'?'Lista do sincronizador, com o seu usuário (só leitura).':'Lista do sincronizador (só leitura), porque o endpoint de pastas da API recusou este perfil.',
+comUsuario:!!pkRaizC&&pkRaizC.credencial==='usuario'};
+// login de usuário
+const lgs=s.lg,pmLg=(PERFIS[lgs.perfil]||{}).protegido||'';
+const lgv={
+open:!!lgs.aberto,perfil:lgs.perfil,login:lgs.login,senha:lgs.senha,
+onLogin:e=>this.setState({lg:Object.assign({},this.state.lg,{login:e.target.value})}),
+onSenha:e=>this.setState({lg:Object.assign({},this.state.lg,{senha:e.target.value})}),
+busy:lgs.busy,idle:!lgs.busy,hasErr:!!lgs.erro,err:lgs.erro,
+bloqueado:pmLg==='bloquear',naoPode:lgs.busy||pmLg==='bloquear'||!lgs.login.trim()||!lgs.senha,prod:pmLg==='confirmar',
+instancia:(PERFIS[lgs.perfil]||{}).instancia||'',
+entrar:()=>this.lgEntrar(),fechar:()=>this.lgFechar()};
 // importar pasta
 const fip=s.forms.importarPasta,ipst=s.ip,ens=ipst.ens,isn=ipst.snap;
 const ipAtivo=!!isn&&isn.estado==='executando';
@@ -2364,7 +2439,7 @@ copy:()=>this.copy(fmr?['TESTE DE FUMAÇA · Docnuvem API Tester','Perfil: '+per
 // gerenciador de perfis
 const fp=s.forms.perfis,ordemP=Object.keys(PERFIS),padraoP=LIVE?LIVE.padrao:'';
 const protTxt={'':'Livre',confirmar:'Produção · confirma',bloquear:'Produção · só leitura'};
-const pfRows=ordemP.map(id=>{const q=PERFIS[id];return {id,isDefault:id===padraoP,instancia:q.instancia,baseUrl:q.baseUrl,mascara:q.mascara,protTxt:protTxt[q.protegido||''],protCls:q.protegido?(q.protegido==='bloquear'?'er':'wn'):'mu',card:id===perfil?'pfr on':'pfr',active:id===perfil,notDefault:id!==padraoP,
+const pfRows=ordemP.map(id=>{const q=PERFIS[id];return {id,isDefault:id===padraoP,instancia:q.instancia,baseUrl:q.baseUrl,mascara:q.mascara,usuarioTxt:q.usuario?q.usuario+' (token guardado no config.json)':'Sem login de usuário',logado:!!q.usuario,entrarLabel:q.usuario?'Trocar usuário…':'Entrar com usuário…',entrar:()=>this.lgAbrir(id,false),sair:()=>this.lgSair(id),protTxt:protTxt[q.protegido||''],protCls:q.protegido?(q.protegido==='bloquear'?'er':'wn'):'mu',card:id===perfil?'pfr on':'pfr',active:id===perfil,notDefault:id!==padraoP,
 edit:()=>this.perfilEditar(id),setDefault:()=>this.perfilPadrao(id),remove:()=>this.perfilRemover(id),removeLabel:fp.rm===id?'Confirmar remoção':'Remover',removeCls:fp.rm===id?'btn dng sm':'btn sm',canRemove:ordemP.length>1};});
 const pf={editavel:!!(LIVE&&LIVE.editavel),naoEditavel:!(LIVE&&LIVE.editavel),arquivo:(LIVE&&LIVE.arquivoConfig)||'config.json',rows:pfRows,
 open:fp.aberto,novo:()=>this.perfilNovo(),titulo:fp.original?'Editar perfil '+fp.original:'Novo perfil',
@@ -2439,7 +2514,7 @@ hasRes:!!res0,noRes:!res0&&!loading,res,tabs,tabResumo:s.tab==='resumo',tabJson:
 jsonCopyAll:()=>this.copy(JSON.stringify(res0?res0.body:{},null,2)),jsonCollapse:()=>this.setState({collapsed:allPaths(res0?res0.body:{},'$',{})}),jsonExpand:()=>this.setState({collapsed:{}}),
 nexts,hasNexts:nexts.length>0,
 hasLinks:links.length>0&&eff==='assinatura',links,linksNote:linkSrc?(linkSrc.conviteEnviado?'Convite enviado por e-mail (conviteEnviado = true). Os links abaixo também valem.':'Nenhum e-mail foi enviado (conviteEnviado = false, padrão). Envie cada link ao signatário.'):'',
-dt,pt,md,stv,dl,wiz,al,asv,api,hist,dg:dgn,prot,pf,bx,cm,lote,fumaca,vg,ip:ipv,pk,pn:pnn,mn:mnv,
+dt,pt,md,stv,dl,wiz,al,asv,api,hist,dg:dgn,prot,pf,bx,cm,lote,fumaca,vg,ip:ipv,pk,lg:lgv,pn:pnn,mn:mnv,
 logOpen:s.logOpen,logFav:s.logFav,onLogFav:e=>this.setState({logFav:e.target.checked}),logRows:lrows,logEmpty:lrows.length===0&&!sel,hasLogSel:!!sel,showLogList:!sel,ld,
 paletteOpen:s.paletteOpen,paletteQ:s.paletteQ,onPaletteQ:e=>this.setState({paletteQ:e.target.value}),palItems,palEmpty:palItems.length===0,closePalette:()=>this.setState({paletteOpen:false}),stop:e=>{if(e&&e.stopPropagation)e.stopPropagation();},
 toast:s.toast,toastCls:s.toast?'':'off'
