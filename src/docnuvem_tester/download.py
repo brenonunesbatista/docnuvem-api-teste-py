@@ -380,6 +380,21 @@ def _falha(t: Trabalho, doc: dict[str, Any], erro: str) -> None:
         t.linhas.append([doc.get("documentoId"), doc.get("nomeArquivo"), "", "falhou", erro])
 
 
+def _ler_arvore(
+    cliente: httpx.Client, base: str, perfil: PerfilConfig, instancia: str
+) -> tuple[dict[int, str], str]:
+    """Árvore de pastas (id -> caminho). Tenta o token da instância e, se a API recusar, o do
+    usuário que entrou no perfil. Devolve também o motivo da falha (vazio se deu certo)."""
+    tokens = [perfil.token] + ([perfil.tokenUsuario] if perfil.tokenUsuario else [])
+    falha = ""
+    for token in tokens:
+        try:
+            return mapa_pastas(cliente, base, {"Authorization": f"Bearer {token}"}, instancia), ""
+        except (ErroDownload, httpx.HTTPError) as exc:
+            falha = str(exc)
+    return {}, falha
+
+
 def executar(t: Trabalho, cliente: httpx.Client, perfil: PerfilConfig) -> None:
     base = perfil.baseUrl.rstrip("/")
     auth = {"Authorization": f"Bearer {perfil.token}"}
@@ -397,13 +412,12 @@ def executar(t: Trabalho, cliente: httpx.Client, perfil: PerfilConfig) -> None:
 
         nomes_pastas: dict[int, str] = {}
         if t.estrutura and t.subpastas:
-            try:
-                nomes_pastas = mapa_pastas(cliente, base, auth, instancia)
-            except (ErroDownload, httpx.HTTPError) as exc:
+            nomes_pastas, falha = _ler_arvore(cliente, base, perfil, instancia)
+            if falha:
                 with t.lock:
                     t.aviso = (
                         "Não consegui ler a árvore de pastas ("
-                        f"{exc}); os arquivos foram salvos todos na mesma pasta."
+                        f"{falha}); os arquivos foram salvos todos na mesma pasta."
                     )
         raiz = nomes_pastas.get(t.diretorio_id)
         if raiz is None and t.diretorio_id == 0 and nomes_pastas:

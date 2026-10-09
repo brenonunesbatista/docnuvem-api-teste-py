@@ -42,7 +42,9 @@ from docnuvem_tester.config import (
     config_path,
     definir_padrao,
     load_config,
+    remover_login,
     remover_perfil,
+    salvar_login,
     salvar_perfil,
 )
 from docnuvem_tester.download import ErroDownload, GerenciadorDownload, validar_destino
@@ -53,6 +55,7 @@ from docnuvem_tester.importar_pasta import (
     validar_origem,
 )
 from docnuvem_tester.importar_pasta import ensaio as ensaio_importacao
+from docnuvem_tester.login_usuario import ErroLogin, dispositivo_padrao, entrar, sem_segredos
 from docnuvem_tester.lote import ErroLote, GerenciadorLote, preparar
 from docnuvem_tester.monitor import ErroMonitor, Monitor, Painel
 from docnuvem_tester.pastas import ErroPastas, Pastas
@@ -830,12 +833,16 @@ class Handler(BaseHTTPRequestHandler):
             return self._cfg_salvar()
         if caminho == "/_config/padrao":
             return self._cfg_padrao()
+        if caminho == "/_config/login":
+            return self._cfg_entrar()
         self._proxy()
 
     def do_DELETE(self) -> None:  # noqa: N802
         partes = urlsplit(self.path)
         if partes.path == "/_historico":
             return self._hist_limpar(parse_qs(partes.query))
+        if partes.path.startswith("/_config/login/"):
+            return self._cfg_sair(unquote(partes.path[len("/_config/login/") :]))
         if partes.path.startswith("/_config/perfil/"):
             return self._cfg_remover(unquote(partes.path[len("/_config/perfil/") :]))
         self._proxy()
@@ -858,6 +865,7 @@ class Handler(BaseHTTPRequestHandler):
                         "baseUrl": p.baseUrl,
                         "tokenMascarado": mascarar_token(p.token),
                         "protegido": p.protecao,
+                        "usuario": p.usuario if p.tokenUsuario else "",
                     }
                     for nome, p in cfg.perfis.items()
                 ],
@@ -1072,7 +1080,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             r = self.server.pastas.filhos(self.server.cliente, nome, perfil, pai)
         except ErroPastas as exc:
-            return self._json({"ok": False, "erro": str(exc)}, 502)
+            corpo = {"ok": False, "erro": str(exc), "precisaLogin": exc.precisa_login}
+            return self._json(corpo, 502)
         self._json({"ok": True, **r})
 
     def _arquivo_teste(self, query: dict[str, list[str]]) -> None:
@@ -1370,6 +1379,66 @@ class Handler(BaseHTTPRequestHandler):
                 protecao=protecao,
             )
         )
+
+    def _cfg_entrar(self) -> None:
+        """Login do usuário na instância do perfil. A senha nunca é gravada nem devolvida."""
+        dado = self._corpo_json()
+        if dado is None:
+            return
+        alvo = self._perfil_do_corpo(dado)
+        if alvo is None:
+            return
+        nome, perfil = alvo
+        login, senha = dado.get("login"), dado.get("senha")
+        if (
+            not isinstance(login, str)
+            or not login.strip()
+            or not isinstance(senha, str)
+            or not senha
+        ):
+            return self._json({"ok": False, "erro": "Informe o usuário e a senha."}, 400)
+        if self.server.arquivo_config is None:
+            return self._json(
+                {"ok": False, "erro": "Este servidor foi iniciado sem arquivo de configuração."},
+                400,
+            )
+        if perfil.protecao == "bloquear":  # o login registra um dispositivo: conta como escrita
+            return self._json(
+                {"ok": False, "erro": "Perfil protegido (só leitura): não dá para entrar nele."},
+                403,
+            )
+        if perfil.protecao == "confirmar" and dado.get("confirmarProtecao") is not True:
+            return self._json(
+                {
+                    "ok": False,
+                    "erro": "Perfil protegido: confirme que quer registrar o dispositivo.",
+                },
+                428,
+            )
+        login = login.strip()
+        dispositivo = perfil.dispositivo or dispositivo_padrao()
+        try:
+            token = entrar(self.server.cliente, perfil, login, senha, dispositivo)
+            self.server.editar_config(
+                lambda arq: salvar_login(
+                    arq, nome, usuario=login, token=token, dispositivo=dispositivo
+                )
+            )
+        except ErroLogin as exc:
+            return self._json(
+                {"ok": False, "erro": str(exc)}, exc.status if exc.status < 500 else 502
+            )
+        except (ConfigError, OSError) as exc:
+            return self._json(
+                {"ok": False, "erro": sem_segredos(f"Não consegui guardar o login: {exc}", senha)},
+                500,
+            )
+        self._json({"ok": True, "usuario": login})
+
+    def _cfg_sair(self, nome: str) -> None:
+        if not self._origem_ok():
+            return self._texto(403, "Origem não permitida.")
+        self._cfg_aplicar(lambda arq: remover_login(arq, nome))
 
     def _cfg_padrao(self) -> None:
         dado = self._corpo_json()

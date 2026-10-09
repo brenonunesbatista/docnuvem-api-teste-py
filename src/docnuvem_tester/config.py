@@ -19,6 +19,11 @@ class PerfilConfig:
     token: str
     # "" (livre), "confirmar" (pede confirmação ao alterar dados) ou "bloquear" (só leituras).
     protecao: str = ""
+    # Login de usuário nesta instância (cada instância tem os seus usuários). Só o token
+    # fica guardado; a senha nunca é gravada.
+    tokenUsuario: str = ""
+    usuario: str = ""
+    dispositivo: str = ""
 
 
 @dataclass(frozen=True)
@@ -75,6 +80,14 @@ def _protecao(valor: Any, onde: str) -> str:
     )
 
 
+def _opcional(valor: Any, onde: str) -> str:
+    if valor is None or valor == "":
+        return ""
+    if not isinstance(valor, str):
+        raise ConfigError(f"config.json inválido: {onde} deve ser um texto.")
+    return valor.strip()
+
+
 def parse_config(dados: Any) -> AppConfig:
     """Valida o conteúdo já lido do config.json."""
     if not isinstance(dados, dict):
@@ -92,6 +105,9 @@ def parse_config(dados: Any) -> AppConfig:
             # Espaço ou quebra de linha colados junto do token quebram o cabeçalho.
             token=_texto(p.get("token"), f"perfis.{nome}.token"),
             protecao=_protecao(p.get("protegido"), f"perfis.{nome}.protegido"),
+            tokenUsuario=_opcional(p.get("tokenUsuario"), f"perfis.{nome}.tokenUsuario"),
+            usuario=_opcional(p.get("usuario"), f"perfis.{nome}.usuario"),
+            dispositivo=_opcional(p.get("dispositivo"), f"perfis.{nome}.dispositivo"),
         )
     padrao = _texto(dados.get("perfilPadrao"), "perfilPadrao")
     if padrao not in perfis:
@@ -183,6 +199,11 @@ def salvar_perfil(
             raise ConfigError("Informe o token.")
         token = str(antigo["token"])
     novo: dict[str, Any] = dict(antigo) if isinstance(antigo, dict) else {}
+    if isinstance(antigo, dict) and (
+        antigo.get("instancia") != instancia or antigo.get("baseUrl") != baseUrl
+    ):  # outra instância: o login do usuário antigo não vale mais
+        novo.pop("tokenUsuario", None)
+        novo.pop("usuario", None)
     novo.update(instancia=instancia, baseUrl=baseUrl, token=token)
     if protecao:
         novo["protegido"] = True if protecao == "confirmar" else "bloquear"
@@ -212,6 +233,27 @@ def remover_perfil(path: Path, nome: str) -> AppConfig:
     del perfis[nome]
     if bruto.get("perfilPadrao") == nome:
         bruto["perfilPadrao"] = next(iter(perfis))
+    return _gravar_bruto(path, bruto)
+
+
+def salvar_login(path: Path, nome: str, *, usuario: str, token: str, dispositivo: str) -> AppConfig:
+    """Guarda o login do usuário (só o token e o nome de usuário; nunca a senha)."""
+    bruto = _ler_bruto(path)
+    perfil = bruto["perfis"].get(nome)
+    if not isinstance(perfil, dict):
+        raise PerfilNaoEncontrado(f'O perfil "{nome}" não existe.')
+    perfil.update(usuario=usuario, tokenUsuario=token, dispositivo=dispositivo)
+    return _gravar_bruto(path, bruto)
+
+
+def remover_login(path: Path, nome: str) -> AppConfig:
+    """Apaga o token do usuário (o identificador do dispositivo fica, para não duplicar)."""
+    bruto = _ler_bruto(path)
+    perfil = bruto["perfis"].get(nome)
+    if not isinstance(perfil, dict):
+        raise PerfilNaoEncontrado(f'O perfil "{nome}" não existe.')
+    perfil.pop("tokenUsuario", None)
+    perfil.pop("usuario", None)
     return _gravar_bruto(path, bruto)
 
 

@@ -25,6 +25,8 @@ class Upstream:
     base: str
     recebidas: list[dict[str, Any]] = field(default_factory=list)
     respostas: dict[tuple[str, str], tuple[int, str]] = field(default_factory=dict)
+    # Resposta que depende de QUEM chama: (método, rota, valor do cabeçalho Authorization).
+    por_token: dict[tuple[str, str, str], tuple[int, str]] = field(default_factory=dict)
     # Respostas calculadas a partir dos parâmetros da consulta (ex.: paginação).
     dinamicas: dict[tuple[str, str], Callable[[dict[str, list[str]]], tuple[int, str]]] = field(
         default_factory=dict
@@ -53,7 +55,10 @@ def upstream() -> Iterator[Upstream]:
                     "corpo": corpo,
                 }
             )
-            if (self.command, rota) in estado.dinamicas:
+            auth = self.headers.get("Authorization") or ""
+            if (self.command, rota, auth) in estado.por_token:
+                status, texto = estado.por_token[(self.command, rota, auth)]
+            elif (self.command, rota) in estado.dinamicas:
                 status, texto = estado.dinamicas[(self.command, rota)](
                     parse_qs(urlsplit(self.path).query)
                 )
@@ -148,4 +153,4 @@ def app_cfg(upstream: Upstream, tmp_path: Path) -> Iterator[App]:
         ),
         encoding="utf-8",
     )
-    yield from _subir(load_config(arquivo), None, arquivo)
+    yield from _subir(load_config(arquivo), Historico(tmp_path / "historico.jsonl"), arquivo)

@@ -112,7 +112,16 @@ def test_erro_quando_nenhuma_fonte_funciona(app: App, upstream: Upstream) -> Non
     assert r.status_code == 502
     erro = r.json()["erro"]
     assert "HTTP 401" in erro and "exige login no sincronizador" in erro
-    assert "Digite o caminho" in erro  # a saída para o usuário
+    assert "Entre com o seu usuário" in erro  # a API pediu login: a saída é entrar
+    assert r.json()["precisaLogin"] is True
+
+
+def test_erro_sem_pedido_de_login_manda_digitar_o_caminho(app: App, upstream: Upstream) -> None:
+    upstream.respostas[OFICIAL] = (500, "")
+    upstream.respostas[SINC] = (500, "")
+    r = _filhos(app)
+    assert "Digite o caminho" in r.json()["erro"]
+    assert r.json()["precisaLogin"] is False
 
 
 def test_api_fora_do_ar(app: App) -> None:
