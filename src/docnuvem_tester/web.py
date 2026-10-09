@@ -381,6 +381,55 @@ def _http(resp: httpx.Response) -> str:
     return f"HTTP {resp.status_code}. {_retorno(resp)}".strip()
 
 
+def _pastas_sem_o_endpoint_oficial(
+    cliente: httpx.Client, perfil: PerfilConfig, rp: httpx.Response | None, erro: str
+) -> tuple[str, str, str]:
+    """(nível, detalhe, causa) do item Pastas quando /api/diretorios recusou.
+
+    Antes de culpar a API, tenta o caminho que o seletor de pastas usa (o endpoint de listagem
+    do sincronizador, com o token do usuário se ele já entrou e depois com o da instância).
+    """
+    oficial = erro or (_http(rp) if rp else "sem resposta")
+    if rp is None:
+        return "erro", oficial, "Não foi possível listar as pastas da instância."
+    try:
+        alt = Pastas().filhos(cliente, "diagnostico", perfil, 0)
+    except ErroPastas as exc:
+        if exc.precisa_login and perfil.tokenUsuario:
+            causa = (
+                f"O login guardado (usuário {perfil.usuario or '?'}) não foi aceito: pode ter "
+                "vencido. Entre de novo em Perfis > Entrar com usuário…"
+            )
+        elif exc.precisa_login:
+            causa = (
+                "Esta instância pede login de usuário para listar pastas. Entre com o seu "
+                "usuário em Perfis > Entrar com usuário…"
+            )
+        elif rp.status_code in (401, 403):
+            causa = (
+                "O token foi aceito em /api/modelos, mas /api/diretorios o recusou: o problema "
+                "está no lado da API (permissão ou filtro deste endpoint), não no token. "
+                "Avise quem mantém a API."
+            )
+        else:
+            causa = "Não foi possível listar as pastas da instância."
+        return "erro", oficial, causa
+    n = len(alt["pastas"])
+    com_usuario = alt["credencial"] == "usuario"
+    quem = f"com o login do usuário {perfil.usuario}" if com_usuario else "com o token da instância"
+    detalhe = (
+        f"/api/diretorios recusou ({oficial}), mas as pastas são listadas pelo sincronizador "
+        f"{quem}: {n} pasta(s) na raiz."
+    )
+    causa = (
+        "O endpoint oficial de pastas continua recusando"
+        + (" mesmo com o login do usuário" if com_usuario else "")
+        + ": é uma limitação da API. O seletor de pastas e o Baixar pasta usam o caminho do "
+        "sincronizador, que funciona."
+    )
+    return "aviso", detalhe, causa
+
+
 def diagnosticar(cliente: httpx.Client, perfil: PerfilConfig) -> dict[str, Any]:
     """Confere a instância só com leituras e explica a causa provável de cada falha.
 
@@ -522,18 +571,8 @@ def diagnosticar(cliente: httpx.Client, perfil: PerfilConfig) -> dict[str, Any]:
     # 4. Pastas
     rp, ms, erro = ler("/api/diretorios", True, pagina=0, tamanho=1)
     if rp is None or rp.status_code >= 400:
-        item(
-            "pastas",
-            "Pastas",
-            "erro",
-            erro or (_http(rp) if rp else "sem resposta"),
-            "O token foi aceito em /api/modelos, mas /api/diretorios o recusou: o problema "
-            "está no lado da API (permissão ou filtro deste endpoint), não no token. "
-            "Avise quem mantém a API."
-            if rp is not None and rp.status_code in (401, 403)
-            else "Não foi possível listar as pastas da instância.",
-            ms=ms,
-        )
+        nivel, detalhe, causa = _pastas_sem_o_endpoint_oficial(cliente, perfil, rp, erro)
+        item("pastas", "Pastas", nivel, detalhe, causa, ms=ms)
     else:
         total = _json_dict(rp).get("total")
         if total == 0:

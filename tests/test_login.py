@@ -483,3 +483,67 @@ def test_baixar_pasta_le_a_arvore_com_o_token_do_usuario(
     assert estado["baixados"] == 2
     assert not estado["aviso"]
     assert (saida / "Sub" / "d2.pdf").is_file()  # a árvore foi refeita graças ao token do usuário
+
+
+# ----------------------------------------------- diagnóstico das pastas ---
+
+
+def _pastas_do_diagnostico(app: App, perfil: str = "a") -> dict[str, Any]:
+    itens = {i["id"]: i for i in app.http.get(f"/_diagnostico/{perfil}").json()["itens"]}
+    return dict(itens["pastas"])
+
+
+def _raiz(*nomes: str) -> tuple[int, str]:
+    pastas = [
+        {"id": i, "nome": n, "caminhoNomesPais": f"/Meus documentos/{n}"}
+        for i, n in enumerate(nomes, 1)
+    ]
+    return 200, json.dumps({"diretorios": pastas, "temMais": False})
+
+
+def test_diagnostico_pastas_com_o_endpoint_oficial_recusando_mas_o_sincronizador_ok(
+    app_cfg: App, upstream: Upstream
+) -> None:
+    upstream.respostas[DIRETORIOS] = (401, "")
+    upstream.respostas[FILHOS] = _raiz("Contratos", "Atas")
+    pastas = _pastas_do_diagnostico(app_cfg)
+    assert pastas["nivel"] == "aviso"  # funciona, mas só por outro caminho
+    assert "2 pasta(s) na raiz" in pastas["detalhe"]
+    assert "token da instância" in pastas["detalhe"]
+    assert "limitação da API" in pastas["causa"]
+
+
+def test_diagnostico_pastas_com_o_login_do_usuario(app_cfg: App, upstream: Upstream) -> None:
+    _login_ok(upstream)
+    _entrar(app_cfg)
+    upstream.respostas[DIRETORIOS] = (401, "")
+    upstream.respostas[FILHOS] = (401, '{"retorno": "Esta instância exige login de usuário."}')
+    upstream.por_token[(*FILHOS, f"Bearer {TOKEN_USUARIO}")] = _raiz("Do usuário")
+    pastas = _pastas_do_diagnostico(app_cfg)
+    assert pastas["nivel"] == "aviso"
+    assert "login do usuário ana@cliente.com.br" in pastas["detalhe"]
+    assert "mesmo com o login do usuário" in pastas["causa"]  # o 401 oficial não é falta de login
+
+
+def test_diagnostico_pastas_sem_login_manda_entrar(app_cfg: App, upstream: Upstream) -> None:
+    upstream.respostas[DIRETORIOS] = (401, "")
+    upstream.respostas[FILHOS] = (401, '{"retorno": "Esta instância exige login de usuário."}')
+    pastas = _pastas_do_diagnostico(app_cfg)
+    assert pastas["nivel"] == "erro"
+    assert "Entre com o seu usuário em Perfis" in pastas["causa"]
+
+
+def test_diagnostico_pastas_com_login_vencido(app_cfg: App, upstream: Upstream) -> None:
+    _login_ok(upstream)
+    _entrar(app_cfg)
+    upstream.respostas[DIRETORIOS] = (401, "")
+    upstream.respostas[FILHOS] = (401, "")
+    pastas = _pastas_do_diagnostico(app_cfg)
+    assert pastas["nivel"] == "erro"
+    assert "pode ter vencido" in pastas["causa"]
+    assert "ana@cliente.com.br" in pastas["causa"]
+
+
+def test_diagnostico_pastas_oficial_ok_nao_muda(app_cfg: App, upstream: Upstream) -> None:
+    upstream.respostas[DIRETORIOS] = (200, json.dumps({"diretorios": [], "total": 4}))
+    assert _pastas_do_diagnostico(app_cfg)["nivel"] == "ok"
