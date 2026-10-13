@@ -803,6 +803,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._status(unquote(caminho[len("/_status/") :]), parse_qs(partes.query))
         if caminho.startswith("/_excluir/"):
             resto = unquote(caminho[len("/_excluir/") :])
+            if resto.startswith("verificacao/"):
+                return self._ex_verificacao(resto[len("verificacao/") :])
             if resto.endswith("/relatorio.csv"):
                 return self._ex_relatorio(resto[: -len("/relatorio.csv")])
             return self._ex_estado(resto)
@@ -848,6 +850,12 @@ class Handler(BaseHTTPRequestHandler):
             return self._hist_gravar()
         if caminho == "/_historico/favorito":
             return self._hist_favorito()
+        if caminho == "/_excluir/verificar":
+            return self._ex_verificar()
+        if caminho.startswith("/_excluir/verificacao/") and caminho.endswith("/cancelar"):
+            return self._ex_cancelar_verificacao(
+                unquote(caminho[len("/_excluir/verificacao/") : -len("/cancelar")])
+            )
         if caminho == "/_excluir/ensaio":
             return self._ex_ensaio()
         if caminho == "/_excluir/iniciar":
@@ -958,6 +966,45 @@ class Handler(BaseHTTPRequestHandler):
             "cancelar_fluxos": dado.get("cancelarFluxos") is not False,
         }
 
+    def _ex_verificar(self) -> None:
+        """Lê a pasta em segundo plano (pode demorar minutos) e devolve o id para acompanhar."""
+        dado = self._corpo_json()
+        if dado is None:
+            return
+        c = self._ex_campos(dado)
+        if c is None:
+            return
+        try:
+            v = self.server.exclusoes.verificar(
+                self.server.cliente,
+                c["nome"],
+                c["perfil"],
+                diretorio_id=c["diretorio_id"],
+                subpastas=c["subpastas"],
+                status=c["status"],
+                data_inicio=c["data_inicio"],
+                data_fim=c["data_fim"],
+                cancelar_fluxos=c["cancelar_fluxos"],
+            )
+        except ErroExclusao as exc:
+            return self._json({"ok": False, "erro": str(exc)}, 400)
+        self._json({"ok": True, "id": v.id})
+
+    def _ex_verificacao(self, id_: str) -> None:
+        v = self.server.exclusoes.obter_verificacao(id_)
+        if v is None:
+            return self._texto(404, "Verificação desconhecida.")
+        self._json(v.snapshot())
+
+    def _ex_cancelar_verificacao(self, id_: str) -> None:
+        if not self._origem_ok():
+            return self._texto(403, "Origem não permitida.")
+        v = self.server.exclusoes.obter_verificacao(id_)
+        if v is None:
+            return self._texto(404, "Verificação desconhecida.")
+        v.cancelar.set()
+        self._json({"ok": True})
+
     def _ex_ensaio(self) -> None:
         dado = self._corpo_json()
         if dado is None:
@@ -1014,6 +1061,7 @@ class Handler(BaseHTTPRequestHandler):
                 cancelar_fluxos=c["cancelar_fluxos"],
                 confirmacao=str(dado.get("confirmacao") or ""),
                 intervalo_ms=intervalo,
+                verificacao_id=str(dado.get("verificacaoId") or ""),
             )
         except ErroExclusao as exc:
             texto = str(exc)

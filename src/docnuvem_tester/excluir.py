@@ -11,17 +11,22 @@ digitando a quantidade exata -> executar com intervalo, parada automática e rel
 - Nunca age na raiz ("Meus documentos"). Uma chamada que falha não é repetida.
 - Não há limite de quantidade: a lista inteira é lida ANTES de qualquer exclusão (apagar enquanto
   se pagina deslocaria as páginas) e, se o total mudar durante a leitura, nada é excluído.
+- Pastas grandes demoram para ler (uma instância real leva ~1,8 s por página de 200). Por isso a
+  leitura usa várias consultas em paralelo, mostra progresso, pode ser cancelada e a lista lida na
+  verificação é REAPROVEITADA na exclusão (se o total ainda bater), em vez de ler tudo de novo.
 """
 
 from __future__ import annotations
 
 import csv
 import io
+import math
 import threading
 import time
 import uuid
 from collections import Counter
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -37,6 +42,9 @@ from docnuvem_tester.download import (
 )
 
 PAGINAS_FOLGA = 5  # páginas além do esperado antes de desconfiar de uma API que não termina
+PARALELISMO = 6  # páginas lidas ao mesmo tempo (só leituras)
+TTL_VERIFICACAO = 20 * 60.0  # segundos em que a lista da verificação pode ser reaproveitada
+MAX_VERIFICACOES = 3  # listas guardadas na memória (as mais antigas são descartadas)
 MAX_FALHAS_SEGUIDAS = 5
 MAX_FALHAS_EXIBIDAS = 50
 INTERVALO_MAX_MS = 10_000
@@ -112,6 +120,26 @@ def contar_rapido(cliente: httpx.Client, perfil: PerfilConfig, **filtros: Any) -
     return total if isinstance(total, int) else None
 
 
+def _acumular(dado: dict[str, Any], alvos: list[dict[str, Any]], vistos: set[int]) -> int:
+    """Junta os documentos novos de uma página (sem repetir). Devolve quantos eram novos."""
+    novos = 0
+    for d in dado.get("documentos") or []:
+        id_ = d.get("documentoId") if isinstance(d, dict) else None
+        if isinstance(id_, int) and id_ not in vistos:
+            vistos.add(id_)
+            novos += 1
+            alvos.append(
+                {
+                    "documentoId": id_,
+                    "nome": str(d.get("nomeArquivo") or f"documento {id_}"),
+                    "status": str(d.get("status") or "sem_assinatura").lower(),
+                    "assinaturaId": d.get("assinaturaId"),
+                    "diretorioId": d.get("diretorioId"),
+                }
+            )
+    return novos
+
+
 def listar_alvos(
     cliente: httpx.Client,
     perfil: PerfilConfig,
@@ -122,21 +150,17 @@ def listar_alvos(
     data_inicio: str,
     data_fim: str,
     cancelar: threading.Event | None = None,
-    ao_ler: Callable[[int], None] | None = None,
+    ao_ler: Callable[[int, int | None], None] | None = None,
 ) -> list[dict[str, Any]]:
     """TODOS os documentos da seleção (sem limite), direto da API (sempre atual).
 
-    Lê tudo antes de qualquer exclusão: apagar enquanto se pagina deslocaria as páginas.
+    Lê tudo antes de qualquer exclusão: apagar enquanto se pagina deslocaria as páginas. A primeira
+    página informa o total; as demais são lidas em paralelo (só leituras), na ordem da API.
     """
     validar_pedido(diretorio_id, status, data_inicio, data_fim)
-    alvos: list[dict[str, Any]] = []
-    vistos: set[int] = set()
-    total: int | None = None
-    pagina = 0
-    while True:
-        if cancelar is not None and cancelar.is_set():
-            break
-        dado = _consulta(
+
+    def ler(n: int) -> dict[str, Any]:
+        return _consulta(
             cliente,
             perfil,
             diretorio_id=diretorio_id,
@@ -144,34 +168,56 @@ def listar_alvos(
             status=status,
             data_inicio=data_inicio,
             data_fim=data_fim,
-            pagina=pagina,
+            pagina=n,
             tamanho=TAMANHO_PAGINA,
         )
-        if total is None and isinstance(dado.get("total"), int):
-            total = dado["total"]
-        lote = [d for d in dado.get("documentos") or [] if isinstance(d, dict)]
-        novos = 0
-        for d in lote:
-            id_ = d.get("documentoId")
-            if isinstance(id_, int) and id_ not in vistos:
-                vistos.add(id_)
-                novos += 1
-                alvos.append(
-                    {
-                        "documentoId": id_,
-                        "nome": str(d.get("nomeArquivo") or f"documento {id_}"),
-                        "status": str(d.get("status") or "sem_assinatura").lower(),
-                        "assinaturaId": d.get("assinaturaId"),
-                        "diretorioId": d.get("diretorioId"),
-                    }
-                )
+
+    def cancelado() -> bool:
+        return cancelar is not None and cancelar.is_set()
+
+    alvos: list[dict[str, Any]] = []
+    vistos: set[int] = set()
+    if cancelado():
+        return alvos
+    dado = ler(0)
+    total = dado["total"] if isinstance(dado.get("total"), int) else None
+    novos = _acumular(dado, alvos, vistos)
+    if ao_ler is not None:
+        ao_ler(len(alvos), total)
+    pagina = 1
+    previstas = math.ceil(total / TAMANHO_PAGINA) if total else 1
+    continuar = bool(dado.get("temMais")) and novos > 0
+    if continuar and total is not None and previstas > 1:
+        parar = threading.Event()
+
+        def tarefa(n: int) -> dict[str, Any] | None:
+            return None if parar.is_set() or cancelado() else ler(n)
+
+        with ThreadPoolExecutor(max_workers=PARALELISMO) as pool:
+            try:
+                ultimo = dado
+                for lote in pool.map(tarefa, range(1, previstas)):
+                    if lote is None:
+                        break
+                    _acumular(lote, alvos, vistos)
+                    ultimo = lote
+                    if ao_ler is not None:
+                        ao_ler(len(alvos), total)
+            except BaseException:
+                parar.set()  # as páginas que faltam nem chegam a ser pedidas
+                raise
+        pagina = previstas
+        continuar = bool(ultimo.get("temMais")) and not cancelado()
+    # Em série: API sem total, ou com mais documentos do que o total anunciado.
+    while continuar and not cancelado():
+        if total is not None and pagina > previstas + PAGINAS_FOLGA:
+            break
+        dado = ler(pagina)
+        novos = _acumular(dado, alvos, vistos)
         if ao_ler is not None:
-            ao_ler(len(alvos))
+            ao_ler(len(alvos), total)
         pagina += 1
-        if not dado.get("temMais") or not lote or novos == 0:  # sem novidade: a API não avança
-            break
-        if total is not None and pagina > total // TAMANHO_PAGINA + PAGINAS_FOLGA:
-            break
+        continuar = bool(dado.get("temMais")) and novos > 0  # sem novidade: a API não avança
     return alvos
 
 
@@ -203,6 +249,43 @@ def ensaio(alvos: list[dict[str, Any]], cancelar_fluxos: bool) -> dict[str, Any]
 # --------------------------------------------------------------------------
 # Execução em segundo plano
 # --------------------------------------------------------------------------
+
+
+@dataclass
+class Verificacao:
+    """Leitura da pasta (só leituras) para mostrar o que seria excluído. Pode demorar minutos."""
+
+    id: str
+    perfil: str
+    filtros: tuple[Any, ...]  # (diretorio_id, subpastas, status, data_inicio, data_fim)
+    cancelar_fluxos: bool
+    estado: str = "lendo"  # lendo | pronta | erro | cancelada
+    lidos: int = 0
+    total: int = 0
+    resultado: dict[str, Any] | None = None
+    erro: str = ""
+    alvos: list[dict[str, Any]] = field(default_factory=list)
+    iniciado_em: float = field(default_factory=time.time)
+    terminou_em: float | None = None
+    cancelar: threading.Event = field(default_factory=threading.Event)
+    lock: threading.Lock = field(default_factory=threading.Lock)
+
+    def snapshot(self) -> dict[str, Any]:
+        with self.lock:
+            decorrido = (self.terminou_em or time.time()) - self.iniciado_em
+            restante = None
+            if self.estado == "lendo" and 0 < self.lidos < self.total:
+                restante = round(decorrido * (self.total - self.lidos) / self.lidos)
+            return {
+                "id": self.id,
+                "estado": self.estado,
+                "lidos": self.lidos,
+                "total": self.total,
+                "decorrido": round(decorrido),
+                "restante": restante,
+                "erro": self.erro,
+                "resultado": self.resultado if self.estado == "pronta" else None,
+            }
 
 
 @dataclass
@@ -271,11 +354,44 @@ class Exclusao:
 class GerenciadorExclusao:
     def __init__(self) -> None:
         self._exclusoes: dict[str, Exclusao] = {}
+        self._verificacoes: dict[str, Verificacao] = {}
         self._lock = threading.Lock()
 
     def obter(self, id_: str) -> Exclusao | None:
         with self._lock:
             return self._exclusoes.get(id_)
+
+    def obter_verificacao(self, id_: str) -> Verificacao | None:
+        with self._lock:
+            return self._verificacoes.get(id_)
+
+    def verificar(
+        self,
+        cliente: httpx.Client,
+        perfil_nome: str,
+        perfil: PerfilConfig,
+        *,
+        diretorio_id: int,
+        subpastas: bool,
+        status: str,
+        data_inicio: str,
+        data_fim: str,
+        cancelar_fluxos: bool,
+    ) -> Verificacao:
+        """Começa a ler a pasta em segundo plano (só leituras). Valida o pedido na hora."""
+        validar_pedido(diretorio_id, status, data_inicio, data_fim)
+        v = Verificacao(
+            id=uuid.uuid4().hex[:12],
+            perfil=perfil_nome,
+            filtros=(diretorio_id, subpastas, status, data_inicio, data_fim),
+            cancelar_fluxos=cancelar_fluxos,
+        )
+        with self._lock:
+            self._verificacoes[v.id] = v
+            for antiga in list(self._verificacoes)[:-MAX_VERIFICACOES]:
+                self._verificacoes.pop(antiga).cancelar.set()  # libera a memória da mais velha
+        threading.Thread(target=_rodar_verificacao, args=(v, cliente, perfil), daemon=True).start()
+        return v
 
     def iniciar(
         self,
@@ -291,6 +407,7 @@ class GerenciadorExclusao:
         cancelar_fluxos: bool,
         confirmacao: str,
         intervalo_ms: int,
+        verificacao_id: str = "",
     ) -> Exclusao:
         filtros: dict[str, Any] = {
             "diretorio_id": diretorio_id,
@@ -313,6 +430,18 @@ class GerenciadorExclusao:
                 f"digite {esperado}. Se o número mudou, a pasta foi alterada desde a verificação: "
                 "refaça-a."
             )
+        if not alvos and verificacao_id:  # reaproveita a leitura da verificação, se ainda valer
+            v = self.obter_verificacao(verificacao_id)
+            igual = v is not None and v.estado == "pronta" and v.terminou_em is not None
+            if (
+                v is not None
+                and igual
+                and v.perfil == perfil_nome
+                and v.filtros == tuple(filtros.values())
+                and time.time() - (v.terminou_em or 0) < TTL_VERIFICACAO
+                and len(v.alvos) == total
+            ):
+                alvos = list(v.alvos)
         intervalo_ms = max(0, min(INTERVALO_MAX_MS, intervalo_ms))
         with self._lock:
             if any(e.ativo for e in self._exclusoes.values()):
@@ -335,6 +464,41 @@ class GerenciadorExclusao:
             self._exclusoes[ex.id] = ex
         threading.Thread(target=executar, args=(ex, cliente, perfil), daemon=True).start()
         return ex
+
+
+def _rodar_verificacao(v: Verificacao, cliente: httpx.Client, perfil: PerfilConfig) -> None:
+    diretorio_id, subpastas, status, data_inicio, data_fim = v.filtros
+
+    def progresso(n: int, total: int | None) -> None:
+        with v.lock:
+            v.lidos = n
+            if total is not None:
+                v.total = total
+
+    try:
+        alvos = listar_alvos(
+            cliente,
+            perfil,
+            diretorio_id=diretorio_id,
+            subpastas=subpastas,
+            status=status,
+            data_inicio=data_inicio,
+            data_fim=data_fim,
+            cancelar=v.cancelar,
+            ao_ler=progresso,
+        )
+    except ErroExclusao as exc:
+        with v.lock:
+            v.erro, v.estado, v.terminou_em = str(exc), "erro", time.time()
+        return
+    with v.lock:
+        if v.cancelar.is_set():
+            v.estado, v.terminou_em = "cancelada", time.time()
+            return
+        v.alvos = alvos
+        v.total = v.lidos = len(alvos)
+        v.resultado = ensaio(alvos, v.cancelar_fluxos)
+        v.estado, v.terminou_em = "pronta", time.time()
 
 
 def _linha(
@@ -393,7 +557,7 @@ def _ler_tudo(ex: Exclusao, cliente: httpx.Client, perfil: PerfilConfig) -> bool
     """Lê a seleção inteira. Devolve False se terminou o trabalho (erro, cancelamento ou
     total diferente do confirmado): nesse caso NADA foi excluído."""
 
-    def progresso(n: int) -> None:
+    def progresso(n: int, total: int | None) -> None:
         with ex.lock:
             ex.lidos = n
 

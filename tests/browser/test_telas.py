@@ -918,3 +918,66 @@ def test_excluir_pasta_grande_le_tudo_antes_e_nao_tem_limite(
     expect(page.locator("main")).to_contain_text("excluído(s)")
     pagina.botao("Parar").click()
     expect(page.locator("main")).to_contain_text("Cancelado")
+
+
+def _pasta_lenta(upstream: Upstream, total: int, atraso: float) -> None:
+    """Uma pasta com `total` documentos em que cada página de 200 leva `atraso` segundos."""
+    import time
+
+    def paginado(q: dict[str, list[str]]) -> tuple[int, str]:
+        pg, tam = int(q["pagina"][0]), int(q["tamanho"][0])
+        if tam > 1:
+            time.sleep(atraso)
+        ini = pg * tam
+        docs = [
+            {"documentoId": i, "nomeArquivo": f"d{i}.pdf", "status": "sem_assinatura"}
+            for i in range(ini + 1, min(ini + tam, total) + 1)
+        ]
+        return 200, json.dumps({"total": total, "temMais": ini + tam < total, "documentos": docs})
+
+    upstream.dinamicas[("GET", "/api/documentos")] = paginado
+
+
+def test_excluir_mostra_o_progresso_da_leitura_e_deixa_cancelar(
+    pagina: Pagina, upstream: Upstream
+) -> None:
+    page = pagina.page
+    _pasta_lenta(upstream, 6000, 1.5)  # ~8 s de leitura: tempo de sobra para ver e cancelar
+    pagina.ir("Excluir em massa")
+    page.fill("#ex-dir", "5")
+    pagina.botao("Ver o que será excluído").click()
+    expect(page.locator("main")).to_contain_text("Lendo a pasta:")
+    expect(page.locator("main")).to_contain_text("de 6000 documento(s)")
+    expect(page.locator("main [role=progressbar]").first).to_be_visible()
+    pagina.botao("Cancelar leitura").click()
+    expect(page.locator("main .dangerbox").last).to_contain_text("Leitura cancelada")
+    expect(page.locator("main")).not_to_contain_text("2. Conferir e confirmar")
+    assert _alteracoes(upstream) == []
+
+
+def test_excluir_reaproveita_a_leitura_da_verificacao(pagina: Pagina, upstream: Upstream) -> None:
+    page = pagina.page
+    _pasta_lenta(upstream, 1000, 0.05)
+
+    def paginas_cheias() -> int:
+        return len(
+            [
+                c
+                for c in upstream.recebidas
+                if c["rota"] == "/api/documentos" and "tamanho=200" in c["path"]
+            ]
+        )
+
+    pagina.ir("Excluir em massa")
+    page.fill("#ex-dir", "5")
+    pagina.botao("Ver o que será excluído").click()
+    expect(page.locator("main")).to_contain_text("1000 documento(s) nesta seleção")
+    lidas = paginas_cheias()
+    assert lidas == 5
+    page.fill("#ex-conf", "EXCLUIR 1000")
+    page.fill("#ex-int", "2000")  # devagar: dá tempo de parar
+    pagina.botao("Excluir 1000 documento(s)").click()
+    expect(page.locator("main")).to_contain_text("excluído(s)")
+    assert paginas_cheias() == lidas  # a exclusão não leu a pasta de novo
+    pagina.botao("Parar").click()
+    expect(page.locator("main")).to_contain_text("Cancelado")

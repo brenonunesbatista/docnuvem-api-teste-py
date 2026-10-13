@@ -488,7 +488,8 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
               <div class="field"><label class="sw"><input type="checkbox" checked="{{ex.cancelar}}" disabled="{{ex.ocupado}}" onChange="{{ex.onCancelarFluxos}}"><span class="track"></span><span class="swt">Cancelar antes os fluxos de assinatura ativos</span></label><span class="hint">Ligado: um documento com assinatura pendente tem o fluxo cancelado e depois é excluído. Desligado: esses documentos são pulados.</span></div>
             </div>
             <sc-if value="{{ex.hasErr}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{ex.err}}</span></div></sc-if>
-            <div class="row"><button class="btn pri" type="button" onClick="{{ex.verificar}}" disabled="{{ex.verificarOff}}">Ver o que será excluído</button><sc-if value="{{ex.busy}}" hint-placeholder-val="{{ false }}"><span class="loadbar"><span class="spin"></span>Lendo a pasta…</span></sc-if></div>
+            <div class="row"><button class="btn pri" type="button" onClick="{{ex.verificar}}" disabled="{{ex.verificarOff}}">Ver o que será excluído</button><sc-if value="{{ex.busy}}" hint-placeholder-val="{{ false }}"><button class="btn" type="button" onClick="{{ex.cancelarLeitura}}">Cancelar leitura</button></sc-if></div>
+            <sc-if value="{{ex.busy}}" hint-placeholder-val="{{ false }}"><div aria-live="polite" style="display:grid;gap:6px"><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ex.verifPct}}"><span style="{{ex.verifBar}}"></span></div><div class="muted small">{{ex.verifTxt}}</div><div class="muted small">Pastas grandes levam alguns minutos para ler. Nada é alterado nesta etapa, e a leitura é aproveitada na hora de excluir.</div></div></sc-if>
           </section>
           <sc-if value="{{ex.has}}" hint-placeholder-val="{{ false }}">
             <section class="card">
@@ -1397,7 +1398,7 @@ lote:{csvNome:'',csvTexto:'',modo:'enviar',intervalo:'500',confirmando:false},
 fumaca:{ok:false},
 baixar:{diretorioId:'',subpastas:true,estrutura:true,conflito:'renomear',destino:'',status:'',dataInicio:'',dataFim:''},
 perfis:{aberto:false,original:'',nome:'',instancia:'',baseUrl:'',token:'',protecao:'',erro:'',salvando:false,rm:''}},
-results:{},loading:{},lists:{},diag:{},bx:{id:'',snap:null,erro:'',escolhendo:false},cmp:{busy:false,res:null,erro:''},pk:{aberto:false,alvo:null,cache:{},trilha:[],busca:''},lg:{aberto:false,perfil:'',login:'',senha:'',busy:false,erro:'',voltar:false},pn:{res:null,busy:false,erro:''},mn:{snap:null,vistos:null,sel:{},intervalo:'5',erro:''},ip:{ens:null,erro:'',busy:false,escolhendo:false,id:'',snap:null},ex:{ens:null,erro:'',busy:false,id:'',snap:null},vg:{todos:[],vistos:{},notif:false,erro:''},lt:{val:null,erro:'',validando:false,id:'',snap:null},fm:{busy:false,res:null,erro:''},protPend:null,tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
+results:{},loading:{},lists:{},diag:{},bx:{id:'',snap:null,erro:'',escolhendo:false},cmp:{busy:false,res:null,erro:''},pk:{aberto:false,alvo:null,cache:{},trilha:[],busca:''},lg:{aberto:false,perfil:'',login:'',senha:'',busy:false,erro:'',voltar:false},pn:{res:null,busy:false,erro:''},mn:{snap:null,vistos:null,sel:{},intervalo:'5',erro:''},ip:{ens:null,erro:'',busy:false,escolhendo:false,id:'',snap:null},ex:{ens:null,erro:'',busy:false,id:'',snap:null,verifId:'',verif:null},vg:{todos:[],vistos:{},notif:false,erro:''},lt:{val:null,erro:'',validando:false,id:'',snap:null},fm:{busy:false,res:null,erro:''},protPend:null,tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
 paletteOpen:false,paletteQ:'',toast:'',wizStep:0,lastMat:'',openSol:null,navMin:false,
 lastDoc:{},lastAss:{},
 sort:{documentos:{k:'criadoEm',d:-1},pastas:{k:'caminho',d:1}},openModelo:'',dragging:false,newSg:sg};
@@ -1567,17 +1568,37 @@ lgSair(perfil){this.cfgCall('/_config/login/'+encodeURIComponent(perfil),'DELETE
 exSet(patch){
 const s=this.state,f=Object.assign({},s.forms.excluir,patch);
 if(!('confirmacao' in patch))f.confirmacao='';
-this.setState({forms:Object.assign({},s.forms,{excluir:f}),ex:Object.assign({},s.ex,{ens:null,erro:''})});
+clearInterval(this._exv);
+this.setState({forms:Object.assign({},s.forms,{excluir:f}),ex:Object.assign({},s.ex,{ens:null,erro:'',busy:false,verifId:'',verif:null})});
 }
 exCorpo(extra){const s=this.state,f=s.forms.excluir;return Object.assign({perfil:s.perfil,diretorioId:f.diretorioId,subpastas:!!f.subpastas,cancelarFluxos:!!f.cancelarFluxos,status:f.status,dataInicio:f.dataInicio,dataFim:f.dataFim},extra||{});}
 exVerificar(){
-this.setState({ex:Object.assign({},this.state.ex,{busy:true,erro:'',ens:null,id:'',snap:null})});
-this.cfgCall('/_excluir/ensaio','POST',this.exCorpo()).then(r=>this.setState({ex:Object.assign({},this.state.ex,{busy:false,ens:r.ok?r:null,erro:r.ok?'':(r.erro||'Não foi possível verificar a pasta.')})}));
+clearInterval(this._exv);
+this.setState({ex:Object.assign({},this.state.ex,{busy:true,erro:'',ens:null,id:'',snap:null,verifId:'',verif:null})});
+this.cfgCall('/_excluir/verificar','POST',this.exCorpo()).then(r=>{
+if(!r.ok){this.setState({ex:Object.assign({},this.state.ex,{busy:false,erro:r.erro||'Não foi possível verificar a pasta.'})});return;}
+this.setState({ex:Object.assign({},this.state.ex,{verifId:r.id})});
+this.exVerifPoll(r.id);
+});
 }
+// Pastas grandes levam minutos para ler: acompanha o progresso e guarda o id para a exclusão reaproveitar a leitura.
+exVerifPoll(id){
+clearInterval(this._exv);
+const falhou=msg=>{clearInterval(this._exv);this.setState({ex:Object.assign({},this.state.ex,{busy:false,verif:null,verifId:'',erro:msg})});};
+const tick=()=>fetch('/_excluir/verificacao/'+encodeURIComponent(id),{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error('HTTP '+r.status))).then(v=>{
+if(this.state.ex.verifId!==id){clearInterval(this._exv);return;}
+if(v.estado==='lendo'){this.setState({ex:Object.assign({},this.state.ex,{verif:v})});return;}
+clearInterval(this._exv);
+if(v.estado==='pronta')this.setState({ex:Object.assign({},this.state.ex,{busy:false,ens:v.resultado,verif:null})});
+else falhou(v.estado==='cancelada'?'Leitura cancelada. Nada foi excluído.':(v.erro||'Não foi possível ler a pasta.'));
+}).catch(e=>falhou('Perdi o contato com o servidor local: '+e.message));
+this._exv=setInterval(tick,700);tick();
+}
+exCancelarLeitura(){const id=this.state.ex.verifId;if(id)this.cfgCall('/_excluir/verificacao/'+encodeURIComponent(id)+'/cancelar','POST',{});}
 exIniciar(){
 const s=this.state,f=s.forms.excluir,ex=s.ex;
 if(ex.snap&&(ex.snap.estado==='executando'||ex.snap.estado==='listando'))return;
-this.cfgCall('/_excluir/iniciar','POST',this.exCorpo({confirmacao:f.confirmacao,intervaloMs:Number(f.intervalo)||0,confirmarProtecao:true})).then(r=>{
+this.cfgCall('/_excluir/iniciar','POST',this.exCorpo({confirmacao:f.confirmacao,intervaloMs:Number(f.intervalo)||0,confirmarProtecao:true,verificacaoId:ex.verifId})).then(r=>{
 if(!r.ok){this.setState({ex:Object.assign({},this.state.ex,{erro:r.erro||'Não foi possível iniciar.'})});return;}
 this.setState({ex:Object.assign({},this.state.ex,{erro:'',id:r.id,snap:{estado:'listando',lidos:0,total:0,feitos:0,excluidos:0,fluxosCancelados:0,pulados:0,nFalhas:0,falhas:[]}})});
 this.exPoll(r.id);
@@ -1731,7 +1752,7 @@ if(f.rm!==id){this.setF('perfis',{rm:id});clearTimeout(this._rm);this._rm=setTim
 this.setF('perfis',{rm:''});
 this.cfgCall('/_config/perfil/'+encodeURIComponent(id),'DELETE').then(r=>{if(!r.ok){this.aviso(r.erro||'Não foi possível remover.');return;}this.recarregarPerfis({}).then(()=>this.aviso('Perfil "'+id+'" removido do config.json.'));});
 }
-componentWillUnmount(){clearInterval(this._iv);clearInterval(this._api);clearInterval(this._bxp);clearInterval(this._ltp);clearInterval(this._vgp);clearInterval(this._ipp);clearInterval(this._pnp);clearInterval(this._exp);clearInterval(this._mnr);clearInterval(this._vgr);}
+componentWillUnmount(){clearInterval(this._iv);clearInterval(this._api);clearInterval(this._bxp);clearInterval(this._ltp);clearInterval(this._vgp);clearInterval(this._ipp);clearInterval(this._pnp);clearInterval(this._exp);clearInterval(this._exv);clearInterval(this._mnr);clearInterval(this._vgr);}
 
 eff(){const s=this.state;return s.screen==='fluxo'?['importar','assinatura','resultado'][s.wizStep]:s.screen;}
 setF(sc,patch){const s=this.state;this.setState({forms:Object.assign({},s.forms,{[sc]:Object.assign({},s.forms[sc],patch)})});}
@@ -2419,6 +2440,10 @@ cancelar:!!fex.cancelarFluxos,onCancelarFluxos:e=>this.exSet({cancelarFluxos:e.t
 status:fex.status,onStatus:e=>this.exSet({status:e.target.value}),dataInicio:fex.dataInicio,onDataInicio:e=>this.exSet({dataInicio:e.target.value}),dataFim:fex.dataFim,onDataFim:e=>this.exSet({dataFim:e.target.value}),
 statusOpts:[['','Todos os status'],['pendente','Pendente'],['assinado','Assinado'],['expirado','Expirado'],['cancelado','Cancelado'],['sem_assinatura','Sem assinatura']].map(a=>({value:a[0],label:a[1],selected:fex.status===a[0]})),
 verificar:()=>this.exVerificar(),verificarOff:exst.busy||exAtivo,busy:exst.busy,hasErr:!!exst.erro,err:exst.erro,
+cancelarLeitura:()=>this.exCancelarLeitura(),
+verifPct:exst.verif&&exst.verif.total?Math.min(100,Math.round(exst.verif.lidos*100/exst.verif.total)):0,
+verifBar:'width:'+(exst.verif&&exst.verif.total?Math.min(100,Math.round(exst.verif.lidos*100/exst.verif.total)):0)+'%',
+verifTxt:exst.verif?('Lendo a pasta: '+exst.verif.lidos+' de '+exst.verif.total+' documento(s)'+(exst.verif.restante!=null?' · faltam cerca de '+(exst.verif.restante<60?exst.verif.restante+' s':exst.verif.restante<3600?Math.round(exst.verif.restante/60)+' min':Math.floor(exst.verif.restante/3600)+' h '+Math.round((exst.verif.restante%3600)/60)+' min'):'')+' · '+exst.verif.decorrido+' s decorridos'):'Iniciando a leitura da pasta…',
 has:!!exe,vazio:!!exe&&exe.total===0,cheio:!!exe&&exe.total>0,
 resumo:exe?exe.total+' documento(s) nesta seleção':'',
 porStatus:exe?Object.keys(exe.porStatus).sort().map(k=>k+': '+exe.porStatus[k]).join(' · '):'',
