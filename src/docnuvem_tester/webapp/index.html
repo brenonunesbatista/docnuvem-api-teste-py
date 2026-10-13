@@ -1609,7 +1609,7 @@ clearInterval(this._exp);
 const tick=()=>fetch('/_excluir/'+encodeURIComponent(id),{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error('HTTP '+r.status))).then(sn=>{
 if(this.state.ex.id!==id){clearInterval(this._exp);return;}
 this.setState({ex:Object.assign({},this.state.ex,{snap:sn})});
-if(sn.estado!=='executando'&&sn.estado!=='listando')clearInterval(this._exp);
+if(sn.estado!=='executando'&&sn.estado!=='listando'){clearInterval(this._exp);if(sn.nFalhas||sn.erro)this.carregarHistorico();}
 }).catch(e=>{clearInterval(this._exp);this.setState({ex:Object.assign({},this.state.ex,{erro:'Perdi o contato com o servidor local: '+e.message})});});
 this._exp=setInterval(tick,700);tick();
 }

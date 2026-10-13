@@ -18,6 +18,7 @@ digitando a quantidade exata -> executar com intervalo, parada automática e rel
 
 from __future__ import annotations
 
+import contextlib
 import csv
 import io
 import math
@@ -47,6 +48,7 @@ TTL_VERIFICACAO = 20 * 60.0  # segundos em que a lista da verificação pode ser
 MAX_VERIFICACOES = 3  # listas guardadas na memória (as mais antigas são descartadas)
 MAX_FALHAS_SEGUIDAS = 5
 MAX_FALHAS_EXIBIDAS = 50
+MAX_FALHAS_NO_LOG = 200  # falhas gravadas no histórico por exclusão (o CSV tem todas)
 INTERVALO_MAX_MS = 10_000
 MOTIVO = "Exclusão em massa (Docnuvem API Tester)"
 
@@ -313,6 +315,11 @@ class Exclusao:
     falhas: list[dict[str, Any]] = field(default_factory=list)
     linhas: list[list[Any]] = field(default_factory=list)
     seguidas: int = 0
+    url_base: str = ""
+    instancia: str = ""
+    # Grava no histórico da ferramenta (log). Recebe um dict com method/url/status/ms/body/resumo.
+    registrar: Callable[[dict[str, Any]], None] | None = None
+    no_log: int = 0
     iniciado_em: float = field(default_factory=time.time)
     terminou_em: float | None = None
     cancelar: threading.Event = field(default_factory=threading.Event)
@@ -408,6 +415,7 @@ class GerenciadorExclusao:
         confirmacao: str,
         intervalo_ms: int,
         verificacao_id: str = "",
+        registrar: Callable[[dict[str, Any]], None] | None = None,
     ) -> Exclusao:
         filtros: dict[str, Any] = {
             "diretorio_id": diretorio_id,
@@ -459,6 +467,7 @@ class GerenciadorExclusao:
                 data_fim=data_fim,
                 confirmado=total,
                 total_previsto=total,
+                registrar=registrar,
                 estado="executando" if alvos else "listando",
             )
             self._exclusoes[ex.id] = ex
@@ -501,9 +510,57 @@ def _rodar_verificacao(v: Verificacao, cliente: httpx.Client, perfil: PerfilConf
         v.estado, v.terminou_em = "pronta", time.time()
 
 
-def _linha(
-    ex: Exclusao, doc: dict[str, Any], fluxo: str, situacao: str, http: Any, detalhe: str
+def _gravar_log(ex: Exclusao, evento: dict[str, Any]) -> None:
+    """Manda o evento ao log da ferramenta. Um problema ao gravar nunca atrapalha a exclusão."""
+    if ex.registrar is None:
+        return
+    with contextlib.suppress(Exception):
+        ex.registrar(evento)
+
+
+def _log_falha(
+    ex: Exclusao, doc: dict[str, Any], fluxo: str, http: Any, detalhe: str, ms: int
 ) -> None:
+    if ex.no_log >= MAX_FALHAS_NO_LOG:
+        return
+    ex.no_log += 1
+    cancelando = fluxo == "erro ao cancelar"
+    if cancelando:
+        metodo, caminho = "DELETE", f"/api/assinatura/{doc.get('assinaturaId')}"
+    else:
+        metodo, caminho = "POST", "/api/sync/excluirDocumento"
+    chave = "motivo" if cancelando else "documentoId"
+    valor = MOTIVO if cancelando else doc["documentoId"]
+    extra = f"{ex.no_log} de {MAX_FALHAS_NO_LOG}" if ex.no_log == MAX_FALHAS_NO_LOG else ""
+    _gravar_log(
+        ex,
+        {
+            "method": metodo,
+            "url": f"{ex.url_base}{caminho}?instancia={ex.instancia}&{chave}={valor}",
+            "status": http if isinstance(http, int) else 0,
+            "ms": ms,
+            "resumo": f"Exclusão em massa · documento {doc['documentoId']} ({doc['nome']}): "
+            f"{detalhe}"
+            + (
+                f" · limite de {MAX_FALHAS_NO_LOG} falhas no log atingido ({extra})"
+                if extra
+                else ""
+            ),
+        },
+    )
+
+
+def _linha(
+    ex: Exclusao,
+    doc: dict[str, Any],
+    fluxo: str,
+    situacao: str,
+    http: Any,
+    detalhe: str,
+    ms: int = 0,
+) -> None:
+    if situacao == "falhou":
+        _log_falha(ex, doc, fluxo, http, detalhe, ms)
     with ex.lock:
         ex.feitos += 1
         ex.linhas.append(
@@ -524,6 +581,7 @@ def _linha(
 def executar(ex: Exclusao, cliente: httpx.Client, perfil: PerfilConfig) -> None:
     base = perfil.baseUrl.rstrip("/")
     instancia = perfil.instancia.lower()
+    ex.url_base, ex.instancia = base, instancia
     auth_instancia = {"Authorization": f"Bearer {perfil.token}"}
     auth_sync = {"Authorization": f"Bearer {credencial(perfil)}"}
     try:
@@ -595,6 +653,10 @@ def _ler_tudo(ex: Exclusao, cliente: httpx.Client, perfil: PerfilConfig) -> bool
     return True
 
 
+def _ms(t0: float) -> int:
+    return round((time.perf_counter() - t0) * 1000)
+
+
 def _processar(
     ex: Exclusao,
     cliente: httpx.Client,
@@ -611,6 +673,7 @@ def _processar(
             motivo = "tem fluxo ativo e o cancelamento está desligado"
             _linha(ex, doc, "ativo (não cancelado)", "pulado", "", motivo)
             return False
+        t0 = time.perf_counter()
         try:
             r = cliente.delete(
                 f"{base}/api/assinatura/{doc['assinaturaId']}",
@@ -626,6 +689,7 @@ def _processar(
                 "falhou",
                 "",
                 f"falha de conexão ao cancelar o fluxo: {exc}",
+                _ms(t0),
             )
             return False
         if r.status_code == 200:
@@ -636,9 +700,17 @@ def _processar(
             fluxo = f"já não estava ativo (HTTP {r.status_code})"
         else:
             msg = _mensagem(r) or "sem mensagem"
-            _linha(ex, doc, "erro ao cancelar", "falhou", r.status_code,
-                   f"não consegui cancelar o fluxo (HTTP {r.status_code}): {msg}")  # fmt: skip
+            _linha(
+                ex,
+                doc,
+                "erro ao cancelar",
+                "falhou",
+                r.status_code,
+                f"não consegui cancelar o fluxo (HTTP {r.status_code}): {msg}",
+                _ms(t0),
+            )
             return r.status_code in (401, 403)
+    t0 = time.perf_counter()
     try:
         r = cliente.post(
             f"{base}/api/sync/excluirDocumento",
@@ -647,13 +719,21 @@ def _processar(
             timeout=60,
         )
     except httpx.HTTPError as exc:
-        _linha(ex, doc, fluxo, "falhou", "", f"falha de conexão: {exc}. Confira antes de repetir.")
+        _linha(
+            ex,
+            doc,
+            fluxo,
+            "falhou",
+            "",
+            f"falha de conexão: {exc}. Confira antes de repetir.",
+            _ms(t0),
+        )
         return False
     if r.status_code == 200:
         _linha(ex, doc, fluxo, "excluido", 200, "enviado para a lixeira")
         return False
     msg = _mensagem(r) or "sem mensagem"
-    _linha(ex, doc, fluxo, "falhou", r.status_code, f"HTTP {r.status_code}: {msg}")
+    _linha(ex, doc, fluxo, "falhou", r.status_code, f"HTTP {r.status_code}: {msg}", _ms(t0))
     if r.status_code in (401, 403):  # sem permissão: continuar só geraria mais falhas
         with ex.lock:
             ex.erro = (
@@ -669,3 +749,20 @@ def _terminar(ex: Exclusao, estado: str) -> None:
         ex.estado = estado
         ex.atual = ""
         ex.terminou_em = time.time()
+        falhas, erro = len(ex.falhas), ex.erro
+        resumo = (
+            f"Exclusão em massa da pasta {ex.diretorio_id} {estado}: {ex.excluidos} excluído(s), "
+            f"{ex.fluxos_cancelados} fluxo(s) cancelado(s), {ex.pulados} pulado(s), "
+            f"{falhas} falha(s)" + (f". {erro}" if erro else "")
+        )
+    if falhas or erro:  # sem problemas, não há nada a registrar além do que a tela já mostra
+        _gravar_log(
+            ex,
+            {
+                "method": "POST",
+                "url": f"{ex.url_base}/api/sync/excluirDocumento?instancia={ex.instancia}",
+                "status": 0 if estado == "erro" else 200,
+                "ms": round((ex.terminou_em or time.time()) - ex.iniciado_em) * 1000,
+                "resumo": resumo,
+            },
+        )

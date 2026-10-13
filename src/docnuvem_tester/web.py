@@ -20,6 +20,7 @@ import subprocess
 import sys
 import threading
 import time
+import uuid
 import webbrowser
 from collections.abc import Callable
 from datetime import datetime
@@ -694,6 +695,50 @@ class Servidor(ThreadingHTTPServer):
             self._status_cache[nome] = (agora, res)
         return res
 
+    def registrar_no_log(
+        self, nome: str, perfil: PerfilConfig
+    ) -> Callable[[dict[str, Any]], None] | None:
+        """Função que grava no histórico (log) um evento de uma tarefa em segundo plano.
+
+        Só leva a máscara do token, como nas chamadas feitas pela página."""
+        historico = self.historico
+        if historico is None:
+            return None
+        auth = mascarar_token(perfil.token)
+
+        def gravar(evento: dict[str, Any]) -> None:
+            agora = int(time.time() * 1000)
+            url, metodo, status = str(evento["url"]), str(evento["method"]), int(evento["status"])
+            resumo = str(evento["resumo"])
+            historico.adicionar(
+                {
+                    "id": f"s{uuid.uuid4().hex[:10]}",
+                    "ts": agora,
+                    "salvoEm": agora,
+                    "method": metodo,
+                    "url": url,
+                    "status": status,
+                    "ms": int(evento.get("ms") or 0),
+                    "auth": auth,
+                    "rv": {
+                        "method": metodo,
+                        "url": url,
+                        "headers": [{"k": "Authorization", "v": auth}],
+                        "body": "",
+                        "hasBody": False,
+                        "curl": f"curl -X {metodo} '{url}' \
+  -H 'Authorization: {auth}'",
+                    },
+                    "body": {"retorno": resumo},
+                    "req": {"method": metodo, "path": "", "query": {}},
+                    "screen": "excluir",
+                    "fav": False,
+                    "perfil": nome,
+                }
+            )
+
+        return gravar
+
     def handle_error(self, request: Any, client_address: Any) -> None:
         """Navegador que desiste da conexão (aba fechada, recarga) é normal: sem barulho."""
         if isinstance(sys.exc_info()[1], ConnectionError | TimeoutError):
@@ -1062,6 +1107,7 @@ class Handler(BaseHTTPRequestHandler):
                 confirmacao=str(dado.get("confirmacao") or ""),
                 intervalo_ms=intervalo,
                 verificacao_id=str(dado.get("verificacaoId") or ""),
+                registrar=self.server.registrar_no_log(c["nome"], perfil),
             )
         except ErroExclusao as exc:
             texto = str(exc)
