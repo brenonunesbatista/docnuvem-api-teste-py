@@ -11,6 +11,7 @@ da API para o indicador de status da página.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import csv
 import io
 import json
@@ -81,6 +82,7 @@ TIMEOUT = httpx.Timeout(30.0, connect=10.0)
 MAX_CORPO = 50 * 1024 * 1024  # maior arquivo/corpo aceito pelo proxy
 MAX_DESCARTE = 1_000_000  # corpo recusado até este tamanho é lido e jogado fora
 MAX_ENTRADA = 1_000_000  # maior entrada do histórico (bytes)
+MAX_FALHAS_NO_LOG = 200  # falhas de uma tarefa gravadas no log
 MAX_HISTORICO = 5000  # entradas mantidas em disco
 FOLGA_HISTORICO = 500  # só poda depois de passar do limite por essa folga
 TTL_STATUS = 15.0  # segundos que o resultado do status fica em cache
@@ -132,6 +134,54 @@ def mascarar_token(token: str) -> str:
     if not token:
         return "Bearer ***"
     return f"Bearer ***...{token[-4:] if len(token) >= 4 else token}"
+
+
+def acompanhar_no_log(
+    registrar: Callable[[dict[str, Any]], None] | None,
+    *,
+    base: str,
+    metodo: str,
+    caminho: str,
+    titulo: str,
+    obter: Callable[[], dict[str, Any]],
+    campo_falha: str,
+    contagens: str,
+) -> None:
+    """Segue uma tarefa em segundo plano e grava no log: o início, cada falha e o resumo final.
+
+    `obter` devolve o snapshot da tarefa; `campo_falha` é a chave do snapshot que identifica o
+    item que falhou e `contagens` descreve o que resumir (texto pronto, com {campo} do snapshot).
+    """
+    if registrar is None:
+        return
+    url = base.rstrip("/") + caminho
+
+    def evento(status: int, resumo: str, ms: int = 0) -> None:
+        with contextlib.suppress(Exception):
+            registrar({"method": metodo, "url": url, "status": status, "ms": ms, "resumo": resumo})
+
+    def seguir() -> None:
+        sn = obter()
+        evento(200, f"{titulo} iniciada: {sn.get('total', 0)} item(ns).")
+        while sn.get("estado") in ("listando", "executando", "baixando"):
+            time.sleep(1.0)
+            sn = obter()
+        falhas = sn.get("falhas") or []
+        for f in falhas[-MAX_FALHAS_NO_LOG:]:
+            item = f.get(campo_falha, "?")
+            evento(0, f"{titulo} · {item}: {f.get('erro', 'falhou')}")
+        ms = max(0, int(sn.get("terminouEm") or 0) - int(sn.get("iniciadoEm") or 0))
+        resumo = f"{titulo} {sn.get('estado')}: " + contagens.format_map(_Seguro(sn))
+        if sn.get("erro"):
+            resumo += f". {sn['erro']}"
+        evento(0 if sn.get("estado") == "erro" or sn.get("nFalhas") else 200, resumo, ms)
+
+    threading.Thread(target=seguir, daemon=True).start()
+
+
+class _Seguro(dict):  # type: ignore[type-arg]
+    def __missing__(self, chave: str) -> str:
+        return "?"
 
 
 def pasta_downloads_padrao() -> Path:
@@ -1226,6 +1276,16 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(
                 {"ok": False, "erro": str(exc)}, 409 if "andamento" in str(exc) else 400
             )
+        acompanhar_no_log(
+            self.server.registrar_no_log(c["nome"], perfil),
+            base=perfil.baseUrl,
+            metodo="POST",
+            caminho="/importar",
+            titulo=f"Importação de pasta ({c['pasta']})",
+            obter=imp.snapshot,
+            campo_falha="arquivo",
+            contagens="{enviados} enviado(s), {nFalhas} falha(s) de {total}",
+        )
         self._json({"ok": True, "id": imp.id})
 
     def _ip_estado(self, id_: str) -> None:
@@ -1478,6 +1538,16 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(
                 {"ok": False, "erro": str(exc)}, 409 if "andamento" in str(exc) else 400
             )
+        acompanhar_no_log(
+            self.server.registrar_no_log(nome, perfil),
+            base=perfil.baseUrl,
+            metodo="POST",
+            caminho="/api/documento/from-template",
+            titulo=f"Lote ({modo})",
+            obter=lote.snapshot,
+            campo_falha="codigoMatricula",
+            contagens="{ok} ok, {nFalhas} falha(s) de {total}",
+        )
         self._json({"ok": True, "id": lote.id})
 
     def _lote_estado(self, id_: str) -> None:
@@ -1548,6 +1618,17 @@ class Handler(BaseHTTPRequestHandler):
         except ErroDownload as exc:
             return self._json(
                 {"ok": False, "erro": str(exc)}, 409 if "andamento" in str(exc) else 400
+            )
+        if not ensaio:
+            acompanhar_no_log(
+                self.server.registrar_no_log(nome, perfil),
+                base=perfil.baseUrl,
+                metodo="GET",
+                caminho="/api/documentos",
+                titulo=f"Baixar pasta {diretorio_id}",
+                obter=t.snapshot,
+                campo_falha="nome",
+                contagens="{baixados} baixado(s), {pulados} pulado(s), {nFalhas} falha(s)",
             )
         self._json({"ok": True, "id": t.id})
 
@@ -1687,6 +1768,7 @@ class Handler(BaseHTTPRequestHandler):
                 )
             )
         except ErroLogin as exc:
+            self._log_login(nome, perfil, exc.status, f"Login de {login} recusado: {exc}")
             return self._json(
                 {"ok": False, "erro": str(exc)}, exc.status if exc.status < 500 else 502
             )
@@ -1695,11 +1777,29 @@ class Handler(BaseHTTPRequestHandler):
                 {"ok": False, "erro": sem_segredos(f"Não consegui guardar o login: {exc}", senha)},
                 500,
             )
+        self._log_login(nome, perfil, 200, f"Login de {login} feito; dispositivo {dispositivo}.")
         self._json({"ok": True, "usuario": login})
+
+    def _log_login(self, nome: str, perfil: PerfilConfig, status: int, resumo: str) -> None:
+        """Registra no log o login (sem a senha e sem o token; a URL vai sem os parâmetros)."""
+        registrar = self.server.registrar_no_log(nome, perfil)
+        if registrar is not None:
+            registrar(
+                {
+                    "method": "POST",
+                    "url": f"{perfil.baseUrl.rstrip('/')}/api/sync/login",
+                    "status": status,
+                    "ms": 0,
+                    "resumo": resumo,
+                }
+            )
 
     def _cfg_sair(self, nome: str) -> None:
         if not self._origem_ok():
             return self._texto(403, "Origem não permitida.")
+        perfil = self.server.cfg.perfis.get(nome)
+        if perfil is not None and perfil.tokenUsuario:
+            self._log_login(nome, perfil, 200, f"Login de {perfil.usuario or '?'} removido (sair).")
         self._cfg_aplicar(lambda arq: remover_login(arq, nome))
 
     def _cfg_padrao(self) -> None:

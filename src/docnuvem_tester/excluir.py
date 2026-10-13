@@ -582,6 +582,25 @@ def executar(ex: Exclusao, cliente: httpx.Client, perfil: PerfilConfig) -> None:
     base = perfil.baseUrl.rstrip("/")
     instancia = perfil.instancia.lower()
     ex.url_base, ex.instancia = base, instancia
+    filtros = [f"pasta {ex.diretorio_id}", "com subpastas" if ex.subpastas else "sem subpastas"]
+    if ex.status:
+        filtros.append(f"status {ex.status}")
+    if ex.data_inicio or ex.data_fim:
+        filtros.append(f"período {ex.data_inicio or '…'} a {ex.data_fim or '…'}")
+    _gravar_log(
+        ex,
+        {
+            "method": "POST",
+            "url": f"{base}/api/sync/excluirDocumento?instancia={instancia}",
+            "status": 200,
+            "ms": 0,
+            "resumo": (
+                f"Exclusão em massa iniciada: {ex.confirmado} documento(s) confirmado(s) "
+                f"({', '.join(filtros)}); cancelar fluxos ativos: "
+                f"{'sim' if ex.cancelar_fluxos else 'não'}; intervalo {ex.intervalo_ms} ms."
+            ),
+        },
+    )
     auth_instancia = {"Authorization": f"Bearer {perfil.token}"}
     auth_sync = {"Authorization": f"Bearer {credencial(perfil)}"}
     try:
@@ -755,7 +774,9 @@ def _terminar(ex: Exclusao, estado: str) -> None:
             f"{ex.fluxos_cancelados} fluxo(s) cancelado(s), {ex.pulados} pulado(s), "
             f"{falhas} falha(s)" + (f". {erro}" if erro else "")
         )
-    if falhas or erro:  # sem problemas, não há nada a registrar além do que a tela já mostra
+    if (
+        falhas or erro or estado == "cancelado"
+    ):  # sem problemas, não há nada a registrar além do que a tela já mostra
         _gravar_log(
             ex,
             {

@@ -504,7 +504,7 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
               <sc-if value="{{ex.bloqueado}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>Este perfil está protegido como somente leitura: não dá para excluir nele.</span></div></sc-if>
               <sc-if value="{{ex.prodAviso}}" hint-placeholder-val="{{ false }}"><div class="muted small">Este perfil está marcado como produção: a confirmação abaixo vale como autorização.</div></sc-if>
               <div class="field"><label class="lbl" for="ex-conf"><span>Para confirmar, digite <code class="api">{{ex.frase}}</code></span></label><input id="ex-conf" type="text" value="{{ex.confirmacao}}" placeholder="{{ex.frase}}" autocomplete="off" disabled="{{ex.ocupado}}" onInput="{{ex.onConfirmacao}}" style="max-width:260px"></div>
-              <div class="field"><label class="lbl" for="ex-int"><span>Intervalo entre as exclusões (ms)</span></label><input id="ex-int" type="text" value="{{ex.intervalo}}" autocomplete="off" disabled="{{ex.ocupado}}" onInput="{{ex.onIntervalo}}" style="max-width:160px"></div>
+              <div class="field"><label class="lbl" for="ex-int"><span>Intervalo entre as exclusões (ms)</span></label><input id="ex-int" type="text" value="{{ex.intervalo}}" autocomplete="off" disabled="{{ex.ocupado}}" onInput="{{ex.onIntervalo}}" style="max-width:160px"><div class="muted small">{{ex.estMin}}</div></div>
               <div class="row"><button class="btn dng" type="button" onClick="{{ex.excluir}}" disabled="{{ex.naoPode}}">{{ex.excluirLabel}}</button><sc-if value="{{ex.ocupado}}" hint-placeholder-val="{{ false }}"><button class="btn" type="button" onClick="{{ex.cancelarExclusao}}">Parar</button></sc-if></div>
               <div class="muted small">Se várias chamadas falharem em seguida, a exclusão para sozinha. Uma chamada que falha nunca é repetida. Se a pasta mudar depois da verificação, a confirmação deixa de valer.</div>
               </sc-if>
@@ -1295,6 +1295,17 @@ function maskTel(v){const d=dg(v).slice(0,11);if(d.length<=2)return d?'('+d:d;if
 function dateBR(s){const m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s||'');if(!m)return false;const d=new Date(+m[3],+m[2]-1,+m[1]);return d.getFullYear()===+m[3]&&d.getMonth()===+m[2]-1&&d.getDate()===+m[1];}
 const numBR=s=>/^-?(\d{1,3}(\.\d{3})+|\d+)(,\d+)?$/.test(s||'');
 const isoDT=s=>/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(s||'')&&!isNaN(new Date(s).getTime());
+const fmtDur=sec=>{sec=Math.max(1,Math.round(sec));if(sec<60)return sec+' s';if(sec<3600)return Math.round(sec/60)+' min';const h=Math.floor(sec/3600),m=Math.round((sec%3600)/60);return h<24?h+' h '+m+' min':Math.floor(h/24)+' d '+(h%24)+' h';};
+// Estimativa de conclusão: ritmo medido desde a primeira leitura desta tarefa (sobrevive a recarregar a tela).
+const ETA={};
+function eta(chave,id,ativo,feitos,total){
+if(!ativo||!total){delete ETA[chave];return '';}
+let e=ETA[chave];
+if(!e||e.id!==id||feitos<e.f0)e=ETA[chave]={id,t0:Date.now(),f0:feitos};
+const dt=(Date.now()-e.t0)/1000,df=feitos-e.f0;
+if(df<=0||dt<2)return ' · calculando o tempo restante…';
+return ' · faltam cerca de '+fmtDur((total-feitos)*dt/df);
+}
 const fmtDT=d=>{if(!d)return '—';try{return new Date(d).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});}catch(e){return String(d);}};
 const fmtT=d=>{try{return new Date(d).toLocaleTimeString('pt-BR');}catch(e){return '';}};
 const fmtSize=n=>n>=1048576?(n/1048576).toFixed(Number.isInteger(n/1048576)?0:1)+' MB':Math.max(1,Math.round(n/1024))+' KB';
@@ -2349,7 +2360,7 @@ isFim:!!bxs&&!bxs.ensaio&&!bxAtivo&&(bxs.estado==='concluido'||bxs.estado==='can
 hasAviso:!!bxs&&!!bxs.aviso,aviso:bxs?bxs.aviso:'',hasEstErro:!!bxs&&!!bxs.erro,estErro:bxs?bxs.erro:'',
 hasAtual:!!bxs&&!!bxs.atual,atual:bxs?bxs.atual:'',
 resumo:bxs?(bxs.ensaio?(bxs.total+' documento(s) em '+bxs.pastas+' pasta(s). Nada foi baixado.'):(bxs.baixados+' baixado(s) · '+bxs.pulados+' pulado(s) · '+bxs.nFalhas+' com falha · '+fmtSize(bxs.bytes))):'',
-progresso:bxs?(bxs.feitos+' de '+bxs.total):'',
+progresso:bxs?(bxs.feitos+' de '+bxs.total+eta('bx',bxs.id,bxAtivo,bxs.feitos,bxs.total)):'',
 destinoAtual:bxs?bxs.destino:'',hasRel:!!bxs&&!!bxs.relatorio,relatorio:bxs?bxs.relatorio:'',
 amostra:(bxs&&bxs.amostra||[]).map(n=>({n})),hasAmostra:!!bxs&&!!(bxs.amostra||[]).length&&!!bxs.ensaio,
 falhas:(bxs&&bxs.falhas||[]).map(x=>({id:x.documentoId,nome:x.nome||'(sem nome)',erro:x.erro})),hasFalhas:!!bxs&&bxs.nFalhas>0,nFalhas:bxs?bxs.nFalhas:0,
@@ -2443,7 +2454,7 @@ verificar:()=>this.exVerificar(),verificarOff:exst.busy||exAtivo,busy:exst.busy,
 cancelarLeitura:()=>this.exCancelarLeitura(),
 verifPct:exst.verif&&exst.verif.total?Math.min(100,Math.round(exst.verif.lidos*100/exst.verif.total)):0,
 verifBar:'width:'+(exst.verif&&exst.verif.total?Math.min(100,Math.round(exst.verif.lidos*100/exst.verif.total)):0)+'%',
-verifTxt:exst.verif?('Lendo a pasta: '+exst.verif.lidos+' de '+exst.verif.total+' documento(s)'+(exst.verif.restante!=null?' · faltam cerca de '+(exst.verif.restante<60?exst.verif.restante+' s':exst.verif.restante<3600?Math.round(exst.verif.restante/60)+' min':Math.floor(exst.verif.restante/3600)+' h '+Math.round((exst.verif.restante%3600)/60)+' min'):'')+' · '+exst.verif.decorrido+' s decorridos'):'Iniciando a leitura da pasta…',
+verifTxt:exst.verif?('Lendo a pasta: '+exst.verif.lidos+' de '+exst.verif.total+' documento(s)'+(exst.verif.restante!=null?' · faltam cerca de '+fmtDur(exst.verif.restante):'')+' · '+exst.verif.decorrido+' s decorridos'):'Iniciando a leitura da pasta…',
 has:!!exe,vazio:!!exe&&exe.total===0,cheio:!!exe&&exe.total>0,
 resumo:exe?exe.total+' documento(s) nesta seleção':'',
 porStatus:exe?Object.keys(exe.porStatus).sort().map(k=>k+': '+exe.porStatus[k]).join(' · '):'',
@@ -2453,13 +2464,14 @@ planoTxt:exe?exe.serao.excluidos+' documento(s) irão para a lixeira da platafor
 amostra:(exe&&exe.amostra||[]).map(a=>({t:a.nome,st:a.status})),hasAmostra:!!exe&&exe.amostra.length>0,
 frase:exFrase,confirmacao:fex.confirmacao,onConfirmacao:e=>this.setState({forms:Object.assign({},s.forms,{excluir:Object.assign({},fex,{confirmacao:e.target.value})})}),
 intervalo:fex.intervalo,onIntervalo:e=>this.setF('excluir',{intervalo:e.target.value}),
+estMin:exe&&exe.total?('Só a espera entre as exclusões soma '+fmtDur(exe.total*(Number(fex.intervalo)||0)/1000)+'. Cada chamada à API leva tempo além disso; a estimativa real aparece assim que a exclusão começa.'):'',
 bloqueado:pmE==='bloquear',prodAviso:pmE==='confirmar',
 podeExcluir:exConf&&!exAtivo&&pmE!=='bloquear'&&!!exe&&exe.total>0,naoPode:!(exConf&&!exAtivo&&pmE!=='bloquear'&&!!exe&&exe.total>0),
 excluirLabel:exe?'Excluir '+exe.total+' documento(s)':'Excluir',excluir:()=>this.exIniciar(),
 ocupado:exAtivo,cancelarExclusao:()=>this.exCancelar(),
 prog:!!exn,cls:exn?(EXC[exn.estado]||'mu'):'mu',label:exn?(EXT[exn.estado]||exn.estado):'',
 pct:exn&&exn.total?Math.min(100,Math.round((exn.estado==='listando'?exn.lidos:exn.feitos)*100/exn.total)):0,barStyle:'width:'+(exn&&exn.total?Math.min(100,Math.round((exn.estado==='listando'?exn.lidos:exn.feitos)*100/exn.total)):0)+'%',
-progresso:exn?(exn.estado==='listando'?'Lendo a pasta antes de excluir qualquer coisa: '+exn.lidos+' de '+exn.total+' documento(s)':exn.feitos+' de '+exn.total):'',hasAtual:!!exn&&!!exn.atual,atual:exn?exn.atual:'',
+progresso:exn?(exn.estado==='listando'?'Lendo a pasta antes de excluir qualquer coisa: '+exn.lidos+' de '+exn.total+' documento(s)'+eta('exl',exn.id,exn.estado==='listando',exn.lidos,exn.total):exn.feitos+' de '+exn.total+eta('ex',exn.id,exn.estado==='executando',exn.feitos,exn.total)):'',hasAtual:!!exn&&!!exn.atual,atual:exn?exn.atual:'',
 resumoExec:exn?(exn.excluidos+' excluído(s) · '+exn.fluxosCancelados+' fluxo(s) cancelado(s) · '+exn.pulados+' pulado(s) · '+exn.nFalhas+' com falha'):'',
 hasFim:!!exn&&exn.estado!=='executando'&&exn.estado!=='listando',relHref:exst.id?'/_excluir/'+encodeURIComponent(exst.id)+'/relatorio.csv':'#',
 hasEstErro:!!exn&&!!exn.erro,estErro:exn?exn.erro:'',
@@ -2495,7 +2507,7 @@ confirmar:()=>this.ipIniciar(true),recuar:()=>this.setF('importarPasta',{confirm
 ocupado:ipAtivo,cancelar:()=>this.ipCancelar(),
 prog:!!isn,cls:isn?(IPC[isn.estado]||'mu'):'mu',label:isn?(IPT[isn.estado]||isn.estado):'',
 pct:isn&&isn.total?Math.min(100,Math.round(isn.feitos*100/isn.total)):0,barStyle:'width:'+(isn&&isn.total?Math.min(100,Math.round(isn.feitos*100/isn.total)):0)+'%',
-progresso:isn?isn.feitos+' de '+isn.total:'',
+progresso:isn?isn.feitos+' de '+isn.total+eta('ip',isn.id,ipAtivo,isn.feitos,isn.total):'',
 hasAtual:!!isn&&!!isn.atual,atual:isn?isn.atual:'',
 resumoEnvio:isn?(isn.enviados+' enviado(s) · '+isn.nFalhas+' com falha · '+fmtSize(isn.bytes)+(isn.puladosAntes?' · '+isn.puladosAntes+' pulado(s) (já enviados antes)':'')):'',
 hasFim:!!isn&&isn.estado!=='executando',relHref:ipst.id?'/_importar/'+encodeURIComponent(ipst.id)+'/relatorio.csv':'#',
@@ -2561,7 +2573,7 @@ confirmar:()=>this.ltIniciar(true),recuar:()=>this.setF('lote',{confirmando:fals
 ocupado:ltAtivo,cancelar:()=>this.ltCancelar(),
 has:!!lsn,cls:lsn?(ltCls[lsn.estado]||'mu'):'mu',label:lsn?(ltTxt[lsn.estado]||lsn.estado):'',
 barStyle:'width:'+(lsn&&lsn.total?Math.min(100,Math.round(lsn.feitos*100/lsn.total)):0)+'%',pct:lsn&&lsn.total?Math.min(100,Math.round(lsn.feitos*100/lsn.total)):0,
-progresso:lsn?lsn.feitos+' de '+lsn.total:'',
+progresso:lsn?lsn.feitos+' de '+lsn.total+eta('lt',lsn.id,ltAtivo,lsn.feitos,lsn.total):'',
 resumo:lsn?(lsn.modo==='consultar'?lsn.ok+' consultado(s) · '+lsn.nFalhas+' com falha · '+lsn.pendentesItens+' item(ns) pendente(s) no total':lsn.ok+' enviada(s) · '+lsn.nFalhas+' com falha · '+lsn.invalidas+' linha(s) ignorada(s)'):'',
 hasAtual:!!lsn&&!!lsn.atual,atual:lsn?lsn.atual:'',hasFim:!!lsn&&lsn.estado!=='executando',relHref:lt.id?'/_lote/'+encodeURIComponent(lt.id)+'/relatorio.csv':'#',
 hasEstErro:!!lsn&&!!lsn.erro,estErro:lsn?lsn.erro:'',
