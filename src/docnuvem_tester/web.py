@@ -48,6 +48,12 @@ from docnuvem_tester.config import (
     salvar_perfil,
 )
 from docnuvem_tester.download import ErroDownload, GerenciadorDownload, validar_destino
+from docnuvem_tester.excluir import (
+    ErroExclusao,
+    GerenciadorExclusao,
+    listar_alvos,
+)
+from docnuvem_tester.excluir import ensaio as ensaio_exclusao
 from docnuvem_tester.importar_pasta import (
     ErroImportacao,
     GerenciadorImportacao,
@@ -664,6 +670,7 @@ class Servidor(ThreadingHTTPServer):
         self.lotes = GerenciadorLote()
         self.vigias = GerenciadorVigia()
         self.pastas = Pastas()
+        self.exclusoes = GerenciadorExclusao()
         self.painel = Painel()
         registro = Registro(historico.arquivo.parent / "importados.jsonl") if historico else None
         self.importacoes = GerenciadorImportacao(registro)
@@ -794,6 +801,11 @@ class Handler(BaseHTTPRequestHandler):
             return self._perfis()
         if caminho.startswith("/_status/"):
             return self._status(unquote(caminho[len("/_status/") :]), parse_qs(partes.query))
+        if caminho.startswith("/_excluir/"):
+            resto = unquote(caminho[len("/_excluir/") :])
+            if resto.endswith("/relatorio.csv"):
+                return self._ex_relatorio(resto[: -len("/relatorio.csv")])
+            return self._ex_estado(resto)
         if caminho.startswith("/_importar/"):
             resto = unquote(caminho[len("/_importar/") :])
             if resto.endswith("/relatorio.csv"):
@@ -836,6 +848,12 @@ class Handler(BaseHTTPRequestHandler):
             return self._hist_gravar()
         if caminho == "/_historico/favorito":
             return self._hist_favorito()
+        if caminho == "/_excluir/ensaio":
+            return self._ex_ensaio()
+        if caminho == "/_excluir/iniciar":
+            return self._ex_iniciar()
+        if caminho.startswith("/_excluir/") and caminho.endswith("/cancelar"):
+            return self._ex_cancelar(unquote(caminho[len("/_excluir/") : -len("/cancelar")]))
         if caminho == "/_importar/ensaio":
             return self._ip_ensaio()
         if caminho == "/_importar/iniciar":
@@ -917,6 +935,117 @@ class Handler(BaseHTTPRequestHandler):
                 "editavel": self.server.arquivo_config is not None,
                 "arquivoConfig": str(self.server.arquivo_config or ""),
             }
+        )
+
+    def _ex_campos(self, dado: dict[str, Any]) -> dict[str, Any] | None:
+        """Campos comuns da verificação e da exclusão; responde o erro e devolve None."""
+        alvo = self._perfil_do_corpo(dado)
+        if alvo is None:
+            return None
+        try:
+            diretorio_id = int(str(dado.get("diretorioId", "")).strip())
+        except ValueError:
+            self._json({"ok": False, "erro": "Informe o diretorioId (um número)."}, 400)
+            return None
+        return {
+            "nome": alvo[0],
+            "perfil": alvo[1],
+            "diretorio_id": diretorio_id,
+            "subpastas": dado.get("subpastas") is True,
+            "status": str(dado.get("status") or ""),
+            "data_inicio": str(dado.get("dataInicio") or ""),
+            "data_fim": str(dado.get("dataFim") or ""),
+            "cancelar_fluxos": dado.get("cancelarFluxos") is not False,
+        }
+
+    def _ex_ensaio(self) -> None:
+        dado = self._corpo_json()
+        if dado is None:
+            return
+        c = self._ex_campos(dado)
+        if c is None:
+            return
+        try:
+            alvos = listar_alvos(
+                self.server.cliente,
+                c["perfil"],
+                diretorio_id=c["diretorio_id"],
+                subpastas=c["subpastas"],
+                status=c["status"],
+                data_inicio=c["data_inicio"],
+                data_fim=c["data_fim"],
+            )
+        except ErroExclusao as exc:
+            return self._json({"ok": False, "erro": str(exc)}, 400)
+        self._json({"ok": True, **ensaio_exclusao(alvos, c["cancelar_fluxos"])})
+
+    def _ex_iniciar(self) -> None:
+        dado = self._corpo_json()
+        if dado is None:
+            return
+        c = self._ex_campos(dado)
+        if c is None:
+            return
+        perfil: PerfilConfig = c["perfil"]
+        if perfil.protecao == "bloquear":
+            return self._json(
+                {"ok": False, "erro": "Perfil protegido (só leitura): não dá para excluir nele."},
+                403,
+            )
+        if perfil.protecao == "confirmar" and dado.get("confirmarProtecao") is not True:
+            return self._json(
+                {"ok": False, "erro": "Perfil protegido: confirme que quer excluir em produção."},
+                428,
+            )
+        try:
+            intervalo = int(dado.get("intervaloMs", 300))
+        except (TypeError, ValueError):
+            return self._json({"ok": False, "erro": "Intervalo inválido."}, 400)
+        try:
+            ex = self.server.exclusoes.iniciar(
+                self.server.cliente,
+                c["nome"],
+                perfil,
+                diretorio_id=c["diretorio_id"],
+                subpastas=c["subpastas"],
+                status=c["status"],
+                data_inicio=c["data_inicio"],
+                data_fim=c["data_fim"],
+                cancelar_fluxos=c["cancelar_fluxos"],
+                confirmacao=str(dado.get("confirmacao") or ""),
+                intervalo_ms=intervalo,
+            )
+        except ErroExclusao as exc:
+            texto = str(exc)
+            status = 409 if "andamento" in texto else 428 if "confirmação" in texto else 400
+            return self._json({"ok": False, "erro": texto}, status)
+        self._json({"ok": True, "id": ex.id})
+
+    def _ex_estado(self, id_: str) -> None:
+        ex = self.server.exclusoes.obter(id_)
+        if ex is None:
+            return self._texto(404, "Exclusão desconhecida.")
+        self._json(ex.snapshot())
+
+    def _ex_cancelar(self, id_: str) -> None:
+        if not self._origem_ok():
+            return self._texto(403, "Origem não permitida.")
+        ex = self.server.exclusoes.obter(id_)
+        if ex is None:
+            return self._texto(404, "Exclusão desconhecida.")
+        ex.cancelar.set()
+        self._json({"ok": True})
+
+    def _ex_relatorio(self, id_: str) -> None:
+        ex = self.server.exclusoes.obter(id_)
+        if ex is None:
+            return self._texto(404, "Exclusão desconhecida.")
+        carimbo = datetime.now().strftime("%Y%m%d-%H%M%S")
+        self._enviar(
+            200,
+            ex.relatorio_csv(),
+            "text/csv; charset=utf-8",
+            {"Content-Disposition": f'attachment; filename="docnuvem-exclusao-{carimbo}.csv"'},
         )
 
     def _ip_campos(self, dado: dict[str, Any]) -> dict[str, Any] | None:

@@ -84,6 +84,14 @@ Opções: `--porta N`, `--nao-abrir`, `--sem-historico`, `--dados PASTA`.
   caminho clicável, filtro e uma gaveta no celular, e preenche o campo no lugar de digitar o caminho.
   Usa o endpoint de pastas da API e, se ela o recusar, o endpoint de listagem do sincronizador (só
   leitura), com o token do seu usuário quando você já entrou; se nada funcionar, avisa e dá para digitar.
+- **Excluir em massa** (destrutivo): esvazia uma pasta (com ou sem subpastas, com filtro de status e
+  período), mandando os documentos para a **lixeira** da plataforma e cancelando antes os fluxos de
+  assinatura **ativos** (status `pendente`). Cancelar fluxo não tem volta: os links param de funcionar
+  e, se alguém já assinou, o arquivo volta à versão sem as assinaturas. Por isso: nunca age na raiz;
+  mostra o que será feito antes (sem alterar nada); só libera depois de você digitar `EXCLUIR <quantidade>`
+  (e a confirmação deixa de valer se a pasta mudar); envia com intervalo, para sozinho após falhas
+  seguidas, nunca repete uma chamada que falhou e gera relatório CSV. Perfil somente leitura não
+  exclui. Usa o token do seu usuário (se você entrou) para excluir.
 - **Importar pasta**: envia uma pasta do computador para o Docnuvem, refazendo as subpastas. Mostra
   antes o plano (de onde → para onde, o que será ignorado e por quê), pede confirmação, envia com
   intervalo, para sozinho após falhas seguidas e gera relatório CSV. O programa anota o que já enviou

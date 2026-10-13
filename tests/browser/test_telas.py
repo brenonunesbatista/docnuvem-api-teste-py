@@ -755,3 +755,139 @@ def test_monitor_recusa_iniciar_sem_nenhum_perfil(pagina: Pagina) -> None:
         page.locator("label.sw", has_text=nome).click()
     pagina.botao("Iniciar monitor").click()
     expect(page.locator("main .dangerbox")).to_contain_text("ao menos um perfil")
+
+
+# ----------------------------------------------------- excluir em massa ---
+
+EXCLUIR_SYNC = ("POST", "/api/sync/excluirDocumento")
+
+
+def _tres_documentos(upstream: Upstream) -> None:
+    docs = [
+        {"documentoId": 1, "nomeArquivo": "ativo.pdf", "status": "pendente", "assinaturaId": 101},
+        {
+            "documentoId": 2,
+            "nomeArquivo": "assinado.pdf",
+            "status": "assinado",
+            "assinaturaId": 102,
+        },
+        {"documentoId": 3, "nomeArquivo": "solto.pdf", "status": "sem_assinatura"},
+    ]
+    corpo = {"total": 3, "temMais": False, "documentos": docs}
+    upstream.respostas[("GET", "/api/documentos")] = (200, json.dumps(corpo))
+
+
+def _alteracoes(upstream: Upstream) -> list[str]:
+    return [
+        f"{c['method']} {c['rota']}"
+        for c in upstream.recebidas
+        if c["method"] in ("POST", "DELETE")
+    ]
+
+
+def test_excluir_em_massa_so_depois_de_ver_e_confirmar(pagina: Pagina, upstream: Upstream) -> None:
+    page = pagina.page
+    _tres_documentos(upstream)
+    pagina.ir("Excluir em massa")
+    expect(page.locator("main")).to_contain_text("Ação destrutiva")
+    expect(page.locator("main")).to_contain_text("lixeira")
+    page.fill("#ex-dir", "5")
+    pagina.botao("Ver o que será excluído").click()
+    expect(page.locator("main")).to_contain_text("3 documento(s) nesta seleção")
+    expect(page.locator("main")).to_contain_text("1 têm fluxo de assinatura ATIVO")
+    expect(page.locator("main")).to_contain_text("não tem volta")
+    expect(page.locator("main")).to_contain_text("3 documento(s) irão para a lixeira")
+    botao = pagina.botao("Excluir 3 documento(s)")
+    expect(botao).to_be_disabled()  # sem digitar a confirmação não libera
+    page.fill("#ex-conf", "EXCLUIR 2")
+    expect(botao).to_be_disabled()  # número errado também não
+    page.fill("#ex-conf", "excluir  3")
+    expect(botao).to_be_enabled()
+    assert _alteracoes(upstream) == []  # até aqui nada foi alterado
+    page.fill("#ex-int", "0")
+    botao.click()
+    expect(page.locator("main")).to_contain_text("3 excluído(s)")
+    expect(page.locator("main")).to_contain_text("1 fluxo(s) cancelado(s)")
+    expect(page.locator("main")).to_contain_text("lixeira da plataforma")
+    assert _alteracoes(upstream) == [
+        "DELETE /api/assinatura/101",  # o fluxo ativo primeiro
+        "POST /api/sync/excluirDocumento",
+        "POST /api/sync/excluirDocumento",
+        "POST /api/sync/excluirDocumento",
+    ]
+
+
+def test_excluir_nao_deixa_esvaziar_a_raiz(pagina: Pagina, upstream: Upstream) -> None:
+    page = pagina.page
+    _tres_documentos(upstream)
+    pagina.ir("Excluir em massa")
+    page.fill("#ex-dir", "0")
+    pagina.botao("Ver o que será excluído").click()
+    expect(page.locator("main .dangerbox").last).to_contain_text("raiz")
+    page.get_by_role("button", name="Escolher na estrutura de pastas…").click()
+    modal = page.locator("[role=dialog][aria-label*='estrutura']")
+    expect(modal.get_by_role("button", name="Escolher esta pasta")).to_be_disabled()
+    expect(modal).to_contain_text("não serve")
+    assert _alteracoes(upstream) == []
+
+
+def test_excluir_mudar_um_filtro_invalida_a_verificacao(pagina: Pagina, upstream: Upstream) -> None:
+    page = pagina.page
+    _tres_documentos(upstream)
+    pagina.ir("Excluir em massa")
+    page.fill("#ex-dir", "5")
+    pagina.botao("Ver o que será excluído").click()
+    page.fill("#ex-conf", "EXCLUIR 3")
+    expect(pagina.botao("Excluir 3 documento(s)")).to_be_enabled()
+    page.select_option("#ex-st", "assinado")  # mudou a seleção: a verificação antiga não vale
+    expect(pagina.botao("Excluir 3 documento(s)")).to_have_count(0)
+    expect(page.locator("main")).not_to_contain_text("2. Conferir e confirmar")
+
+
+def test_excluir_sem_cancelar_fluxos_avisa_que_vai_pular(
+    pagina: Pagina, upstream: Upstream
+) -> None:
+    page = pagina.page
+    _tres_documentos(upstream)
+    pagina.ir("Excluir em massa")
+    page.fill("#ex-dir", "5")
+    page.locator("label.sw", has_text="Cancelar antes os fluxos").click()  # desliga
+    pagina.botao("Ver o que será excluído").click()
+    expect(page.locator("main")).to_contain_text("serão PULADOS")
+    expect(page.locator("main")).to_contain_text("2 documento(s) irão para a lixeira")
+    page.fill("#ex-conf", "EXCLUIR 3")
+    page.fill("#ex-int", "0")
+    pagina.botao("Excluir 3 documento(s)").click()
+    expect(page.locator("main")).to_contain_text("1 pulado(s)")
+    assert not any(a.startswith("DELETE") for a in _alteracoes(upstream))  # nada foi cancelado
+
+
+def test_excluir_em_perfil_somente_leitura_fica_bloqueado(
+    pagina: Pagina, upstream: Upstream
+) -> None:
+    page = pagina.page
+    _tres_documentos(upstream)
+    page.select_option("#perfil", "leitura")
+    pagina.ir("Excluir em massa")
+    page.fill("#ex-dir", "5")
+    pagina.botao("Ver o que será excluído").click()  # ver é leitura: vale
+    expect(page.locator("main")).to_contain_text("somente leitura")
+    page.fill("#ex-conf", "EXCLUIR 3")
+    expect(pagina.botao("Excluir 3 documento(s)")).to_be_disabled()
+    assert _alteracoes(upstream) == []
+
+
+def test_excluir_pasta_sem_documentos_nao_pede_confirmacao(
+    pagina: Pagina, upstream: Upstream
+) -> None:
+    page = pagina.page
+    upstream.respostas[("GET", "/api/documentos")] = (
+        200,
+        json.dumps({"total": 0, "temMais": False, "documentos": []}),
+    )
+    pagina.ir("Excluir em massa")
+    page.fill("#ex-dir", "5")
+    pagina.botao("Ver o que será excluído").click()
+    expect(page.locator("main")).to_contain_text("Nenhum documento nesta seleção")
+    expect(page.locator("#ex-conf")).to_have_count(0)
+    expect(page.locator("main button.dng")).to_have_count(0)

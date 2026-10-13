@@ -474,6 +474,54 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
           </sc-if>
         </sc-if>
 
+        <!-- ===== EXCLUIR EM MASSA ===== -->
+        <sc-if value="{{show.excluir}}" hint-placeholder-val="{{ false }}">
+          <section class="card">
+            <h2>1. Qual pasta esvaziar</h2>
+            <div class="dangerbox"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span><strong>Ação destrutiva.</strong> Os documentos vão para a <strong>lixeira</strong> da plataforma (não é exclusão definitiva). Cancelar um fluxo de assinatura, porém, <strong>não tem volta</strong>. Por isso você verá tudo antes e terá de digitar uma confirmação.</span></div>
+            <div class="fields">
+              <div class="field"><label class="lbl" for="ex-dir"><span>Pasta no Docnuvem</span><code class="api">diretorioId</code><span class="req">obrigatório</span></label><input id="ex-dir" type="text" value="{{ex.dir}}" placeholder="12345" autocomplete="off" disabled="{{ex.ocupado}}" onInput="{{ex.onDir}}"><button class="link" type="button" onClick="{{ex.escolherPasta}}" disabled="{{ex.ocupado}}">Escolher na estrutura de pastas…</button><span class="hint">A raiz (Meus documentos) não pode ser esvaziada por aqui.</span></div>
+              <div class="field"><label class="sw"><input type="checkbox" checked="{{ex.subpastas}}" disabled="{{ex.ocupado}}" onChange="{{ex.onSub}}"><span class="track"></span><span class="swt">Incluir também as subpastas</span></label><span class="hint">Desligado: só os documentos que estão diretamente nesta pasta.</span></div>
+              <div class="field"><label class="lbl" for="ex-st"><span>Só com o status</span><code class="api">status</code><span class="tag">opcional</span></label><select id="ex-st" value="{{ex.status}}" disabled="{{ex.ocupado}}" onChange="{{ex.onStatus}}"><sc-for list="{{ex.statusOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.value}}" selected="{{o.selected}}">{{o.label}}</option></sc-for></select></div>
+              <div class="field"><label class="lbl" for="ex-di"><span>Enviados de</span><code class="api">dataInicio</code><span class="tag">opcional</span></label><input id="ex-di" type="date" value="{{ex.dataInicio}}" disabled="{{ex.ocupado}}" onInput="{{ex.onDataInicio}}"></div>
+              <div class="field"><label class="lbl" for="ex-df"><span>Enviados até</span><code class="api">dataFim</code><span class="tag">opcional</span></label><input id="ex-df" type="date" value="{{ex.dataFim}}" disabled="{{ex.ocupado}}" onInput="{{ex.onDataFim}}"></div>
+              <div class="field"><label class="sw"><input type="checkbox" checked="{{ex.cancelar}}" disabled="{{ex.ocupado}}" onChange="{{ex.onCancelarFluxos}}"><span class="track"></span><span class="swt">Cancelar antes os fluxos de assinatura ativos</span></label><span class="hint">Ligado: um documento com assinatura pendente tem o fluxo cancelado e depois é excluído. Desligado: esses documentos são pulados.</span></div>
+            </div>
+            <sc-if value="{{ex.hasErr}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{ex.err}}</span></div></sc-if>
+            <div class="row"><button class="btn pri" type="button" onClick="{{ex.verificar}}" disabled="{{ex.verificarOff}}">Ver o que será excluído</button><sc-if value="{{ex.busy}}" hint-placeholder-val="{{ false }}"><span class="loadbar"><span class="spin"></span>Lendo a pasta…</span></sc-if></div>
+          </section>
+          <sc-if value="{{ex.has}}" hint-placeholder-val="{{ false }}">
+            <section class="card">
+              <h2>2. Conferir e confirmar</h2>
+              <div class="bxn"><strong>{{ex.resumo}}</strong></div>
+              <div class="muted small">{{ex.porStatus}}</div>
+              <sc-if value="{{ex.vazio}}" hint-placeholder-val="{{ false }}"><div class="empty small"><strong>Nenhum documento nesta seleção</strong><span>Não há nada a excluir com esta pasta e estes filtros.</span></div></sc-if>
+              <sc-if value="{{ex.cheio}}" hint-placeholder-val="{{ false }}">
+              <div class="muted small"><strong>{{ex.planoTxt}}</strong></div>
+              <sc-if value="{{ex.temFluxos}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{ex.fluxoTxt}}</span></div></sc-if>
+              <sc-if value="{{ex.hasAmostra}}" hint-placeholder-val="{{ false }}"><strong class="small">Primeiros documentos</strong><div class="dglist"><sc-for list="{{ex.amostra}}" as="a" hint-placeholder-count="3"><div class="mi"><strong style="overflow-wrap:anywhere">{{a.t}}</strong><span class="pill mu">{{a.st}}</span></div></sc-for></div></sc-if>
+              <sc-if value="{{ex.bloqueado}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>Este perfil está protegido como somente leitura: não dá para excluir nele.</span></div></sc-if>
+              <sc-if value="{{ex.prodAviso}}" hint-placeholder-val="{{ false }}"><div class="muted small">Este perfil está marcado como produção: a confirmação abaixo vale como autorização.</div></sc-if>
+              <div class="field"><label class="lbl" for="ex-conf"><span>Para confirmar, digite <code class="api">{{ex.frase}}</code></span></label><input id="ex-conf" type="text" value="{{ex.confirmacao}}" placeholder="{{ex.frase}}" autocomplete="off" disabled="{{ex.ocupado}}" onInput="{{ex.onConfirmacao}}" style="max-width:260px"></div>
+              <div class="field"><label class="lbl" for="ex-int"><span>Intervalo entre as exclusões (ms)</span></label><input id="ex-int" type="text" value="{{ex.intervalo}}" autocomplete="off" disabled="{{ex.ocupado}}" onInput="{{ex.onIntervalo}}" style="max-width:160px"></div>
+              <div class="row"><button class="btn dng" type="button" onClick="{{ex.excluir}}" disabled="{{ex.naoPode}}">{{ex.excluirLabel}}</button><sc-if value="{{ex.ocupado}}" hint-placeholder-val="{{ false }}"><button class="btn" type="button" onClick="{{ex.cancelarExclusao}}">Parar</button></sc-if></div>
+              <div class="muted small">Se várias chamadas falharem em seguida, a exclusão para sozinha. Uma chamada que falha nunca é repetida. Se a pasta mudar depois da verificação, a confirmação deixa de valer.</div>
+              </sc-if>
+            </section>
+          </sc-if>
+          <sc-if value="{{ex.prog}}" hint-placeholder-val="{{ false }}">
+            <section class="card" aria-live="polite">
+              <div class="row"><h2>Andamento</h2><span class="pill {{ex.cls}}">{{ex.label}}</span><span class="grow"></span><sc-if value="{{ex.hasFim}}" hint-placeholder-val="{{ false }}"><a class="btn sm" href="{{ex.relHref}}" download>Baixar relatório (CSV)</a></sc-if></div>
+              <sc-if value="{{ex.ocupado}}" hint-placeholder-val="{{ false }}"><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ex.pct}}"><span style="{{ex.barStyle}}"></span></div><div class="muted small">{{ex.progresso}}</div></sc-if>
+              <sc-if value="{{ex.hasAtual}}" hint-placeholder-val="{{ false }}"><div class="muted small" style="overflow-wrap:anywhere">Agora: {{ex.atual}}</div></sc-if>
+              <div class="bxn"><strong>{{ex.resumoExec}}</strong></div>
+              <sc-if value="{{ex.hasEstErro}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{ex.estErro}}</span></div></sc-if>
+              <sc-if value="{{ex.hasFalhas}}" hint-placeholder-val="{{ false }}"><strong class="small">{{ex.nFalhas}} com falha</strong><div class="dglist"><sc-for list="{{ex.falhas}}" as="f" hint-placeholder-count="2"><div class="mi"><strong style="overflow-wrap:anywhere">{{f.t}}</strong><span class="pill er">{{f.erro}}</span></div></sc-for></div></sc-if>
+              <sc-if value="{{ex.hasFim}}" hint-placeholder-val="{{ false }}"><div class="muted small">Os documentos excluídos estão na lixeira da plataforma. O relatório lista o que foi feito com cada um.</div></sc-if>
+            </section>
+          </sc-if>
+        </sc-if>
+
         <!-- ===== IMPORTAR PASTA ===== -->
         <sc-if value="{{show.importarPasta}}" hint-placeholder-val="{{ false }}">
           <section class="card">
@@ -1201,6 +1249,7 @@ inicio:{label:'Início',title:'O que você quer testar hoje?',sub:'Escolha uma t
 fluxo:{label:'Fluxo completo',title:'Fluxo completo',sub:'Importe um arquivo, solicite a assinatura e receba os links, em três passos guiados.',d:ICON.route,grp:''},
 importar:{label:'Importar arquivo',title:'Importar arquivo',method:'POST',path:'/importar',sub:'Envia um arquivo para uma pasta. Se a pasta (ou a árvore de pastas) não existir, ela é criada.',d:ICON.upload,grp:'Enviar'},
 envio:{label:'Envio inteligente',title:'Envio inteligente',method:'POST',path:'/enviarParaEnvioInteligente',sub:'Envia o arquivo para o fluxo de envio inteligente e devolve o documentoId.',d:ICON.zap,grp:''},
+excluir:{label:'Excluir em massa',title:'Excluir documentos em massa',sub:'Envia para a lixeira os documentos de uma pasta, cancelando antes os fluxos de assinatura ativos. Sempre mostra o que será feito e pede confirmação.',d:ICON.trash,grp:''},
 importarPasta:{label:'Importar pasta',title:'Importar pasta do computador',sub:'Envia todos os arquivos de uma pasta do seu computador para o Docnuvem, refazendo as subpastas. Antes de enviar você vê exatamente o que irá.',d:ICON.upload,grp:''},
 modelos:{label:'Modelos',title:'Modelos',method:'GET',path:'/api/modelos',sub:'Lista os modelos de documento e as variáveis de cada um.',d:ICON.layout,grp:'Modelos'},
 template:{label:'Criar de modelo',title:'Criar documento de modelo',method:'POST',path:'/api/documento/from-template',sub:'O formulário é montado a partir das variáveis do modelo escolhido. A pasta precisa já existir.',d:ICON.filetext,grp:''},
@@ -1221,7 +1270,7 @@ painel:{label:'Painel das instâncias',title:'Painel das instâncias',sub:'Todos
 diagnostico:{label:'Diagnóstico',title:'Diagnóstico da instância',sub:'Confere, só com leituras, se o perfil está pronto para uso e mostra a causa provável de cada problema.',d:ICON.pulse,grp:'Suporte'},
 perfis:{label:'Perfis',title:'Perfis',sub:'Crie, edite e remova os perfis do config.json: nome, instância, endereço, token e proteção.',d:ICON.gear,grp:''}
 };
-const ORDER=['inicio','fluxo','importar','envio','importarPasta','modelos','template','assinatura','cancelar','documentos','pastas','status','download','baixarPasta','alunoSolicitar','alunoStatus','comparar','lote','fumaca','vigia','painel','diagnostico','perfis'];
+const ORDER=['inicio','fluxo','importar','envio','importarPasta','modelos','template','assinatura','cancelar','documentos','pastas','status','download','baixarPasta','excluir','alunoSolicitar','alunoStatus','comparar','lote','fumaca','vigia','painel','diagnostico','perfis'];
 const AUTO=['documentos','pastas','modelos'];
 let LIVE=null;const FILEBLOB=new WeakMap();
 const BASE='https://api.docnuvem.example';
@@ -1341,13 +1390,14 @@ pastas:{diretorioPaiId:'',nome:'',caminho:'',pagina:'0',tamanho:'50'},
 status:{documentoId:''},download:{documentoId:''},modelos:{},
 alunoSolicitar:{codigoMatricula:'',nome:'',cpf:'',email:'',telefone:'',tipoSolicitacao:'1',emailResponsavel:'',confirmEmail:false},alunoStatus:{codigoMatricula:''},
 comparar:{a:'',b:'',tipo:'modelos'},
+excluir:{diretorioId:'',subpastas:false,cancelarFluxos:true,status:'',dataInicio:'',dataFim:'',intervalo:'300',confirmacao:''},
 importarPasta:{origem:'',subpastas:true,pastaPai:'',pasta:'',tipo:'',pular:true,intervalo:'300',confirmando:false},
 vigia:{ids:'',intervalo:'10',alerta:'48'},
 lote:{csvNome:'',csvTexto:'',modo:'enviar',intervalo:'500',confirmando:false},
 fumaca:{ok:false},
 baixar:{diretorioId:'',subpastas:true,estrutura:true,conflito:'renomear',destino:'',status:'',dataInicio:'',dataFim:''},
 perfis:{aberto:false,original:'',nome:'',instancia:'',baseUrl:'',token:'',protecao:'',erro:'',salvando:false,rm:''}},
-results:{},loading:{},lists:{},diag:{},bx:{id:'',snap:null,erro:'',escolhendo:false},cmp:{busy:false,res:null,erro:''},pk:{aberto:false,alvo:null,cache:{},trilha:[],busca:''},lg:{aberto:false,perfil:'',login:'',senha:'',busy:false,erro:'',voltar:false},pn:{res:null,busy:false,erro:''},mn:{snap:null,vistos:null,sel:{},intervalo:'5',erro:''},ip:{ens:null,erro:'',busy:false,escolhendo:false,id:'',snap:null},vg:{todos:[],vistos:{},notif:false,erro:''},lt:{val:null,erro:'',validando:false,id:'',snap:null},fm:{busy:false,res:null,erro:''},protPend:null,tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
+results:{},loading:{},lists:{},diag:{},bx:{id:'',snap:null,erro:'',escolhendo:false},cmp:{busy:false,res:null,erro:''},pk:{aberto:false,alvo:null,cache:{},trilha:[],busca:''},lg:{aberto:false,perfil:'',login:'',senha:'',busy:false,erro:'',voltar:false},pn:{res:null,busy:false,erro:''},mn:{snap:null,vistos:null,sel:{},intervalo:'5',erro:''},ip:{ens:null,erro:'',busy:false,escolhendo:false,id:'',snap:null},ex:{ens:null,erro:'',busy:false,id:'',snap:null},vg:{todos:[],vistos:{},notif:false,erro:''},lt:{val:null,erro:'',validando:false,id:'',snap:null},fm:{busy:false,res:null,erro:''},protPend:null,tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
 paletteOpen:false,paletteQ:'',toast:'',wizStep:0,lastMat:'',openSol:null,navMin:false,
 lastDoc:{},lastAss:{},
 sort:{documentos:{k:'criadoEm',d:-1},pastas:{k:'caminho',d:1}},openModelo:'',dragging:false,newSg:sg};
@@ -1487,6 +1537,7 @@ if(al.modo==='id'){
 if(al.sc==='baixar')this.setF('baixar',{diretorioId:String(row.id)});
 else if(al.sc==='documentos')this.setF('documentos',{diretorioId:String(row.id),pagina:'0'});
 else if(al.sc==='pastas')this.setF('pastas',{diretorioPaiId:String(row.id),pagina:'0'});
+else if(al.sc==='excluir'){if(row.id===0)return;this.exSet({diretorioId:String(row.id)});}
 }else{
 if(row.id===0)return;
 const cam=row.caminho||'',pai=cam.endsWith('/'+row.nome)?cam.slice(0,cam.length-row.nome.length-1):'';
@@ -1513,6 +1564,35 @@ if(voltar){const pk=this.state.pk,cache=Object.assign({},pk.cache);Object.keys(c
 });
 }
 lgSair(perfil){this.cfgCall('/_config/login/'+encodeURIComponent(perfil),'DELETE').then(r=>{if(!r.ok){this.aviso(r.erro||'Não foi possível sair.');return;}this.recarregarPerfis({}).then(()=>this.aviso('Login do perfil '+perfil+' removido do config.json.'));});}
+exSet(patch){
+const s=this.state,f=Object.assign({},s.forms.excluir,patch);
+if(!('confirmacao' in patch))f.confirmacao='';
+this.setState({forms:Object.assign({},s.forms,{excluir:f}),ex:Object.assign({},s.ex,{ens:null,erro:''})});
+}
+exCorpo(extra){const s=this.state,f=s.forms.excluir;return Object.assign({perfil:s.perfil,diretorioId:f.diretorioId,subpastas:!!f.subpastas,cancelarFluxos:!!f.cancelarFluxos,status:f.status,dataInicio:f.dataInicio,dataFim:f.dataFim},extra||{});}
+exVerificar(){
+this.setState({ex:Object.assign({},this.state.ex,{busy:true,erro:'',ens:null,id:'',snap:null})});
+this.cfgCall('/_excluir/ensaio','POST',this.exCorpo()).then(r=>this.setState({ex:Object.assign({},this.state.ex,{busy:false,ens:r.ok?r:null,erro:r.ok?'':(r.erro||'Não foi possível verificar a pasta.')})}));
+}
+exIniciar(){
+const s=this.state,f=s.forms.excluir,ex=s.ex;
+if(ex.snap&&ex.snap.estado==='executando')return;
+this.cfgCall('/_excluir/iniciar','POST',this.exCorpo({confirmacao:f.confirmacao,intervaloMs:Number(f.intervalo)||0,confirmarProtecao:true})).then(r=>{
+if(!r.ok){this.setState({ex:Object.assign({},this.state.ex,{erro:r.erro||'Não foi possível iniciar.'})});return;}
+this.setState({ex:Object.assign({},this.state.ex,{erro:'',id:r.id,snap:{estado:'executando',total:0,feitos:0,excluidos:0,fluxosCancelados:0,pulados:0,nFalhas:0,falhas:[]}})});
+this.exPoll(r.id);
+});
+}
+exPoll(id){
+clearInterval(this._exp);
+const tick=()=>fetch('/_excluir/'+encodeURIComponent(id),{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error('HTTP '+r.status))).then(sn=>{
+if(this.state.ex.id!==id){clearInterval(this._exp);return;}
+this.setState({ex:Object.assign({},this.state.ex,{snap:sn})});
+if(sn.estado!=='executando')clearInterval(this._exp);
+}).catch(e=>{clearInterval(this._exp);this.setState({ex:Object.assign({},this.state.ex,{erro:'Perdi o contato com o servidor local: '+e.message})});});
+this._exp=setInterval(tick,700);tick();
+}
+exCancelar(){const id=this.state.ex.id;if(id)this.cfgCall('/_excluir/'+encodeURIComponent(id)+'/cancelar','POST',{});}
 ipSet(patch){
 const s=this.state,f=Object.assign({},s.forms.importarPasta,patch,{confirmando:false});
 this.setState({forms:Object.assign({},s.forms,{importarPasta:f}),ip:Object.assign({},s.ip,{ens:null,erro:''})});
@@ -1651,7 +1731,7 @@ if(f.rm!==id){this.setF('perfis',{rm:id});clearTimeout(this._rm);this._rm=setTim
 this.setF('perfis',{rm:''});
 this.cfgCall('/_config/perfil/'+encodeURIComponent(id),'DELETE').then(r=>{if(!r.ok){this.aviso(r.erro||'Não foi possível remover.');return;}this.recarregarPerfis({}).then(()=>this.aviso('Perfil "'+id+'" removido do config.json.'));});
 }
-componentWillUnmount(){clearInterval(this._iv);clearInterval(this._api);clearInterval(this._bxp);clearInterval(this._ltp);clearInterval(this._vgp);clearInterval(this._ipp);clearInterval(this._pnp);clearInterval(this._mnr);clearInterval(this._vgr);}
+componentWillUnmount(){clearInterval(this._iv);clearInterval(this._api);clearInterval(this._bxp);clearInterval(this._ltp);clearInterval(this._vgp);clearInterval(this._ipp);clearInterval(this._pnp);clearInterval(this._exp);clearInterval(this._mnr);clearInterval(this._vgr);}
 
 eff(){const s=this.state;return s.screen==='fluxo'?['importar','assinatura','resultado'][s.wizStep]:s.screen;}
 setF(sc,patch){const s=this.state;this.setState({forms:Object.assign({},s.forms,{[sc]:Object.assign({},s.forms[sc],patch)})});}
@@ -1740,7 +1820,7 @@ if(t&&(t.type==='file'||t.type==='checkbox'||t.type==='search'))return;
 if(s.logOpen)return;
 e.preventDefault();this.send();}
 };
-send(){const sc=this.eff();if(sc==='inicio'||sc==='resultado'||sc==='diagnostico'||sc==='perfis'||sc==='baixarPasta'||sc==='comparar'||sc==='lote'||sc==='fumaca'||sc==='vigia'||sc==='importarPasta'||sc==='painel')return;if(this.state.loading[sc])return;const p=this.plan(sc);if(p.ready)this.run(sc);}
+send(){const sc=this.eff();if(sc==='inicio'||sc==='resultado'||sc==='diagnostico'||sc==='perfis'||sc==='baixarPasta'||sc==='comparar'||sc==='lote'||sc==='fumaca'||sc==='vigia'||sc==='importarPasta'||sc==='painel'||sc==='excluir')return;if(this.state.loading[sc])return;const p=this.plan(sc);if(p.ready)this.run(sc);}
 
 plan(sc){
 const s=this.state,f=s.forms[sc]||{},perfil=s.perfil,v=s.validar;
@@ -1970,7 +2050,7 @@ const res0=s.results[eff];
 const loading=!!s.loading[eff];
 const show={};ORDER.concat(['resultado']).forEach(i=>{show[i]=eff===i;});
 show.fluxo=s.screen==='fluxo';
-show.form=eff!=='inicio'&&eff!=='resultado'&&eff!=='diagnostico'&&eff!=='perfis'&&eff!=='baixarPasta'&&eff!=='comparar'&&eff!=='lote'&&eff!=='fumaca'&&eff!=='vigia'&&eff!=='importarPasta'&&eff!=='painel';
+show.form=eff!=='inicio'&&eff!=='resultado'&&eff!=='diagnostico'&&eff!=='perfis'&&eff!=='baixarPasta'&&eff!=='comparar'&&eff!=='lote'&&eff!=='fumaca'&&eff!=='vigia'&&eff!=='importarPasta'&&eff!=='painel'&&eff!=='excluir';
 const T=(sc,k,o)=>this.fld(sc,k,o);
 const last=s.lastDoc[perfil],lastA=s.lastAss[perfil];
 const docLast=(sc)=>({useLast:true,lastLabel:last?'Usar último documentoId ('+last+')':'Nenhum documentoId recente',lastDisabled:!last,onLast:()=>this.setF(sc,{documentoId:String(last)})});
@@ -2308,7 +2388,7 @@ vazio:!!pkC&&!!pkC.pastas&&pkC.pastas.length===0,semResultado:!!pkC&&!!pkC.pasta
 contagem:pkC&&pkC.pastas?(pkBusca?pkLista.length+' de '+pkC.pastas.length+' pasta(s)':pkC.pastas.length+' pasta(s)'):'',
 atualTxt:pkCur.caminho||pkCur.nome,
 escolher:()=>this.pkEscolher(),escolherLabel:pkModoId?'Escolher esta pasta (ID '+pkCur.id+')':'Escolher esta pasta',
-naoPodeEscolher:!pkModoId&&pkCur.id===0,raizAviso:!pkModoId&&pkCur.id===0,
+naoPodeEscolher:(!pkModoId||(!!pkAl&&pkAl.sc==='excluir'))&&pkCur.id===0,raizAviso:(!pkModoId||(!!pkAl&&pkAl.sc==='excluir'))&&pkCur.id===0,
 dica:pkModoId?'Entre nas pastas e escolha a que você quer. O formulário recebe o ID dela (a raiz é o 0).':'Entre nas pastas e escolha a que você quer. O formulário recebe o nome da pasta e o caminho da pasta pai.',
 hasFonte:!!pkRaizC&&pkRaizC.fonte==='sincronizador',
 fonteTxt:pkRaizC&&pkRaizC.credencial==='usuario'?'Lista do sincronizador, com o seu usuário (só leitura).':'Lista do sincronizador (só leitura), porque o endpoint de pastas da API recusou este perfil.',
@@ -2323,6 +2403,42 @@ busy:lgs.busy,idle:!lgs.busy,hasErr:!!lgs.erro,err:lgs.erro,
 bloqueado:pmLg==='bloquear',naoPode:lgs.busy||pmLg==='bloquear'||!lgs.login.trim()||!lgs.senha,prod:pmLg==='confirmar',
 instancia:(PERFIS[lgs.perfil]||{}).instancia||'',
 entrar:()=>this.lgEntrar(),fechar:()=>this.lgFechar()};
+// excluir em massa
+const fex=s.forms.excluir,exst=s.ex,exe=exst.ens,exn=exst.snap;
+const exAtivo=!!exn&&exn.estado==='executando';
+const pmE=(PERFIS[perfil]||{}).protegido||'';
+const EXT={executando:'Excluindo…',concluido:'Concluído',cancelado:'Cancelado',erro:'Interrompido'};
+const EXC={executando:'mu',concluido:'ok',cancelado:'wn',erro:'er'};
+const exFrase=exe?exe.confirmacao:'';
+const exConf=!!exe&&fex.confirmacao.trim().toUpperCase().replace(/\s+/g,' ')===exFrase;
+const exv={
+dir:fex.diretorioId,onDir:e=>this.exSet({diretorioId:e.target.value}),
+escolherPasta:()=>this.pkAbrir({modo:'id',sc:'excluir'}),
+subpastas:!!fex.subpastas,onSub:e=>this.exSet({subpastas:e.target.checked}),
+cancelar:!!fex.cancelarFluxos,onCancelarFluxos:e=>this.exSet({cancelarFluxos:e.target.checked}),
+status:fex.status,onStatus:e=>this.exSet({status:e.target.value}),dataInicio:fex.dataInicio,onDataInicio:e=>this.exSet({dataInicio:e.target.value}),dataFim:fex.dataFim,onDataFim:e=>this.exSet({dataFim:e.target.value}),
+statusOpts:[['','Todos os status'],['pendente','Pendente'],['assinado','Assinado'],['expirado','Expirado'],['cancelado','Cancelado'],['sem_assinatura','Sem assinatura']].map(a=>({value:a[0],label:a[1],selected:fex.status===a[0]})),
+verificar:()=>this.exVerificar(),verificarOff:exst.busy||exAtivo,busy:exst.busy,hasErr:!!exst.erro,err:exst.erro,
+has:!!exe,vazio:!!exe&&exe.total===0,cheio:!!exe&&exe.total>0,
+resumo:exe?exe.total+' documento(s) nesta seleção':'',
+porStatus:exe?Object.keys(exe.porStatus).sort().map(k=>k+': '+exe.porStatus[k]).join(' · '):'',
+fluxos:exe?exe.fluxosAtivos:0,temFluxos:!!exe&&exe.fluxosAtivos>0,
+fluxoTxt:exe&&exe.fluxosAtivos>0?(fex.cancelarFluxos?exe.fluxosAtivos+' têm fluxo de assinatura ATIVO e serão CANCELADOS antes. Cancelar um fluxo não tem volta: os links param de funcionar e, se alguém já assinou, o arquivo volta à versão anterior às assinaturas.':exe.fluxosAtivos+' têm fluxo de assinatura ativo e serão PULADOS (o cancelamento está desligado).'):'',
+planoTxt:exe?exe.serao.excluidos+' documento(s) irão para a lixeira da plataforma'+(exe.serao.pulados?' · '+exe.serao.pulados+' pulado(s)':'')+(exe.serao.cancelados?' · '+exe.serao.cancelados+' fluxo(s) cancelado(s)':''):'',
+amostra:(exe&&exe.amostra||[]).map(a=>({t:a.nome,st:a.status})),hasAmostra:!!exe&&exe.amostra.length>0,
+frase:exFrase,confirmacao:fex.confirmacao,onConfirmacao:e=>this.setState({forms:Object.assign({},s.forms,{excluir:Object.assign({},fex,{confirmacao:e.target.value})})}),
+intervalo:fex.intervalo,onIntervalo:e=>this.setF('excluir',{intervalo:e.target.value}),
+bloqueado:pmE==='bloquear',prodAviso:pmE==='confirmar',
+podeExcluir:exConf&&!exAtivo&&pmE!=='bloquear'&&!!exe&&exe.total>0,naoPode:!(exConf&&!exAtivo&&pmE!=='bloquear'&&!!exe&&exe.total>0),
+excluirLabel:exe?'Excluir '+exe.total+' documento(s)':'Excluir',excluir:()=>this.exIniciar(),
+ocupado:exAtivo,cancelarExclusao:()=>this.exCancelar(),
+prog:!!exn,cls:exn?(EXC[exn.estado]||'mu'):'mu',label:exn?(EXT[exn.estado]||exn.estado):'',
+pct:exn&&exn.total?Math.min(100,Math.round(exn.feitos*100/exn.total)):0,barStyle:'width:'+(exn&&exn.total?Math.min(100,Math.round(exn.feitos*100/exn.total)):0)+'%',
+progresso:exn?exn.feitos+' de '+exn.total:'',hasAtual:!!exn&&!!exn.atual,atual:exn?exn.atual:'',
+resumoExec:exn?(exn.excluidos+' excluído(s) · '+exn.fluxosCancelados+' fluxo(s) cancelado(s) · '+exn.pulados+' pulado(s) · '+exn.nFalhas+' com falha'):'',
+hasFim:!!exn&&exn.estado!=='executando',relHref:exst.id?'/_excluir/'+encodeURIComponent(exst.id)+'/relatorio.csv':'#',
+hasEstErro:!!exn&&!!exn.erro,estErro:exn?exn.erro:'',
+falhas:(exn&&exn.falhas||[]).map(x=>({t:x.nome,erro:x.erro})),hasFalhas:!!exn&&exn.nFalhas>0,nFalhas:exn?exn.nFalhas:0};
 // importar pasta
 const fip=s.forms.importarPasta,ipst=s.ip,ens=ipst.ens,isn=ipst.snap;
 const ipAtivo=!!isn&&isn.estado==='executando';
@@ -2514,7 +2630,7 @@ hasRes:!!res0,noRes:!res0&&!loading,res,tabs,tabResumo:s.tab==='resumo',tabJson:
 jsonCopyAll:()=>this.copy(JSON.stringify(res0?res0.body:{},null,2)),jsonCollapse:()=>this.setState({collapsed:allPaths(res0?res0.body:{},'$',{})}),jsonExpand:()=>this.setState({collapsed:{}}),
 nexts,hasNexts:nexts.length>0,
 hasLinks:links.length>0&&eff==='assinatura',links,linksNote:linkSrc?(linkSrc.conviteEnviado?'Convite enviado por e-mail (conviteEnviado = true). Os links abaixo também valem.':'Nenhum e-mail foi enviado (conviteEnviado = false, padrão). Envie cada link ao signatário.'):'',
-dt,pt,md,stv,dl,wiz,al,asv,api,hist,dg:dgn,prot,pf,bx,cm,lote,fumaca,vg,ip:ipv,pk,lg:lgv,pn:pnn,mn:mnv,
+dt,pt,md,stv,dl,wiz,al,asv,api,hist,dg:dgn,prot,pf,bx,cm,lote,fumaca,vg,ip:ipv,ex:exv,pk,lg:lgv,pn:pnn,mn:mnv,
 logOpen:s.logOpen,logFav:s.logFav,onLogFav:e=>this.setState({logFav:e.target.checked}),logRows:lrows,logEmpty:lrows.length===0&&!sel,hasLogSel:!!sel,showLogList:!sel,ld,
 paletteOpen:s.paletteOpen,paletteQ:s.paletteQ,onPaletteQ:e=>this.setState({paletteQ:e.target.value}),palItems,palEmpty:palItems.length===0,closePalette:()=>this.setState({paletteOpen:false}),stop:e=>{if(e&&e.stopPropagation)e.stopPropagation();},
 toast:s.toast,toastCls:s.toast?'':'off'
