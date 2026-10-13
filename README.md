@@ -89,7 +89,8 @@ Opções: `--porta N`, `--nao-abrir`, `--sem-historico`, `--dados PASTA`.
   assinatura **ativos** (status `pendente`). Cancelar fluxo não tem volta: os links param de funcionar
   e, se alguém já assinou, o arquivo volta à versão sem as assinaturas. Por isso: nunca age na raiz;
   mostra o que será feito antes (sem alterar nada); só libera depois de você digitar `EXCLUIR <quantidade>`
-  (e a confirmação deixa de valer se a pasta mudar); envia com intervalo, para sozinho após falhas
+  (e a confirmação deixa de valer se a pasta mudar); **sem limite de quantidade**: lê a pasta inteira
+  antes de excluir qualquer coisa e, se o total mudar durante a leitura, não exclui nada; envia com intervalo, para sozinho após falhas
   seguidas, nunca repete uma chamada que falhou e gera relatório CSV. Perfil somente leitura não
   exclui. Usa o token do seu usuário (se você entrou) para excluir.
 - **Importar pasta**: envia uma pasta do computador para o Docnuvem, refazendo as subpastas. Mostra

@@ -10,7 +10,6 @@ from urllib.parse import parse_qs, urlsplit
 
 import pytest
 
-from docnuvem_tester import excluir
 from docnuvem_tester.excluir import frase_de_confirmacao
 
 from .conftest import TOKEN_OK, App, Upstream
@@ -74,7 +73,7 @@ def _esperar(app: App, id_: str, limite: float = 15.0) -> dict[str, Any]:
     fim = time.monotonic() + limite
     while time.monotonic() < fim:
         dado = dict(app.http.get(f"/_excluir/{id_}").json())
-        if dado["estado"] != "executando":
+        if dado["estado"] not in ("listando", "executando"):
             return dado
         time.sleep(0.03)
     raise AssertionError("a exclusão não terminou a tempo")
@@ -171,14 +170,136 @@ def test_ensaio_recusa_pedido_invalido(
     assert upstream.recebidas == []
 
 
-def test_selecao_grande_demais_pede_para_fazer_em_partes(
-    app: App, upstream: Upstream, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr(excluir, "MAX_DOCUMENTOS", 2)
-    _tres(upstream)
-    r = _ensaio(app)
-    assert r.status_code == 400
-    assert "em partes" in r.json()["erro"]
+def _paginado(total: int, nome: str = "d") -> Any:
+    """Uma API com `total` documentos, paginada de verdade (pagina/tamanho)."""
+
+    def resposta(q: dict[str, list[str]]) -> tuple[int, str]:
+        pagina, tamanho = int(q["pagina"][0]), int(q["tamanho"][0])
+        ini = pagina * tamanho
+        itens = [
+            {"documentoId": i, "nomeArquivo": f"{nome}{i}.pdf", "status": "sem_assinatura"}
+            for i in range(ini + 1, min(ini + tamanho, total) + 1)
+        ]
+        corpo = {"total": total, "temMais": ini + tamanho < total, "documentos": itens}
+        return 200, json.dumps(corpo)
+
+    return resposta
+
+
+def test_nao_ha_limite_de_quantidade_na_verificacao(app: App, upstream: Upstream) -> None:
+    upstream.dinamicas[LISTAGEM] = _paginado(12_345)
+    r = _ensaio(app, confirmacao="").json()
+    assert r["ok"] is True
+    assert r["total"] == 12_345  # bem acima dos 5000 do limite antigo
+    assert r["confirmacao"] == "EXCLUIR 12345"
+
+
+def test_exclusao_de_mais_de_5000_comeca_depois_de_ler_tudo(app: App, upstream: Upstream) -> None:
+    upstream.dinamicas[LISTAGEM] = _paginado(6000)
+    r = _iniciar(app, confirmacao="EXCLUIR 6000", intervaloMs=2000)
+    assert r["ok"] is True
+    fim = None
+    for _ in range(200):  # espera a leitura terminar e a primeira exclusão sair
+        s = app.http.get(f"/_excluir/{r['id']}").json()
+        if s["estado"] == "executando" and s["excluidos"] >= 1:
+            fim = s
+            break
+        time.sleep(0.05)
+    assert fim is not None
+    assert fim["total"] == 6000
+    app.http.post(f"/_excluir/{r['id']}/cancelar")
+    final = _esperar(app, r["id"])
+    assert final["estado"] == "cancelado"
+    assert 1 <= final["excluidos"] < 6000
+
+
+def test_a_leitura_aparece_como_listando_e_depois_segue(app: App, upstream: Upstream) -> None:
+    paginas = _paginado(450)
+
+    def devagar(q: dict[str, list[str]]) -> tuple[int, str]:
+        if q["tamanho"][0] != "1":
+            time.sleep(0.25)
+        return paginas(q)
+
+    upstream.dinamicas[LISTAGEM] = devagar
+    r = _iniciar(app, confirmacao="EXCLUIR 450")
+    vistos = set()
+    for _ in range(400):
+        s = app.http.get(f"/_excluir/{r['id']}").json()
+        vistos.add(s["estado"])
+        if s["estado"] not in ("listando", "executando"):
+            break
+        time.sleep(0.03)
+    assert "listando" in vistos and s["estado"] == "concluido"
+    assert s["excluidos"] == 450 and s["lidos"] == 450
+
+
+def test_pagina_repetida_pela_api_nao_trava(app: App, upstream: Upstream) -> None:
+    repetida = [
+        {"documentoId": i, "nomeArquivo": f"r{i}.pdf", "status": "assinado"} for i in (1, 2)
+    ]
+    upstream.dinamicas[LISTAGEM] = lambda q: (
+        200,
+        json.dumps({"total": 99999, "temMais": True, "documentos": repetida}),
+    )
+    r = _ensaio(app, confirmacao="").json()
+    assert r["total"] == 2  # a API não avança: para e não conta repetidos
+
+
+def test_sem_total_na_api_cai_para_a_leitura_completa(app: App, upstream: Upstream) -> None:
+    itens = [{"documentoId": i, "nomeArquivo": f"{i}.pdf", "status": "assinado"} for i in (1, 2)]
+    upstream.respostas[LISTAGEM] = (200, json.dumps({"temMais": False, "documentos": itens}))
+    fim = _excluir(app, confirmacao="EXCLUIR 2")
+    assert fim["excluidos"] == 2
+
+
+def test_pasta_que_muda_durante_a_leitura_nao_exclui_nada(app: App, upstream: Upstream) -> None:
+    """A contagem rápida dizia 3, mas a leitura completa achou 4: nada pode ser excluído."""
+
+    def resposta(q: dict[str, list[str]]) -> tuple[int, str]:
+        docs = [
+            {"documentoId": i, "nomeArquivo": f"{i}.pdf", "status": "assinado"}
+            for i in (1, 2, 3, 4)
+        ]
+        if q["tamanho"][0] == "1":
+            return 200, json.dumps({"total": 3, "temMais": True, "documentos": docs[:1]})
+        return 200, json.dumps({"total": 4, "temMais": False, "documentos": docs})
+
+    upstream.dinamicas[LISTAGEM] = resposta
+    r = _iniciar(app, confirmacao="EXCLUIR 3")
+    assert r["ok"] is True
+    fim = _esperar(app, r["id"])
+    assert fim["estado"] == "erro"
+    assert "mudou durante a leitura" in fim["erro"]
+    assert "Nada foi excluído" in fim["erro"]
+    assert _destrutivas(upstream) == []
+
+
+def test_falha_na_leitura_nao_exclui_nada(app: App, upstream: Upstream) -> None:
+    paginas = _paginado(500)
+    upstream.dinamicas[LISTAGEM] = lambda q: (500, "") if q["pagina"][0] == "1" else paginas(q)
+    r = _iniciar(app, confirmacao="EXCLUIR 500")
+    fim = _esperar(app, r["id"])
+    assert fim["estado"] == "erro"
+    assert "Não consegui ler a pasta" in fim["erro"]
+    assert _destrutivas(upstream) == []
+
+
+def test_cancelar_durante_a_leitura_nao_exclui_nada(app: App, upstream: Upstream) -> None:
+    paginas = _paginado(2000)
+
+    def devagar(q: dict[str, list[str]]) -> tuple[int, str]:
+        if q["tamanho"][0] != "1":
+            time.sleep(0.2)
+        return paginas(q)
+
+    upstream.dinamicas[LISTAGEM] = devagar
+    r = _iniciar(app, confirmacao="EXCLUIR 2000")
+    time.sleep(0.4)
+    app.http.post(f"/_excluir/{r['id']}/cancelar")
+    fim = _esperar(app, r["id"])
+    assert fim["estado"] == "cancelado"
+    assert _destrutivas(upstream) == []
 
 
 def test_ensaio_perfil_desconhecido(app: App) -> None:

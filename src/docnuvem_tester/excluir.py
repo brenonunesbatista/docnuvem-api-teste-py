@@ -9,6 +9,8 @@ digitando a quantidade exata -> executar com intervalo, parada automática e rel
   assinou, o arquivo volta à versão anterior às assinaturas. Só são cancelados fluxos ATIVOS
   (status `pendente`), e só se a pessoa pediu.
 - Nunca age na raiz ("Meus documentos"). Uma chamada que falha não é repetida.
+- Não há limite de quantidade: a lista inteira é lida ANTES de qualquer exclusão (apagar enquanto
+  se pagina deslocaria as páginas) e, se o total mudar durante a leitura, nada é excluído.
 """
 
 from __future__ import annotations
@@ -19,6 +21,7 @@ import threading
 import time
 import uuid
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -33,8 +36,7 @@ from docnuvem_tester.download import (
     validar_filtros,
 )
 
-MAX_DOCUMENTOS = 5000
-MAX_PAGINAS = 100
+PAGINAS_FOLGA = 5  # páginas além do esperado antes de desconfiar de uma API que não termina
 MAX_FALHAS_SEGUIDAS = 5
 MAX_FALHAS_EXIBIDAS = 50
 INTERVALO_MAX_MS = 10_000
@@ -54,6 +56,62 @@ def credencial(perfil: PerfilConfig) -> str:
     return perfil.tokenUsuario or perfil.token
 
 
+def validar_pedido(diretorio_id: int, status: str, data_inicio: str, data_fim: str) -> None:
+    if diretorio_id <= 0:
+        raise ErroExclusao(
+            "Escolha uma pasta: a raiz (Meus documentos) não pode ser esvaziada aqui."
+        )
+    try:
+        validar_filtros(status, data_inicio, data_fim)
+    except ErroDownload as exc:
+        raise ErroExclusao(str(exc)) from exc
+
+
+def _consulta(
+    cliente: httpx.Client,
+    perfil: PerfilConfig,
+    *,
+    diretorio_id: int,
+    subpastas: bool,
+    status: str,
+    data_inicio: str,
+    data_fim: str,
+    pagina: int,
+    tamanho: int,
+) -> dict[str, Any]:
+    params: dict[str, Any] = {
+        "instancia": perfil.instancia.lower(),
+        "diretorioId": diretorio_id,
+        "incluirSubpastas": "true" if subpastas else "false",
+        "pagina": pagina,
+        "tamanho": tamanho,
+    }
+    for chave, valor in (("status", status), ("dataInicio", data_inicio), ("dataFim", data_fim)):
+        if valor:  # filtro vazio nunca é enviado (a API recusa "status=")
+            params[chave] = valor
+    try:
+        return _pagina(
+            cliente,
+            perfil.baseUrl.rstrip("/"),
+            "/api/documentos",
+            {"Authorization": f"Bearer {perfil.token}"},
+            params,
+        )
+    except ErroDownload as exc:
+        raise ErroExclusao(str(exc)) from exc
+    except httpx.HTTPError as exc:
+        raise ErroExclusao(f"Falha de conexão com a API: {exc}") from exc
+
+
+def contar_rapido(cliente: httpx.Client, perfil: PerfilConfig, **filtros: Any) -> int | None:
+    """Total da seleção segundo a API, com uma consulta só (None se ela não informar)."""
+    validar_pedido(
+        filtros["diretorio_id"], filtros["status"], filtros["data_inicio"], filtros["data_fim"]
+    )
+    total = _consulta(cliente, perfil, pagina=0, tamanho=1, **filtros).get("total")
+    return total if isinstance(total, int) else None
+
+
 def listar_alvos(
     cliente: httpx.Client,
     perfil: PerfilConfig,
@@ -63,58 +121,56 @@ def listar_alvos(
     status: str,
     data_inicio: str,
     data_fim: str,
+    cancelar: threading.Event | None = None,
+    ao_ler: Callable[[int], None] | None = None,
 ) -> list[dict[str, Any]]:
-    """Os documentos que seriam excluídos, direto da API (sempre atual)."""
-    if diretorio_id <= 0:
-        raise ErroExclusao(
-            "Escolha uma pasta: a raiz (Meus documentos) não pode ser esvaziada aqui."
-        )
-    try:
-        validar_filtros(status, data_inicio, data_fim)
-    except ErroDownload as exc:
-        raise ErroExclusao(str(exc)) from exc
-    base = perfil.baseUrl.rstrip("/")
-    auth = {"Authorization": f"Bearer {perfil.token}"}
+    """TODOS os documentos da seleção (sem limite), direto da API (sempre atual).
+
+    Lê tudo antes de qualquer exclusão: apagar enquanto se pagina deslocaria as páginas.
+    """
+    validar_pedido(diretorio_id, status, data_inicio, data_fim)
     alvos: list[dict[str, Any]] = []
-    for pagina in range(MAX_PAGINAS):
-        params: dict[str, Any] = {
-            "instancia": perfil.instancia.lower(),
-            "diretorioId": diretorio_id,
-            "incluirSubpastas": "true" if subpastas else "false",
-            "pagina": pagina,
-            "tamanho": TAMANHO_PAGINA,
-        }
-        for chave, valor in (
-            ("status", status),
-            ("dataInicio", data_inicio),
-            ("dataFim", data_fim),
-        ):
-            if valor:
-                params[chave] = valor
-        try:
-            dado = _pagina(cliente, base, "/api/documentos", auth, params)
-        except ErroDownload as exc:
-            raise ErroExclusao(str(exc)) from exc
-        except httpx.HTTPError as exc:
-            raise ErroExclusao(f"Falha de conexão com a API: {exc}") from exc
+    vistos: set[int] = set()
+    total: int | None = None
+    pagina = 0
+    while True:
+        if cancelar is not None and cancelar.is_set():
+            break
+        dado = _consulta(
+            cliente,
+            perfil,
+            diretorio_id=diretorio_id,
+            subpastas=subpastas,
+            status=status,
+            data_inicio=data_inicio,
+            data_fim=data_fim,
+            pagina=pagina,
+            tamanho=TAMANHO_PAGINA,
+        )
+        if total is None and isinstance(dado.get("total"), int):
+            total = dado["total"]
         lote = [d for d in dado.get("documentos") or [] if isinstance(d, dict)]
+        novos = 0
         for d in lote:
-            if isinstance(d.get("documentoId"), int):
+            id_ = d.get("documentoId")
+            if isinstance(id_, int) and id_ not in vistos:
+                vistos.add(id_)
+                novos += 1
                 alvos.append(
                     {
-                        "documentoId": d["documentoId"],
-                        "nome": str(d.get("nomeArquivo") or f"documento {d['documentoId']}"),
+                        "documentoId": id_,
+                        "nome": str(d.get("nomeArquivo") or f"documento {id_}"),
                         "status": str(d.get("status") or "sem_assinatura").lower(),
                         "assinaturaId": d.get("assinaturaId"),
                         "diretorioId": d.get("diretorioId"),
                     }
                 )
-        if len(alvos) > MAX_DOCUMENTOS:
-            raise ErroExclusao(
-                f"Há mais de {MAX_DOCUMENTOS} documentos nesta seleção. Use os filtros de status "
-                "ou de período para fazer em partes."
-            )
-        if not dado.get("temMais") or not lote:
+        if ao_ler is not None:
+            ao_ler(len(alvos))
+        pagina += 1
+        if not dado.get("temMais") or not lote or novos == 0:  # sem novidade: a API não avança
+            break
+        if total is not None and pagina > total // TAMANHO_PAGINA + PAGINAS_FOLGA:
             break
     return alvos
 
@@ -157,7 +213,14 @@ class Exclusao:
     alvos: list[dict[str, Any]]
     cancelar_fluxos: bool
     intervalo_ms: int
-    estado: str = "executando"  # executando | concluido | cancelado | erro
+    subpastas: bool = False
+    status: str = ""
+    data_inicio: str = ""
+    data_fim: str = ""
+    confirmado: int = 0  # a quantidade que a pessoa confirmou
+    total_previsto: int = 0
+    lidos: int = 0
+    estado: str = "executando"  # listando | executando | concluido | cancelado | erro
     feitos: int = 0
     excluidos: int = 0
     fluxos_cancelados: int = 0
@@ -174,7 +237,7 @@ class Exclusao:
 
     @property
     def ativo(self) -> bool:
-        return self.estado == "executando"
+        return self.estado in ("listando", "executando")
 
     def snapshot(self) -> dict[str, Any]:
         with self.lock:
@@ -183,7 +246,8 @@ class Exclusao:
                 "perfil": self.perfil,
                 "diretorioId": self.diretorio_id,
                 "estado": self.estado,
-                "total": len(self.alvos),
+                "lidos": self.lidos,
+                "total": len(self.alvos) or self.total_previsto,
                 "feitos": self.feitos,
                 "excluidos": self.excluidos,
                 "fluxosCancelados": self.fluxos_cancelados,
@@ -228,21 +292,24 @@ class GerenciadorExclusao:
         confirmacao: str,
         intervalo_ms: int,
     ) -> Exclusao:
-        alvos = listar_alvos(
-            cliente,
-            perfil,
-            diretorio_id=diretorio_id,
-            subpastas=subpastas,
-            status=status,
-            data_inicio=data_inicio,
-            data_fim=data_fim,
-        )
-        if not alvos:
+        filtros: dict[str, Any] = {
+            "diretorio_id": diretorio_id,
+            "subpastas": subpastas,
+            "status": status,
+            "data_inicio": data_inicio,
+            "data_fim": data_fim,
+        }
+        total = contar_rapido(cliente, perfil, **filtros)
+        alvos: list[dict[str, Any]] = []
+        if total is None:  # a API não informa o total: lê tudo agora, no próprio pedido
+            alvos = listar_alvos(cliente, perfil, **filtros)
+            total = len(alvos)
+        if total == 0:
             raise ErroExclusao("Não há documentos nesta seleção.")
-        esperado = frase_de_confirmacao(len(alvos))
+        esperado = frase_de_confirmacao(total)
         if " ".join(confirmacao.upper().split()) != esperado:
             raise ErroExclusao(
-                f"A confirmação não confere. Agora há {len(alvos)} documento(s) na seleção: "
+                f"A confirmação não confere. Agora há {total} documento(s) na seleção: "
                 f"digite {esperado}. Se o número mudou, a pasta foi alterada desde a verificação: "
                 "refaça-a."
             )
@@ -257,6 +324,13 @@ class GerenciadorExclusao:
                 alvos=alvos,
                 cancelar_fluxos=cancelar_fluxos,
                 intervalo_ms=intervalo_ms,
+                subpastas=subpastas,
+                status=status,
+                data_inicio=data_inicio,
+                data_fim=data_fim,
+                confirmado=total,
+                total_previsto=total,
+                estado="executando" if alvos else "listando",
             )
             self._exclusoes[ex.id] = ex
         threading.Thread(target=executar, args=(ex, cliente, perfil), daemon=True).start()
@@ -289,6 +363,8 @@ def executar(ex: Exclusao, cliente: httpx.Client, perfil: PerfilConfig) -> None:
     auth_instancia = {"Authorization": f"Bearer {perfil.token}"}
     auth_sync = {"Authorization": f"Bearer {credencial(perfil)}"}
     try:
+        if ex.estado == "listando" and not _ler_tudo(ex, cliente, perfil):
+            return
         for indice, doc in enumerate(ex.alvos):
             if ex.cancelar.is_set():
                 return _terminar(ex, "cancelado")
@@ -311,6 +387,48 @@ def executar(ex: Exclusao, cliente: httpx.Client, perfil: PerfilConfig) -> None:
         with ex.lock:
             ex.erro = f"Erro inesperado: {exc}"
         _terminar(ex, "erro")
+
+
+def _ler_tudo(ex: Exclusao, cliente: httpx.Client, perfil: PerfilConfig) -> bool:
+    """Lê a seleção inteira. Devolve False se terminou o trabalho (erro, cancelamento ou
+    total diferente do confirmado): nesse caso NADA foi excluído."""
+
+    def progresso(n: int) -> None:
+        with ex.lock:
+            ex.lidos = n
+
+    try:
+        alvos = listar_alvos(
+            cliente,
+            perfil,
+            diretorio_id=ex.diretorio_id,
+            subpastas=ex.subpastas,
+            status=ex.status,
+            data_inicio=ex.data_inicio,
+            data_fim=ex.data_fim,
+            cancelar=ex.cancelar,
+            ao_ler=progresso,
+        )
+    except ErroExclusao as exc:
+        with ex.lock:
+            ex.erro = f"Não consegui ler a pasta: {exc}. Nada foi excluído."
+        _terminar(ex, "erro")
+        return False
+    if ex.cancelar.is_set():
+        _terminar(ex, "cancelado")
+        return False
+    if len(alvos) != ex.confirmado:
+        with ex.lock:
+            ex.erro = (
+                f"A pasta mudou durante a leitura (você confirmou {ex.confirmado} documento(s) e "
+                f"encontrei {len(alvos)}). Nada foi excluído: refaça a verificação."
+            )
+        _terminar(ex, "erro")
+        return False
+    with ex.lock:
+        ex.alvos = alvos
+        ex.estado = "executando"
+    return True
 
 
 def _processar(

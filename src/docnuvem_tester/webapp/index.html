@@ -1576,10 +1576,10 @@ this.cfgCall('/_excluir/ensaio','POST',this.exCorpo()).then(r=>this.setState({ex
 }
 exIniciar(){
 const s=this.state,f=s.forms.excluir,ex=s.ex;
-if(ex.snap&&ex.snap.estado==='executando')return;
+if(ex.snap&&(ex.snap.estado==='executando'||ex.snap.estado==='listando'))return;
 this.cfgCall('/_excluir/iniciar','POST',this.exCorpo({confirmacao:f.confirmacao,intervaloMs:Number(f.intervalo)||0,confirmarProtecao:true})).then(r=>{
 if(!r.ok){this.setState({ex:Object.assign({},this.state.ex,{erro:r.erro||'Não foi possível iniciar.'})});return;}
-this.setState({ex:Object.assign({},this.state.ex,{erro:'',id:r.id,snap:{estado:'executando',total:0,feitos:0,excluidos:0,fluxosCancelados:0,pulados:0,nFalhas:0,falhas:[]}})});
+this.setState({ex:Object.assign({},this.state.ex,{erro:'',id:r.id,snap:{estado:'listando',lidos:0,total:0,feitos:0,excluidos:0,fluxosCancelados:0,pulados:0,nFalhas:0,falhas:[]}})});
 this.exPoll(r.id);
 });
 }
@@ -1588,7 +1588,7 @@ clearInterval(this._exp);
 const tick=()=>fetch('/_excluir/'+encodeURIComponent(id),{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject(new Error('HTTP '+r.status))).then(sn=>{
 if(this.state.ex.id!==id){clearInterval(this._exp);return;}
 this.setState({ex:Object.assign({},this.state.ex,{snap:sn})});
-if(sn.estado!=='executando')clearInterval(this._exp);
+if(sn.estado!=='executando'&&sn.estado!=='listando')clearInterval(this._exp);
 }).catch(e=>{clearInterval(this._exp);this.setState({ex:Object.assign({},this.state.ex,{erro:'Perdi o contato com o servidor local: '+e.message})});});
 this._exp=setInterval(tick,700);tick();
 }
@@ -2405,10 +2405,10 @@ instancia:(PERFIS[lgs.perfil]||{}).instancia||'',
 entrar:()=>this.lgEntrar(),fechar:()=>this.lgFechar()};
 // excluir em massa
 const fex=s.forms.excluir,exst=s.ex,exe=exst.ens,exn=exst.snap;
-const exAtivo=!!exn&&exn.estado==='executando';
+const exAtivo=!!exn&&(exn.estado==='executando'||exn.estado==='listando');
 const pmE=(PERFIS[perfil]||{}).protegido||'';
-const EXT={executando:'Excluindo…',concluido:'Concluído',cancelado:'Cancelado',erro:'Interrompido'};
-const EXC={executando:'mu',concluido:'ok',cancelado:'wn',erro:'er'};
+const EXT={listando:'Lendo a pasta…',executando:'Excluindo…',concluido:'Concluído',cancelado:'Cancelado',erro:'Interrompido'};
+const EXC={listando:'mu',executando:'mu',concluido:'ok',cancelado:'wn',erro:'er'};
 const exFrase=exe?exe.confirmacao:'';
 const exConf=!!exe&&fex.confirmacao.trim().toUpperCase().replace(/\s+/g,' ')===exFrase;
 const exv={
@@ -2433,10 +2433,10 @@ podeExcluir:exConf&&!exAtivo&&pmE!=='bloquear'&&!!exe&&exe.total>0,naoPode:!(exC
 excluirLabel:exe?'Excluir '+exe.total+' documento(s)':'Excluir',excluir:()=>this.exIniciar(),
 ocupado:exAtivo,cancelarExclusao:()=>this.exCancelar(),
 prog:!!exn,cls:exn?(EXC[exn.estado]||'mu'):'mu',label:exn?(EXT[exn.estado]||exn.estado):'',
-pct:exn&&exn.total?Math.min(100,Math.round(exn.feitos*100/exn.total)):0,barStyle:'width:'+(exn&&exn.total?Math.min(100,Math.round(exn.feitos*100/exn.total)):0)+'%',
-progresso:exn?exn.feitos+' de '+exn.total:'',hasAtual:!!exn&&!!exn.atual,atual:exn?exn.atual:'',
+pct:exn&&exn.total?Math.min(100,Math.round((exn.estado==='listando'?exn.lidos:exn.feitos)*100/exn.total)):0,barStyle:'width:'+(exn&&exn.total?Math.min(100,Math.round((exn.estado==='listando'?exn.lidos:exn.feitos)*100/exn.total)):0)+'%',
+progresso:exn?(exn.estado==='listando'?'Lendo a pasta antes de excluir qualquer coisa: '+exn.lidos+' de '+exn.total+' documento(s)':exn.feitos+' de '+exn.total):'',hasAtual:!!exn&&!!exn.atual,atual:exn?exn.atual:'',
 resumoExec:exn?(exn.excluidos+' excluído(s) · '+exn.fluxosCancelados+' fluxo(s) cancelado(s) · '+exn.pulados+' pulado(s) · '+exn.nFalhas+' com falha'):'',
-hasFim:!!exn&&exn.estado!=='executando',relHref:exst.id?'/_excluir/'+encodeURIComponent(exst.id)+'/relatorio.csv':'#',
+hasFim:!!exn&&exn.estado!=='executando'&&exn.estado!=='listando',relHref:exst.id?'/_excluir/'+encodeURIComponent(exst.id)+'/relatorio.csv':'#',
 hasEstErro:!!exn&&!!exn.erro,estErro:exn?exn.erro:'',
 falhas:(exn&&exn.falhas||[]).map(x=>({t:x.nome,erro:x.erro})),hasFalhas:!!exn&&exn.nFalhas>0,nFalhas:exn?exn.nFalhas:0};
 // importar pasta

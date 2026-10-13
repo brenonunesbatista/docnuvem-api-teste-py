@@ -891,3 +891,30 @@ def test_excluir_pasta_sem_documentos_nao_pede_confirmacao(
     expect(page.locator("main")).to_contain_text("Nenhum documento nesta seleção")
     expect(page.locator("#ex-conf")).to_have_count(0)
     expect(page.locator("main button.dng")).to_have_count(0)
+
+
+def test_excluir_pasta_grande_le_tudo_antes_e_nao_tem_limite(
+    pagina: Pagina, upstream: Upstream
+) -> None:
+    page = pagina.page
+
+    def paginado(q: dict[str, list[str]]) -> tuple[int, str]:
+        pg, tam = int(q["pagina"][0]), int(q["tamanho"][0])
+        ini = pg * tam
+        docs = [
+            {"documentoId": i, "nomeArquivo": f"d{i}.pdf", "status": "sem_assinatura"}
+            for i in range(ini + 1, min(ini + tam, 5400) + 1)
+        ]
+        return 200, json.dumps({"total": 5400, "temMais": ini + tam < 5400, "documentos": docs})
+
+    upstream.dinamicas[("GET", "/api/documentos")] = paginado
+    pagina.ir("Excluir em massa")
+    page.fill("#ex-dir", "5")
+    pagina.botao("Ver o que será excluído").click()
+    expect(page.locator("main")).to_contain_text("5400 documento(s) nesta seleção")  # sem teto
+    page.fill("#ex-conf", "EXCLUIR 5400")
+    page.fill("#ex-int", "2000")  # devagar para dar tempo de parar
+    pagina.botao("Excluir 5400 documento(s)").click()
+    expect(page.locator("main")).to_contain_text("excluído(s)")
+    pagina.botao("Parar").click()
+    expect(page.locator("main")).to_contain_text("Cancelado")
