@@ -981,3 +981,31 @@ def test_excluir_reaproveita_a_leitura_da_verificacao(pagina: Pagina, upstream: 
     assert paginas_cheias() == lidas  # a exclusão não leu a pasta de novo
     pagina.botao("Parar").click()
     expect(page.locator("main")).to_contain_text("Cancelado")
+
+
+def test_excluir_marcar_varias_pastas_de_uma_pasta_pai(pagina: Pagina, upstream: Upstream) -> None:
+    page = pagina.page
+    _arvore_de_pastas(upstream)
+    _tres_documentos(upstream)
+    pagina.ir("Excluir em massa")
+    page.get_by_role("button", name="Marcar várias pastas de uma pasta pai…").click()
+    modal = _seletor(page)
+    expect(modal.get_by_role("button", name="Usar 0 pasta(s) marcada(s)")).to_be_disabled()
+    modal.get_by_label("Marcar Contratos").check()
+    modal.get_by_label("Marcar Atas").check()
+    expect(modal).to_contain_text("2 marcada(s)")
+    modal.get_by_role("button", name="Limpar", exact=True).click()
+    expect(modal).to_contain_text("0 marcada(s)")
+    modal.get_by_role("button", name="Marcar todas").click()
+    modal.get_by_role("button", name="Usar 2 pasta(s) marcada(s)").click()
+    expect(modal).to_have_count(0)
+    expect(page.locator("main")).to_contain_text("2 pasta(s) marcada(s) em /Meus documentos")
+    expect(page.locator("main")).to_contain_text("Atas")
+    expect(page.locator("main")).to_contain_text("Contratos")
+    pagina.botao("Ver o que será excluído").click()
+    expect(page.locator("main")).to_contain_text("2. Conferir e confirmar")
+    lidas = " ".join(c["path"] for c in upstream.recebidas if c["rota"] == "/api/documentos")
+    assert "diretorioId=10" in lidas and "diretorioId=11" in lidas
+    assert [a for a in _alteracoes(upstream) if "listarDiretoriosFilhos" not in a] == []
+    pagina.page.get_by_role("button", name="Limpar seleção").click()
+    expect(page.locator("main")).not_to_contain_text("pasta(s) marcada(s) em")

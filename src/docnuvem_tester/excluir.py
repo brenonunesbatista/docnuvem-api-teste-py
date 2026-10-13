@@ -26,7 +26,7 @@ import threading
 import time
 import uuid
 from collections import Counter
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any
@@ -47,6 +47,7 @@ PARALELISMO = 6  # páginas lidas ao mesmo tempo (só leituras)
 TTL_VERIFICACAO = 20 * 60.0  # segundos em que a lista da verificação pode ser reaproveitada
 MAX_VERIFICACOES = 3  # listas guardadas na memória (as mais antigas são descartadas)
 MAX_FALHAS_SEGUIDAS = 5
+MAX_PASTAS = 500  # pastas marcadas de uma vez
 MAX_FALHAS_EXIBIDAS = 50
 MAX_FALHAS_NO_LOG = 200  # falhas gravadas no histórico por exclusão (o CSV tem todas)
 INTERVALO_MAX_MS = 10_000
@@ -66,11 +67,17 @@ def credencial(perfil: PerfilConfig) -> str:
     return perfil.tokenUsuario or perfil.token
 
 
-def validar_pedido(diretorio_id: int, status: str, data_inicio: str, data_fim: str) -> None:
-    if diretorio_id <= 0:
+def validar_pedido(
+    diretorio_ids: Sequence[int], status: str, data_inicio: str, data_fim: str
+) -> None:
+    if not diretorio_ids:
+        raise ErroExclusao("Escolha pelo menos uma pasta.")
+    if any(d <= 0 for d in diretorio_ids):
         raise ErroExclusao(
             "Escolha uma pasta: a raiz (Meus documentos) não pode ser esvaziada aqui."
         )
+    if len(diretorio_ids) > MAX_PASTAS:
+        raise ErroExclusao(f"Escolha no máximo {MAX_PASTAS} pastas por vez.")
     try:
         validar_filtros(status, data_inicio, data_fim)
     except ErroDownload as exc:
@@ -115,11 +122,16 @@ def _consulta(
 
 def contar_rapido(cliente: httpx.Client, perfil: PerfilConfig, **filtros: Any) -> int | None:
     """Total da seleção segundo a API, com uma consulta só (None se ela não informar)."""
-    validar_pedido(
-        filtros["diretorio_id"], filtros["status"], filtros["data_inicio"], filtros["data_fim"]
-    )
-    total = _consulta(cliente, perfil, pagina=0, tamanho=1, **filtros).get("total")
-    return total if isinstance(total, int) else None
+    ids = filtros.pop("diretorio_ids")
+    validar_pedido(ids, filtros["status"], filtros["data_inicio"], filtros["data_fim"])
+    soma = 0
+    for id_ in ids:
+        dado = _consulta(cliente, perfil, diretorio_id=id_, pagina=0, tamanho=1, **filtros)
+        total = dado.get("total")
+        if not isinstance(total, int):
+            return None
+        soma += total
+    return soma
 
 
 def _acumular(dado: dict[str, Any], alvos: list[dict[str, Any]], vistos: set[int]) -> int:
@@ -146,7 +158,7 @@ def listar_alvos(
     cliente: httpx.Client,
     perfil: PerfilConfig,
     *,
-    diretorio_id: int,
+    diretorio_ids: Sequence[int],
     subpastas: bool,
     status: str,
     data_inicio: str,
@@ -154,12 +166,64 @@ def listar_alvos(
     cancelar: threading.Event | None = None,
     ao_ler: Callable[[int, int | None], None] | None = None,
 ) -> list[dict[str, Any]]:
-    """TODOS os documentos da seleção (sem limite), direto da API (sempre atual).
+    """TODOS os documentos da seleção (uma ou várias pastas), direto da API (sempre atual).
+
+    Um documento que apareça em mais de uma pasta marcada entra uma vez só.
+    """
+    validar_pedido(diretorio_ids, status, data_inicio, data_fim)
+    alvos: list[dict[str, Any]] = []
+    vistos: set[int] = set()
+    total_geral: int | None = None
+    if len(diretorio_ids) > 1:  # o total de todas as pastas, para o progresso fazer sentido
+        total_geral = contar_rapido(
+            cliente,
+            perfil,
+            diretorio_ids=list(diretorio_ids),
+            subpastas=subpastas,
+            status=status,
+            data_inicio=data_inicio,
+            data_fim=data_fim,
+        )
+    for id_ in diretorio_ids:
+        if cancelar is not None and cancelar.is_set():
+            break
+        _listar_pasta(
+            cliente,
+            perfil,
+            id_,
+            alvos,
+            vistos,
+            total_geral,
+            subpastas=subpastas,
+            status=status,
+            data_inicio=data_inicio,
+            data_fim=data_fim,
+            cancelar=cancelar,
+            ao_ler=ao_ler,
+        )
+    return alvos
+
+
+def _listar_pasta(
+    cliente: httpx.Client,
+    perfil: PerfilConfig,
+    diretorio_id: int,
+    alvos: list[dict[str, Any]],
+    vistos: set[int],
+    total_fixo: int | None,
+    *,
+    subpastas: bool,
+    status: str,
+    data_inicio: str,
+    data_fim: str,
+    cancelar: threading.Event | None,
+    ao_ler: Callable[[int, int | None], None] | None,
+) -> None:
+    """Lê uma pasta inteira e acrescenta em `alvos`.
 
     Lê tudo antes de qualquer exclusão: apagar enquanto se pagina deslocaria as páginas. A primeira
     página informa o total; as demais são lidas em paralelo (só leituras), na ordem da API.
     """
-    validar_pedido(diretorio_id, status, data_inicio, data_fim)
 
     def ler(n: int) -> dict[str, Any]:
         return _consulta(
@@ -177,15 +241,14 @@ def listar_alvos(
     def cancelado() -> bool:
         return cancelar is not None and cancelar.is_set()
 
-    alvos: list[dict[str, Any]] = []
-    vistos: set[int] = set()
     if cancelado():
-        return alvos
+        return
     dado = ler(0)
     total = dado["total"] if isinstance(dado.get("total"), int) else None
     novos = _acumular(dado, alvos, vistos)
+    mostrado = total_fixo if total_fixo is not None else total
     if ao_ler is not None:
-        ao_ler(len(alvos), total)
+        ao_ler(len(alvos), mostrado)
     pagina = 1
     previstas = math.ceil(total / TAMANHO_PAGINA) if total else 1
     continuar = bool(dado.get("temMais")) and novos > 0
@@ -204,7 +267,7 @@ def listar_alvos(
                     _acumular(lote, alvos, vistos)
                     ultimo = lote
                     if ao_ler is not None:
-                        ao_ler(len(alvos), total)
+                        ao_ler(len(alvos), mostrado)
             except BaseException:
                 parar.set()  # as páginas que faltam nem chegam a ser pedidas
                 raise
@@ -217,10 +280,9 @@ def listar_alvos(
         dado = ler(pagina)
         novos = _acumular(dado, alvos, vistos)
         if ao_ler is not None:
-            ao_ler(len(alvos), total)
+            ao_ler(len(alvos), mostrado)
         pagina += 1
         continuar = bool(dado.get("temMais")) and novos > 0  # sem novidade: a API não avança
-    return alvos
 
 
 def _ativo(doc: dict[str, Any]) -> bool:
@@ -259,7 +321,7 @@ class Verificacao:
 
     id: str
     perfil: str
-    filtros: tuple[Any, ...]  # (diretorio_id, subpastas, status, data_inicio, data_fim)
+    filtros: tuple[Any, ...]  # (diretorio_ids, subpastas, status, data_inicio, data_fim)
     cancelar_fluxos: bool
     estado: str = "lendo"  # lendo | pronta | erro | cancelada
     lidos: int = 0
@@ -294,7 +356,7 @@ class Verificacao:
 class Exclusao:
     id: str
     perfil: str
-    diretorio_id: int
+    diretorio_ids: tuple[int, ...]
     alvos: list[dict[str, Any]]
     cancelar_fluxos: bool
     intervalo_ms: int
@@ -334,7 +396,8 @@ class Exclusao:
             return {
                 "id": self.id,
                 "perfil": self.perfil,
-                "diretorioId": self.diretorio_id,
+                "diretorioId": self.diretorio_ids[0],
+                "diretorioIds": list(self.diretorio_ids),
                 "estado": self.estado,
                 "lidos": self.lidos,
                 "total": len(self.alvos) or self.total_previsto,
@@ -378,7 +441,7 @@ class GerenciadorExclusao:
         perfil_nome: str,
         perfil: PerfilConfig,
         *,
-        diretorio_id: int,
+        diretorio_ids: Sequence[int],
         subpastas: bool,
         status: str,
         data_inicio: str,
@@ -386,11 +449,12 @@ class GerenciadorExclusao:
         cancelar_fluxos: bool,
     ) -> Verificacao:
         """Começa a ler a pasta em segundo plano (só leituras). Valida o pedido na hora."""
-        validar_pedido(diretorio_id, status, data_inicio, data_fim)
+        ids = tuple(dict.fromkeys(diretorio_ids))  # sem repetir, na ordem marcada
+        validar_pedido(ids, status, data_inicio, data_fim)
         v = Verificacao(
             id=uuid.uuid4().hex[:12],
             perfil=perfil_nome,
-            filtros=(diretorio_id, subpastas, status, data_inicio, data_fim),
+            filtros=(ids, subpastas, status, data_inicio, data_fim),
             cancelar_fluxos=cancelar_fluxos,
         )
         with self._lock:
@@ -406,7 +470,7 @@ class GerenciadorExclusao:
         perfil_nome: str,
         perfil: PerfilConfig,
         *,
-        diretorio_id: int,
+        diretorio_ids: Sequence[int],
         subpastas: bool,
         status: str,
         data_inicio: str,
@@ -417,8 +481,9 @@ class GerenciadorExclusao:
         verificacao_id: str = "",
         registrar: Callable[[dict[str, Any]], None] | None = None,
     ) -> Exclusao:
+        ids = tuple(dict.fromkeys(diretorio_ids))
         filtros: dict[str, Any] = {
-            "diretorio_id": diretorio_id,
+            "diretorio_ids": ids,
             "subpastas": subpastas,
             "status": status,
             "data_inicio": data_inicio,
@@ -457,7 +522,7 @@ class GerenciadorExclusao:
             ex = Exclusao(
                 id=uuid.uuid4().hex[:12],
                 perfil=perfil_nome,
-                diretorio_id=diretorio_id,
+                diretorio_ids=ids,
                 alvos=alvos,
                 cancelar_fluxos=cancelar_fluxos,
                 intervalo_ms=intervalo_ms,
@@ -476,7 +541,7 @@ class GerenciadorExclusao:
 
 
 def _rodar_verificacao(v: Verificacao, cliente: httpx.Client, perfil: PerfilConfig) -> None:
-    diretorio_id, subpastas, status, data_inicio, data_fim = v.filtros
+    diretorio_ids, subpastas, status, data_inicio, data_fim = v.filtros
 
     def progresso(n: int, total: int | None) -> None:
         with v.lock:
@@ -488,7 +553,7 @@ def _rodar_verificacao(v: Verificacao, cliente: httpx.Client, perfil: PerfilConf
         alvos = listar_alvos(
             cliente,
             perfil,
-            diretorio_id=diretorio_id,
+            diretorio_ids=diretorio_ids,
             subpastas=subpastas,
             status=status,
             data_inicio=data_inicio,
@@ -582,7 +647,10 @@ def executar(ex: Exclusao, cliente: httpx.Client, perfil: PerfilConfig) -> None:
     base = perfil.baseUrl.rstrip("/")
     instancia = perfil.instancia.lower()
     ex.url_base, ex.instancia = base, instancia
-    filtros = [f"pasta {ex.diretorio_id}", "com subpastas" if ex.subpastas else "sem subpastas"]
+    filtros = [
+        _descrever_pastas(ex.diretorio_ids),
+        "com subpastas" if ex.subpastas else "sem subpastas",
+    ]
     if ex.status:
         filtros.append(f"status {ex.status}")
     if ex.data_inicio or ex.data_fim:
@@ -642,7 +710,7 @@ def _ler_tudo(ex: Exclusao, cliente: httpx.Client, perfil: PerfilConfig) -> bool
         alvos = listar_alvos(
             cliente,
             perfil,
-            diretorio_id=ex.diretorio_id,
+            diretorio_ids=ex.diretorio_ids,
             subpastas=ex.subpastas,
             status=ex.status,
             data_inicio=ex.data_inicio,
@@ -670,6 +738,13 @@ def _ler_tudo(ex: Exclusao, cliente: httpx.Client, perfil: PerfilConfig) -> bool
         ex.alvos = alvos
         ex.estado = "executando"
     return True
+
+
+def _descrever_pastas(ids: Sequence[int]) -> str:
+    if len(ids) == 1:
+        return f"pasta {ids[0]}"
+    amostra = ", ".join(str(i) for i in ids[:10]) + (" …" if len(ids) > 10 else "")
+    return f"{len(ids)} pastas ({amostra})"
 
 
 def _ms(t0: float) -> int:
@@ -770,7 +845,8 @@ def _terminar(ex: Exclusao, estado: str) -> None:
         ex.terminou_em = time.time()
         falhas, erro = len(ex.falhas), ex.erro
         resumo = (
-            f"Exclusão em massa da pasta {ex.diretorio_id} {estado}: {ex.excluidos} excluído(s), "
+            f"Exclusão em massa de {_descrever_pastas(ex.diretorio_ids)} {estado}: "
+            f"{ex.excluidos} excluído(s), "
             f"{ex.fluxos_cancelados} fluxo(s) cancelado(s), {ex.pulados} pulado(s), "
             f"{falhas} falha(s)" + (f". {erro}" if erro else "")
         )

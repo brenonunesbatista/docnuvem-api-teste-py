@@ -84,7 +84,9 @@ Opções: `--porta N`, `--nao-abrir`, `--sem-historico`, `--dados PASTA`.
   caminho clicável, filtro e uma gaveta no celular, e preenche o campo no lugar de digitar o caminho.
   Usa o endpoint de pastas da API e, se ela o recusar, o endpoint de listagem do sincronizador (só
   leitura), com o token do seu usuário quando você já entrou; se nada funcionar, avisa e dá para digitar.
-- **Excluir em massa** (destrutivo): esvazia uma pasta (com ou sem subpastas, com filtro de status e
+- **Excluir em massa** (destrutivo): esvazia uma pasta, ou **várias pastas marcadas** dentro de uma
+  pasta pai ("Marcar várias pastas de uma pasta pai…"; a confirmação vale para o total de todas),
+  (com ou sem subpastas, com filtro de status e
   período), mandando os documentos para a **lixeira** da plataforma e cancelando antes os fluxos de
   assinatura **ativos** (status `pendente`). Cancelar fluxo não tem volta: os links param de funcionar
   e, se alguém já assinou, o arquivo volta à versão sem as assinaturas. Por isso: nunca age na raiz;

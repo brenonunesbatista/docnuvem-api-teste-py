@@ -1045,15 +1045,19 @@ class Handler(BaseHTTPRequestHandler):
         alvo = self._perfil_do_corpo(dado)
         if alvo is None:
             return None
+        # uma pasta (diretorioId) ou várias marcadas dentro de uma pasta pai (diretorioIds)
+        bruto = dado.get("diretorioIds")
+        if not isinstance(bruto, list):
+            bruto = [dado.get("diretorioId", "")]
         try:
-            diretorio_id = int(str(dado.get("diretorioId", "")).strip())
+            ids = [int(str(x).strip()) for x in bruto]
         except ValueError:
             self._json({"ok": False, "erro": "Informe o diretorioId (um número)."}, 400)
             return None
         return {
             "nome": alvo[0],
             "perfil": alvo[1],
-            "diretorio_id": diretorio_id,
+            "diretorio_ids": ids,
             "subpastas": dado.get("subpastas") is True,
             "status": str(dado.get("status") or ""),
             "data_inicio": str(dado.get("dataInicio") or ""),
@@ -1074,7 +1078,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.server.cliente,
                 c["nome"],
                 c["perfil"],
-                diretorio_id=c["diretorio_id"],
+                diretorio_ids=c["diretorio_ids"],
                 subpastas=c["subpastas"],
                 status=c["status"],
                 data_inicio=c["data_inicio"],
@@ -1111,7 +1115,7 @@ class Handler(BaseHTTPRequestHandler):
             alvos = listar_alvos(
                 self.server.cliente,
                 c["perfil"],
-                diretorio_id=c["diretorio_id"],
+                diretorio_ids=c["diretorio_ids"],
                 subpastas=c["subpastas"],
                 status=c["status"],
                 data_inicio=c["data_inicio"],
@@ -1148,7 +1152,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.server.cliente,
                 c["nome"],
                 perfil,
-                diretorio_id=c["diretorio_id"],
+                diretorio_ids=c["diretorio_ids"],
                 subpastas=c["subpastas"],
                 status=c["status"],
                 data_inicio=c["data_inicio"],
