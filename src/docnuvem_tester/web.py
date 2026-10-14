@@ -53,7 +53,9 @@ from docnuvem_tester.download import ErroDownload, GerenciadorDownload, validar_
 from docnuvem_tester.excluir import (
     ErroExclusao,
     GerenciadorExclusao,
+    excluir_pasta,
     listar_alvos,
+    verificar_pasta,
 )
 from docnuvem_tester.excluir import ensaio as ensaio_exclusao
 from docnuvem_tester.importar_pasta import (
@@ -951,6 +953,12 @@ class Handler(BaseHTTPRequestHandler):
             return self._ex_cancelar_verificacao(
                 unquote(caminho[len("/_excluir/verificacao/") : -len("/cancelar")])
             )
+        if caminho == "/_excluir/pasta/verificar":
+            return self._ex_pasta_verificar()
+        if caminho == "/_excluir/pasta/executar":
+            return self._ex_pasta_executar()
+        if caminho == "/_pastas/criar":
+            return self._pastas_criar()
         if caminho == "/_excluir/ensaio":
             return self._ex_ensaio()
         if caminho == "/_excluir/iniciar":
@@ -1103,6 +1111,146 @@ class Handler(BaseHTTPRequestHandler):
             return self._texto(404, "Verificação desconhecida.")
         v.cancelar.set()
         self._json({"ok": True})
+
+    def _pasta_do_corpo(self, dado: dict[str, Any]) -> int | None:
+        try:
+            pasta = int(str(dado.get("diretorioId", "")).strip())
+        except ValueError:
+            self._json({"ok": False, "erro": "Informe o diretorioId (um número)."}, 400)
+            return None
+        return pasta
+
+    def _recusa_escrita(self, perfil: PerfilConfig, dado: dict[str, Any], acao: str) -> bool:
+        """Perfil protegido: responde a recusa e devolve True se não pode alterar dados."""
+        if perfil.protecao == "bloquear":
+            msg = f"Perfil protegido (só leitura): não dá para {acao} nele."
+            self._json({"ok": False, "erro": msg}, 403)
+            return True
+        if perfil.protecao == "confirmar" and dado.get("confirmarProtecao") is not True:
+            msg = f"Perfil protegido: confirme que quer {acao} em produção."
+            self._json({"ok": False, "erro": msg}, 428)
+            return True
+        return False
+
+    def _ex_pasta_verificar(self) -> None:
+        """Quanto há dentro da pasta que seria excluída inteira (só leituras)."""
+        dado = self._corpo_json()
+        if dado is None:
+            return
+        alvo = self._perfil_do_corpo(dado)
+        pasta = self._pasta_do_corpo(dado) if alvo else None
+        if alvo is None or pasta is None:
+            return
+        nome, perfil = alvo
+        try:
+            r = verificar_pasta(self.server.cliente, perfil, pasta)
+        except ErroExclusao as exc:
+            return self._json({"ok": False, "erro": str(exc)}, 400)
+        r["subpastas"] = self.server.pastas.contar_subpastas(
+            self.server.cliente, nome, perfil, pasta
+        )
+        self._json({"ok": True, **r})
+
+    def _ex_pasta_executar(self) -> None:
+        dado = self._corpo_json()
+        if dado is None:
+            return
+        alvo = self._perfil_do_corpo(dado)
+        pasta = self._pasta_do_corpo(dado) if alvo else None
+        if alvo is None or pasta is None:
+            return
+        nome, perfil = alvo
+        if self._recusa_escrita(perfil, dado, "excluir a pasta"):
+            return
+        registrar = self.server.registrar_no_log(nome, perfil)
+        base = perfil.baseUrl.rstrip("/")
+        consulta = f"instancia={perfil.instancia.lower()}&diretorioId={pasta}"
+        url = f"{base}/api/sync/excluirDiretorio?{consulta}"
+        inicio = time.perf_counter()
+        try:
+            r = excluir_pasta(
+                self.server.cliente, perfil, pasta, str(dado.get("confirmacao") or "")
+            )
+        except ErroExclusao as exc:
+            if registrar is not None and "confirmação" not in str(exc):
+                registrar(
+                    {
+                        "method": "POST",
+                        "url": url,
+                        "status": 0,
+                        "ms": round((time.perf_counter() - inicio) * 1000),
+                        "resumo": f"Excluir a pasta {pasta} inteira falhou: {exc}",
+                    }
+                )
+            status = 428 if "confirmação" in str(exc) else 400
+            return self._json({"ok": False, "erro": str(exc)}, status)
+        self.server.pastas.invalidar(nome)
+        if registrar is not None:
+            registrar(
+                {
+                    "method": "POST",
+                    "url": url,
+                    "status": 200,
+                    "ms": round((time.perf_counter() - inicio) * 1000),
+                    "resumo": f"Pasta {pasta} excluída inteira (enviada para a lixeira), com "
+                    f"{r['total']} documento(s) dentro.",
+                }
+            )
+        self._json({"ok": True, **r})
+
+    def _pastas_criar(self) -> None:
+        dado = self._corpo_json()
+        if dado is None:
+            return
+        alvo = self._perfil_do_corpo(dado)
+        if alvo is None:
+            return
+        nome, perfil = alvo
+        nome_pasta = str(dado.get("nome") or "").strip()
+        try:
+            pai = int(str(dado.get("paiId", "")).strip())
+            if pai < 0:
+                raise ValueError
+        except ValueError:
+            return self._json({"ok": False, "erro": "paiId deve ser um número (0 é a raiz)."}, 400)
+        if not nome_pasta or len(nome_pasta) > 255 or any(c in nome_pasta for c in "/\\"):
+            msg = "O nome da pasta é obrigatório (até 255 caracteres, sem / nem \\)."
+            return self._json({"ok": False, "erro": msg}, 400)
+        if self._recusa_escrita(perfil, dado, "criar pastas"):
+            return
+        registrar = self.server.registrar_no_log(nome, perfil)
+        url = (
+            f"{perfil.baseUrl.rstrip('/')}/api/sync/criarDiretorio"
+            f"?instancia={perfil.instancia.lower()}&diretorioPaiId={pai}"
+        )
+        inicio = time.perf_counter()
+        try:
+            r = self.server.pastas.criar(self.server.cliente, nome, perfil, pai, nome_pasta)
+        except ErroPastas as exc:
+            if registrar is not None:
+                registrar(
+                    {
+                        "method": "POST",
+                        "url": url,
+                        "status": 0,
+                        "ms": round((time.perf_counter() - inicio) * 1000),
+                        "resumo": f'Criar a pasta "{nome_pasta}" na pasta {pai} falhou: {exc}',
+                    }
+                )
+            return self._json(
+                {"ok": False, "erro": str(exc), "precisaLogin": exc.precisa_login}, 502
+            )
+        if registrar is not None:
+            registrar(
+                {
+                    "method": "POST",
+                    "url": url,
+                    "status": 200,
+                    "ms": round((time.perf_counter() - inicio) * 1000),
+                    "resumo": f'Pasta "{nome_pasta}" criada dentro da pasta {pai}.',
+                }
+            )
+        self._json({"ok": True, "pasta": r})
 
     def _ex_ensaio(self) -> None:
         dado = self._corpo_json()

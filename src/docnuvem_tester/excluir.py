@@ -285,6 +285,80 @@ def _listar_pasta(
         continuar = bool(dado.get("temMais")) and novos > 0  # sem novidade: a API não avança
 
 
+def frase_da_pasta(pasta_id: int) -> str:
+    return f"EXCLUIR PASTA {pasta_id}"
+
+
+def _contagens_da_pasta(
+    cliente: httpx.Client, perfil: PerfilConfig, pasta_id: int
+) -> tuple[int, int]:
+    """(documentos da pasta e de todas as subpastas, quantos têm fluxo de assinatura pendente)."""
+    comum: dict[str, Any] = {
+        "diretorio_ids": [pasta_id],
+        "subpastas": True,
+        "data_inicio": "",
+        "data_fim": "",
+    }
+    total = contar_rapido(cliente, perfil, status="", **comum)
+    pendentes = contar_rapido(cliente, perfil, status="pendente", **comum)
+    if total is None or pendentes is None:
+        raise ErroExclusao(
+            "A API não informou quantos documentos há na pasta, então não dá para conferir "
+            "o que será excluído. Nada foi feito."
+        )
+    return total, pendentes
+
+
+def verificar_pasta(cliente: httpx.Client, perfil: PerfilConfig, pasta_id: int) -> dict[str, Any]:
+    """O que acontece se a pasta INTEIRA for excluída (só leituras)."""
+    validar_pedido([pasta_id], "", "", "")
+    total, pendentes = _contagens_da_pasta(cliente, perfil, pasta_id)
+    return {
+        "pastaId": pasta_id,
+        "total": total,
+        "fluxosAtivos": pendentes,
+        "confirmacao": frase_da_pasta(pasta_id),
+    }
+
+
+def excluir_pasta(
+    cliente: httpx.Client, perfil: PerfilConfig, pasta_id: int, confirmacao: str
+) -> dict[str, Any]:
+    """Envia a pasta e tudo que há nela para a lixeira (`/api/sync/excluirDiretorio`).
+
+    Recusa se ainda houver fluxo de assinatura ativo lá dentro: esse endpoint não cancela fluxos,
+    e cancelar não tem volta, então isso fica para a exclusão em massa (que cancela antes).
+    """
+    validar_pedido([pasta_id], "", "", "")
+    if " ".join(confirmacao.upper().split()) != frase_da_pasta(pasta_id):
+        raise ErroExclusao(f"A confirmação não confere: digite {frase_da_pasta(pasta_id)}.")
+    total, pendentes = _contagens_da_pasta(cliente, perfil, pasta_id)
+    if pendentes:
+        raise ErroExclusao(
+            f"Há {pendentes} documento(s) com fluxo de assinatura ativo nesta pasta. Excluir a "
+            "pasta não cancela fluxos: use antes Excluir em massa com o status Pendente "
+            "(que cancela os fluxos e exclui esses documentos) e depois volte aqui."
+        )
+    try:
+        r = cliente.post(
+            f"{perfil.baseUrl.rstrip('/')}/api/sync/excluirDiretorio",
+            params={"instancia": perfil.instancia.lower(), "diretorioId": pasta_id},
+            headers={"Authorization": f"Bearer {credencial(perfil)}"},
+            timeout=300,
+        )
+    except httpx.HTTPError as exc:
+        raise ErroExclusao(f"Falha de conexão com a API: {exc}. Confira antes de repetir.") from exc
+    if r.status_code != 200:
+        msg = _mensagem(r) or "sem mensagem"
+        extra = (
+            " Entre com o seu usuário em Perfis e tente de novo."
+            if r.status_code in (401, 403)
+            else ""
+        )
+        raise ErroExclusao(f"A API recusou excluir a pasta (HTTP {r.status_code}): {msg}.{extra}")
+    return {"pastaId": pasta_id, "total": total}
+
+
 def _ativo(doc: dict[str, Any]) -> bool:
     """Tem fluxo de assinatura em andamento (o único caso em que o cancelamento se aplica)."""
     return doc["status"] == "pendente" and isinstance(doc["assinaturaId"], int)

@@ -84,6 +84,15 @@ Opções: `--porta N`, `--nao-abrir`, `--sem-historico`, `--dados PASTA`.
   caminho clicável, filtro e uma gaveta no celular, e preenche o campo no lugar de digitar o caminho.
   Usa o endpoint de pastas da API e, se ela o recusar, o endpoint de listagem do sincronizador (só
   leitura), com o token do seu usuário quando você já entrou; se nada funcionar, avisa e dá para digitar.
+  Com o login do usuário ele lê a **árvore inteira de uma vez** (`/api/sync/tree`, ~1 s mesmo com
+  milhares de pastas), navega sem outras chamadas e mostra **quantos documentos há em cada pasta**.
+  O botão "Nova pasta aqui…" **cria uma pasta** (`/api/sync/criarDiretorio`) dentro da pasta aberta
+  (perfis somente leitura bloqueiam; perfis de produção pedem confirmação).
+- **Excluir a pasta inteira** (destrutivo, na tela de excluir em massa): `/api/sync/excluirDiretorio`
+  manda a pasta, as subpastas e os documentos para a lixeira numa chamada só (a própria pasta também
+  vai). Mostra antes quantos documentos e subpastas há, só libera ao digitar `EXCLUIR PASTA <id>`, e
+  **recusa se houver fluxo de assinatura ativo** (esse endpoint não os cancela): nesse caso use antes a
+  exclusão em massa com o status Pendente.
 - **Excluir em massa** (destrutivo): esvazia uma pasta, ou **várias pastas marcadas** dentro de uma
   pasta pai ("Marcar várias pastas de uma pasta pai…"; a confirmação vale para o total de todas),
   (com ou sem subpastas, com filtro de status e

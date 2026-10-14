@@ -521,6 +521,21 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
               <sc-if value="{{ex.hasFim}}" hint-placeholder-val="{{ false }}"><div class="muted small">Os documentos excluídos estão na lixeira da plataforma. O relatório lista o que foi feito com cada um.</div></sc-if>
             </section>
           </sc-if>
+          <section class="card">
+            <h2>Ou excluir a pasta inteira</h2>
+            <p class="muted small">Envia a pasta escolhida acima <strong>e tudo dentro dela</strong> (subpastas e documentos) para a lixeira, de uma vez: bem mais rápido para pastas enormes. Diferente da exclusão em massa, <strong>a própria pasta também vai para a lixeira</strong>. Não cancela fluxos de assinatura: se houver algum ativo, cancele antes pela exclusão em massa com o status Pendente.</p>
+            <div class="row"><button class="btn" type="button" onClick="{{px.verificar}}" disabled="{{px.verificarOff}}">Ver a pasta inteira</button><span class="muted small">{{px.dica}}</span></div>
+            <sc-if value="{{px.hasErr}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{px.err}}</span></div></sc-if>
+            <sc-if value="{{px.hasOk}}" hint-placeholder-val="{{ false }}"><div class="bxn" role="status"><strong>{{px.okTxt}}</strong></div></sc-if>
+            <sc-if value="{{px.has}}" hint-placeholder-val="{{ false }}">
+              <div class="bxn"><strong>{{px.resumo}}</strong></div>
+              <sc-if value="{{px.bloq}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{px.bloqTxt}}</span></div></sc-if>
+              <sc-if value="{{px.livre}}" hint-placeholder-val="{{ false }}">
+                <div class="field"><label class="lbl" for="px-conf"><span>Para confirmar, digite <code class="api">{{px.frase}}</code></span></label><input id="px-conf" type="text" value="{{px.conf}}" placeholder="{{px.frase}}" autocomplete="off" onInput="{{px.onConf}}" style="max-width:260px"></div>
+                <div class="row"><button class="btn dng" type="button" onClick="{{px.excluir}}" disabled="{{px.excluirOff}}">{{px.excluirLabel}}</button></div>
+              </sc-if>
+            </sc-if>
+          </section>
         </sc-if>
 
         <!-- ===== IMPORTAR PASTA ===== -->
@@ -1165,7 +1180,7 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
         <div class="row" style="flex-wrap:nowrap"><input type="search" placeholder="Filtrar as pastas daqui…" value="{{pk.busca}}" onInput="{{pk.onBusca}}" aria-label="Filtrar as pastas desta pasta" autocomplete="off"><span class="muted small" style="white-space:nowrap">{{pk.contagem}}</span></div>
         <div class="pkgrid">
           <sc-if value="{{pk.carregando}}" hint-placeholder-val="{{ false }}"><sc-for list="{{pk.skeleton}}" as="n" hint-placeholder-count="6"><div class="sk"></div></sc-for></sc-if>
-          <sc-for list="{{pk.cards}}" as="q" hint-placeholder-count="6"><div class="pkcard"><button class="abrir" type="button" aria-label="{{q.abrirLabel}}" onClick="{{q.abrir}}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.folder}}"/></svg><span>{{q.nome}}</span></button><sc-if value="{{pk.simples}}" hint-placeholder-val="{{ true }}"><button class="usar" type="button" aria-label="{{q.usarLabel}}" title="Escolher esta pasta" onClick="{{q.usar}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.check}}"/></svg></button></sc-if><sc-if value="{{pk.multi}}" hint-placeholder-val="{{ false }}"><label class="usar" title="Marcar esta pasta" style="display:flex;align-items:center"><input type="checkbox" checked="{{q.marcada}}" aria-label="{{q.marcarLabel}}" onChange="{{q.marcar}}"></label></sc-if></div></sc-for>
+          <sc-for list="{{pk.cards}}" as="q" hint-placeholder-count="6"><div class="pkcard"><button class="abrir" type="button" aria-label="{{q.abrirLabel}}" onClick="{{q.abrir}}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.folder}}"/></svg><span>{{q.nome}}<span class="muted small" style="display:block">{{q.contagem}}</span></span></button><sc-if value="{{pk.simples}}" hint-placeholder-val="{{ true }}"><button class="usar" type="button" aria-label="{{q.usarLabel}}" title="Escolher esta pasta" onClick="{{q.usar}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.check}}"/></svg></button></sc-if><sc-if value="{{pk.multi}}" hint-placeholder-val="{{ false }}"><label class="usar" title="Marcar esta pasta" style="display:flex;align-items:center"><input type="checkbox" checked="{{q.marcada}}" aria-label="{{q.marcarLabel}}" onChange="{{q.marcar}}"></label></sc-if></div></sc-for>
         </div>
         <sc-if value="{{pk.vazio}}" hint-placeholder-val="{{ false }}"><div class="empty small"><strong>Esta pasta não tem subpastas</strong><span>Você pode escolhê-la abaixo.</span></div></sc-if>
         <sc-if value="{{pk.semResultado}}" hint-placeholder-val="{{ false }}"><div class="empty small"><strong>Nenhuma pasta com esse nome</strong></div></sc-if>
@@ -1173,6 +1188,11 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
         <sc-if value="{{pk.multi}}" hint-placeholder-val="{{ false }}"><div class="row"><button class="btn sm" type="button" onClick="{{pk.marcarTodas}}">Marcar todas</button><button class="btn sm" type="button" onClick="{{pk.limpar}}">Limpar</button><span class="muted small" aria-live="polite">{{pk.marcadasTxt}}</span></div></sc-if>
         <sc-if value="{{pk.hasFonte}}" hint-placeholder-val="{{ false }}"><div class="muted small">{{pk.fonteTxt}}</div></sc-if>
         <div class="muted small">{{pk.dica}}</div>
+        <sc-if value="{{pk.criarVisivel}}" hint-placeholder-val="{{ false }}"><div class="field">
+          <div class="row"><button class="link" type="button" onClick="{{pk.novaAbrir}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.plus}}"/></svg> Nova pasta aqui…</button></div>
+          <sc-if value="{{pk.novoAberto}}" hint-placeholder-val="{{ false }}"><div class="row" style="flex-wrap:nowrap"><input id="pk-novo" type="text" placeholder="Nome da nova pasta" aria-label="{{pk.novaTxt}}" value="{{pk.novoNome}}" onInput="{{pk.onNovoNome}}" onKeyDown="{{pk.onNovoKey}}" autocomplete="off"><button class="btn pri sm" type="button" onClick="{{pk.novaCriar}}" disabled="{{pk.novoOff}}">{{pk.novoLabel}}</button><button class="btn sm" type="button" onClick="{{pk.novaFechar}}">Cancelar</button></div><div class="muted small">{{pk.novaTxt}}</div></sc-if>
+          <sc-if value="{{pk.hasNovoErro}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{pk.novoErro}}</span></div></sc-if>
+        </div></sc-if>
         <div class="pkfoot">
           <div class="atual"><span class="muted">Pasta atual:</span> <code>{{pk.atualTxt}}</code><sc-if value="{{pk.raizAviso}}" hint-placeholder-val="{{ false }}"><div class="muted small">A raiz não serve como pasta do formulário: entre em uma subpasta.</div></sc-if></div>
           <button class="btn" type="button" onClick="{{pk.fechar}}">Cancelar</button>
@@ -1410,7 +1430,7 @@ lote:{csvNome:'',csvTexto:'',modo:'enviar',intervalo:'500',confirmando:false},
 fumaca:{ok:false},
 baixar:{diretorioId:'',subpastas:true,estrutura:true,conflito:'renomear',destino:'',status:'',dataInicio:'',dataFim:''},
 perfis:{aberto:false,original:'',nome:'',instancia:'',baseUrl:'',token:'',protecao:'',erro:'',salvando:false,rm:''}},
-results:{},loading:{},lists:{},diag:{},bx:{id:'',snap:null,erro:'',escolhendo:false},cmp:{busy:false,res:null,erro:''},pk:{aberto:false,alvo:null,cache:{},trilha:[],busca:'',sel:{}},lg:{aberto:false,perfil:'',login:'',senha:'',busy:false,erro:'',voltar:false},pn:{res:null,busy:false,erro:''},mn:{snap:null,vistos:null,sel:{},intervalo:'5',erro:''},ip:{ens:null,erro:'',busy:false,escolhendo:false,id:'',snap:null},ex:{ens:null,erro:'',busy:false,id:'',snap:null,verifId:'',verif:null},vg:{todos:[],vistos:{},notif:false,erro:''},lt:{val:null,erro:'',validando:false,id:'',snap:null},fm:{busy:false,res:null,erro:''},protPend:null,tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
+results:{},loading:{},lists:{},diag:{},bx:{id:'',snap:null,erro:'',escolhendo:false},cmp:{busy:false,res:null,erro:''},pk:{aberto:false,alvo:null,cache:{},trilha:[],busca:'',sel:{},novo:{aberto:false,nome:'',busy:false,erro:''}},px:{ens:null,erro:'',busy:false,conf:'',ok:''},lg:{aberto:false,perfil:'',login:'',senha:'',busy:false,erro:'',voltar:false},pn:{res:null,busy:false,erro:''},mn:{snap:null,vistos:null,sel:{},intervalo:'5',erro:''},ip:{ens:null,erro:'',busy:false,escolhendo:false,id:'',snap:null},ex:{ens:null,erro:'',busy:false,id:'',snap:null,verifId:'',verif:null},vg:{todos:[],vistos:{},notif:false,erro:''},lt:{val:null,erro:'',validando:false,id:'',snap:null},fm:{busy:false,res:null,erro:''},protPend:null,tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
 paletteOpen:false,paletteQ:'',toast:'',wizStep:0,lastMat:'',openSol:null,navMin:false,
 lastDoc:{},lastAss:{},
 sort:{documentos:{k:'criadoEm',d:-1},pastas:{k:'caminho',d:1}},openModelo:'',dragging:false,newSg:sg};
@@ -1541,8 +1561,42 @@ gravar({carregando:true});
 fetch('/_pastas/filhos?perfil='+encodeURIComponent(this.state.perfil)+'&pai='+pai,{cache:'no-store'}).then(r=>r.json()).then(j=>gravar(j.ok?{pastas:j.pastas,fonte:j.fonte,credencial:j.credencial}:{erro:j.erro||'Não foi possível listar as pastas.',precisaLogin:!!j.precisaLogin})).catch(e=>gravar({erro:'O servidor local não respondeu: '+e.message}));
 }
 pkAtual(){const t=this.state.pk.trilha;return t[t.length-1]||{id:0,nome:'Meus documentos',caminho:'/Meus documentos'};}
-pkEntrar(q){const pk=this.state.pk;this.setState({pk:Object.assign({},pk,{trilha:pk.trilha.concat([q]),busca:'',sel:{}})});this.pkCarregar(q.id);}
-pkIrPara(i){const pk=this.state.pk;const t=pk.trilha.slice(0,i+1);this.setState({pk:Object.assign({},pk,{trilha:t,busca:'',sel:{}})});this.pkCarregar(t[t.length-1].id);}
+pkEntrar(q){const pk=this.state.pk;this.setState({pk:Object.assign({},pk,{trilha:pk.trilha.concat([q]),busca:'',sel:{},novo:{aberto:false,nome:'',busy:false,erro:''}})});this.pkCarregar(q.id);}
+pkIrPara(i){const pk=this.state.pk;const t=pk.trilha.slice(0,i+1);this.setState({pk:Object.assign({},pk,{trilha:t,busca:'',sel:{},novo:{aberto:false,nome:'',busy:false,erro:''}})});this.pkCarregar(t[t.length-1].id);}
+pkNovoSet(patch){const pk=this.state.pk;this.setState({pk:Object.assign({},pk,{novo:Object.assign({},pk.novo,patch)})});}
+pkNovaAbrir(){this.pkNovoSet({aberto:true,nome:'',erro:''});setTimeout(()=>{const i=document.getElementById('pk-novo');if(i)i.focus();},60);}
+pkNovaCriar(){
+const n=this.state.pk.novo,nome=(n.nome||'').trim();
+if(!nome||n.busy)return;
+const perfil=this.state.perfil,pm=(PERFIS[perfil]||{}).protegido||'';
+if(pm==='confirmar'&&!window.confirm('Este perfil é protegido (produção). Criar a pasta "'+nome+'" mesmo assim?'))return;
+const cur=this.pkAtual();
+this.pkNovoSet({busy:true,erro:''});
+this.cfgCall('/_pastas/criar','POST',{perfil,paiId:cur.id,nome,confirmarProtecao:true}).then(r=>{
+if(!r.ok){this.pkNovoSet({busy:false,erro:r.erro||'Não foi possível criar a pasta.'});return;}
+this.pkNovoSet({aberto:false,busy:false,nome:'',erro:''});
+this.pkCarregar(cur.id,true);
+this.aviso('Pasta criada: '+nome);
+});
+}
+pxSet(patch){this.setState({px:Object.assign({},this.state.px,patch)});}
+pxVerificar(){
+const s=this.state,id=String(s.forms.excluir.diretorioId||'').trim();
+this.pxSet({busy:true,erro:'',ens:null,ok:'',conf:''});
+this.cfgCall('/_excluir/pasta/verificar','POST',{perfil:s.perfil,diretorioId:id}).then(r=>{
+if(!r.ok){this.pxSet({busy:false,erro:r.erro||'Não foi possível verificar a pasta.'});return;}
+this.pxSet({busy:false,ens:Object.assign({},r,{dir:id})});
+});
+}
+pxExcluir(){
+const s=this.state,px=s.px;
+if(!px.ens||px.busy)return;
+this.pxSet({busy:true,erro:''});
+this.cfgCall('/_excluir/pasta/executar','POST',{perfil:s.perfil,diretorioId:px.ens.dir,confirmacao:px.conf,confirmarProtecao:true}).then(r=>{
+if(!r.ok){this.pxSet({busy:false,erro:r.erro||'Não foi possível excluir a pasta.'});return;}
+this.setState({px:{ens:null,erro:'',busy:false,conf:'',ok:'Pasta '+px.ens.dir+' excluída inteira: '+r.total+' documento(s) foram para a lixeira junto com a pasta.'},pk:Object.assign({},this.state.pk,{cache:{}})});
+});
+}
 pkMarcar(q){const pk=this.state.pk,sel=Object.assign({},pk.sel);if(sel[q.id])delete sel[q.id];else sel[q.id]={id:q.id,nome:q.nome};this.setState({pk:Object.assign({},pk,{sel})});}
 pkMarcarTodas(lista,todas){const pk=this.state.pk,sel={};if(todas)lista.forEach(q=>{sel[q.id]={id:q.id,nome:q.nome};});this.setState({pk:Object.assign({},pk,{sel})});}
 pkUsarMarcadas(lista){
@@ -1592,6 +1646,7 @@ const s=this.state,f=Object.assign({},s.forms.excluir,patch);
 if(!('confirmacao' in patch))f.confirmacao='';
 clearInterval(this._exv);
 this.setState({forms:Object.assign({},s.forms,{excluir:f}),ex:Object.assign({},s.ex,{ens:null,erro:'',busy:false,verifId:'',verif:null})});
+if('diretorioId' in patch||'diretorioIds' in patch)this.setState({px:{ens:null,erro:'',busy:false,conf:'',ok:''}});
 }
 exCorpo(extra){const s=this.state,f=s.forms.excluir;return Object.assign({perfil:s.perfil,diretorioId:f.diretorioId,diretorioIds:f.diretorioIds&&f.diretorioIds.length?f.diretorioIds:undefined,subpastas:!!f.subpastas,cancelarFluxos:!!f.cancelarFluxos,status:f.status,dataInicio:f.dataInicio,dataFim:f.dataFim},extra||{});}
 exVerificar(){
@@ -2426,8 +2481,13 @@ open:!!pkk.aberto,fechar:()=>this.pkFechar(),
 crumbs:pkTrilha.map((q,i)=>({nome:i===0?'Meus documentos':q.nome,cur:i===pkTrilha.length-1,notCur:i!==pkTrilha.length-1,first:i===0,ir:()=>this.pkIrPara(i)})),
 temPai:pkTrilha.length>1,subir:()=>this.pkIrPara(pkTrilha.length-2),
 busca:pkk.busca||'',onBusca:e=>this.setState({pk:Object.assign({},this.state.pk,{busca:e.target.value})}),
-cards:pkLista.map(q=>({nome:q.nome,abrirLabel:'Abrir '+q.nome,usarLabel:'Escolher '+q.nome,marcarLabel:'Marcar '+q.nome,marcada:!!pkk.sel[q.id],marcar:()=>this.pkMarcar(q),abrir:()=>this.pkEntrar(q),usar:()=>this.pkEscolher(q)})),
-multi:pkModoMulti,simples:!pkModoMulti,marcarTodas:()=>this.pkMarcarTodas(pkLista,true),limpar:()=>this.pkMarcarTodas(pkLista,false),
+cards:pkLista.map(q=>({contagem:q.docsTotal!=null?q.docsTotal+' documento(s)':'',nome:q.nome,abrirLabel:'Abrir '+q.nome,usarLabel:'Escolher '+q.nome,marcarLabel:'Marcar '+q.nome,marcada:!!pkk.sel[q.id],marcar:()=>this.pkMarcar(q),abrir:()=>this.pkEntrar(q),usar:()=>this.pkEscolher(q)})),
+multi:pkModoMulti,simples:!pkModoMulti,
+criarVisivel:((PERFIS[perfil]||{}).protegido||'')!=='bloquear'&&!!pkC&&!!pkC.pastas,novoAberto:!!pkk.novo.aberto,novoNome:pkk.novo.nome,novoBusy:!!pkk.novo.busy,novoOff:!!pkk.novo.busy||!(pkk.novo.nome||'').trim(),
+hasNovoErro:!!pkk.novo.erro,novoErro:pkk.novo.erro,novoLabel:pkk.novo.busy?'Criando…':'Criar',
+novaAbrir:()=>this.pkNovaAbrir(),novaFechar:()=>this.pkNovoSet({aberto:false,erro:''}),novaCriar:()=>this.pkNovaCriar(),
+onNovoNome:e=>this.pkNovoSet({nome:e.target.value,erro:''}),onNovoKey:e=>{if(e.key==='Enter'){e.preventDefault();this.pkNovaCriar();}},
+novaTxt:'Nova pasta dentro de '+(pkCur.caminho||pkCur.nome),marcarTodas:()=>this.pkMarcarTodas(pkLista,true),limpar:()=>this.pkMarcarTodas(pkLista,false),
 marcadasTxt:pkNMarc+' marcada(s)'+(pkNMarc?' · todas ficam dentro de '+(pkCur.caminho||pkCur.nome):''),
 carregando:!!pkC&&!!pkC.carregando,skeleton:[1,2,3,4,5,6],
 erro:!!pkC&&!!pkC.erro,erroTxt:pkC&&pkC.erro?pkC.erro:'',precisaLogin:!!pkC&&!!pkC.precisaLogin,
@@ -2438,8 +2498,8 @@ atualTxt:pkCur.caminho||pkCur.nome,
 escolher:pkModoMulti?()=>this.pkUsarMarcadas(pkCacheLista):()=>this.pkEscolher(),escolherLabel:pkModoMulti?'Usar '+pkNMarc+' pasta(s) marcada(s)':pkModoId?'Escolher esta pasta (ID '+pkCur.id+')':'Escolher esta pasta',
 naoPodeEscolher:pkModoMulti?pkNMarc===0:(!pkModoId||(!!pkAl&&pkAl.sc==='excluir'))&&pkCur.id===0,raizAviso:!pkModoMulti&&(!pkModoId||(!!pkAl&&pkAl.sc==='excluir'))&&pkCur.id===0,
 dica:pkModoMulti?'Marque as pastas que quer esvaziar. Todas têm de estar dentro da pasta aberta: para marcar em outra pasta pai, entre nela (a marcação é refeita).':pkModoId?'Entre nas pastas e escolha a que você quer. O formulário recebe o ID dela (a raiz é o 0).':'Entre nas pastas e escolha a que você quer. O formulário recebe o nome da pasta e o caminho da pasta pai.',
-hasFonte:!!pkRaizC&&pkRaizC.fonte==='sincronizador',
-fonteTxt:pkRaizC&&pkRaizC.credencial==='usuario'?'Lista do sincronizador, com o seu usuário (só leitura).':'Lista do sincronizador (só leitura), porque o endpoint de pastas da API recusou este perfil.',
+hasFonte:!!pkRaizC&&(pkRaizC.fonte==='sincronizador'||pkRaizC.fonte==='arvore'),
+fonteTxt:pkRaizC&&pkRaizC.fonte==='arvore'?'Estrutura lida de uma vez (só leitura), com a contagem de documentos de cada pasta.':pkRaizC&&pkRaizC.credencial==='usuario'?'Lista do sincronizador, com o seu usuário (só leitura).':'Lista do sincronizador (só leitura), porque o endpoint de pastas da API recusou este perfil.',
 comUsuario:!!pkRaizC&&pkRaizC.credencial==='usuario'};
 // login de usuário
 const lgs=s.lg,pmLg=(PERFIS[lgs.perfil]||{}).protegido||'';
@@ -2459,6 +2519,18 @@ const EXT={listando:'Lendo a pasta…',executando:'Excluindo…',concluido:'Conc
 const EXC={listando:'mu',executando:'mu',concluido:'ok',cancelado:'wn',erro:'er'};
 const exFrase=exe?exe.confirmacao:'';
 const exConf=!!exe&&fex.confirmacao.trim().toUpperCase().replace(/\s+/g,' ')===exFrase;
+const pxs=s.px,pxe=pxs.ens,pxId=String(fex.diretorioId||'').trim();
+const pxUnica=/^[1-9]\d*$/.test(pxId)&&!(fex.diretorioIds&&fex.diretorioIds.length);
+const pxOk=!!pxe&&String(pxs.conf).trim().toUpperCase().replace(/\s+/g,' ')===pxe.confirmacao;
+const pxv={
+verificar:()=>this.pxVerificar(),verificarOff:!pxUnica||pxs.busy||exAtivo||pmE==='bloquear',busy:pxs.busy,
+dica:pmE==='bloquear'?'Perfil somente leitura: não dá para excluir nele.':pxUnica?'Pasta '+pxId+' (a escolhida acima).':'Escolha ou digite acima UMA pasta (o ID dela).',
+hasErr:!!pxs.erro,err:pxs.erro,hasOk:!!pxs.ok,okTxt:pxs.ok,
+has:!!pxe,resumo:pxe?('A pasta '+pxe.dir+' tem '+pxe.total+' documento(s)'+(pxe.subpastas!=null?' e '+pxe.subpastas+' subpasta(s)':'')+'. Tudo isso vai para a lixeira, junto com a própria pasta.'):'',
+bloq:!!pxe&&pxe.fluxosAtivos>0,bloqTxt:pxe&&pxe.fluxosAtivos>0?(pxe.fluxosAtivos+' documento(s) têm fluxo de assinatura ativo. Excluir a pasta não cancela fluxos: use antes "Excluir em massa" com o status Pendente (ela cancela os fluxos e exclui esses documentos) e volte aqui.'):'',
+livre:!!pxe&&pxe.fluxosAtivos===0,frase:pxe?pxe.confirmacao:'',conf:pxs.conf,onConf:e=>this.pxSet({conf:e.target.value}),
+excluir:()=>this.pxExcluir(),excluirOff:!pxOk||pxs.busy||exAtivo,excluirLabel:pxs.busy?'Excluindo…':'Excluir a pasta inteira'
+};
 const exv={
 dir:fex.diretorioId,onDir:e=>this.exSet({diretorioId:e.target.value,diretorioIds:[],pastasSel:[],pastaPai:''}),
 escolherVarias:()=>this.pkAbrir({modo:'multi',sc:'excluir'}),
@@ -2687,7 +2759,7 @@ hasRes:!!res0,noRes:!res0&&!loading,res,tabs,tabResumo:s.tab==='resumo',tabJson:
 jsonCopyAll:()=>this.copy(JSON.stringify(res0?res0.body:{},null,2)),jsonCollapse:()=>this.setState({collapsed:allPaths(res0?res0.body:{},'$',{})}),jsonExpand:()=>this.setState({collapsed:{}}),
 nexts,hasNexts:nexts.length>0,
 hasLinks:links.length>0&&eff==='assinatura',links,linksNote:linkSrc?(linkSrc.conviteEnviado?'Convite enviado por e-mail (conviteEnviado = true). Os links abaixo também valem.':'Nenhum e-mail foi enviado (conviteEnviado = false, padrão). Envie cada link ao signatário.'):'',
-dt,pt,md,stv,dl,wiz,al,asv,api,hist,dg:dgn,prot,pf,bx,cm,lote,fumaca,vg,ip:ipv,ex:exv,pk,lg:lgv,pn:pnn,mn:mnv,
+dt,pt,md,stv,dl,wiz,al,asv,api,hist,dg:dgn,prot,pf,bx,cm,lote,fumaca,vg,ip:ipv,ex:exv,px:pxv,pk,lg:lgv,pn:pnn,mn:mnv,
 logOpen:s.logOpen,logFav:s.logFav,onLogFav:e=>this.setState({logFav:e.target.checked}),logRows:lrows,logEmpty:lrows.length===0&&!sel,hasLogSel:!!sel,showLogList:!sel,ld,
 paletteOpen:s.paletteOpen,paletteQ:s.paletteQ,onPaletteQ:e=>this.setState({paletteQ:e.target.value}),palItems,palEmpty:palItems.length===0,closePalette:()=>this.setState({paletteOpen:false}),stop:e=>{if(e&&e.stopPropagation)e.stopPropagation();},
 toast:s.toast,toastCls:s.toast?'':'off'

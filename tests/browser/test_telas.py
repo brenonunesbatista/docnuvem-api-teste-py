@@ -1010,6 +1010,134 @@ def test_excluir_marcar_varias_pastas_de_uma_pasta_pai(pagina: Pagina, upstream:
     expect(page.locator("main")).to_contain_text("2. Conferir e confirmar")
     lidas = " ".join(c["path"] for c in upstream.recebidas if c["rota"] == "/api/documentos")
     assert "diretorioId=10" in lidas and "diretorioId=11" in lidas
-    assert [a for a in _alteracoes(upstream) if "listarDiretoriosFilhos" not in a] == []
+    leituras = ("listarDiretoriosFilhos", "/api/sync/tree")
+    assert [a for a in _alteracoes(upstream) if not any(x in a for x in leituras)] == []
     pagina.page.get_by_role("button", name="Limpar seleção").click()
     expect(page.locator("main")).not_to_contain_text("pasta(s) marcada(s) em")
+
+
+# ---------------------------------------- árvore completa, nova pasta, pasta inteira ---
+
+ARVORE_SYNC = ("POST", "/api/sync/tree")
+CRIAR_PASTA = ("POST", "/api/sync/criarDiretorio")
+EXCLUIR_PASTA = ("POST", "/api/sync/excluirDiretorio")
+DOCUMENTOS = ("GET", "/api/documentos")
+
+
+def _arvore_completa(upstream: Upstream) -> None:
+    """Contratos (10) com 2024 (12) dentro, e Atas (11). Documentos: 1 em Contratos, 2 em 2024."""
+    pastas = [
+        (10, "Contratos", 0, "/Meus documentos/Contratos"),
+        (11, "Atas", 0, "/Meus documentos/Atas"),
+        (12, "2024", 10, "/Meus documentos/Contratos/2024"),
+    ]
+    dado = {
+        "diretorios": [
+            {"id": i, "nome": n, "diretorioPaiId": pai, "caminhoNomesPais": c, "lixeira": False}
+            for i, n, pai, c in pastas
+        ],
+        "documentos": [
+            {"id": k, "diretorioId": d, "lixeira": False} for k, d in ((1, 10), (2, 12), (3, 12))
+        ],
+    }
+    upstream.respostas[OFICIAL_PASTAS] = (401, "")
+    upstream.respostas[ARVORE_SYNC] = (200, json.dumps(dado))
+
+
+def test_seletor_mostra_quantos_documentos_ha_em_cada_pasta(
+    pagina: Pagina, upstream: Upstream
+) -> None:
+    page = pagina.page
+    _arvore_completa(upstream)
+    pagina.ir("Excluir em massa")
+    page.get_by_role("button", name="Escolher na estrutura de pastas…").click()
+    modal = _seletor(page)
+    expect(modal.locator(".pkcard")).to_have_count(2)
+    expect(modal.locator(".pkcard").filter(has_text="Contratos")).to_contain_text("3 documento(s)")
+    expect(modal.locator(".pkcard").filter(has_text="Atas")).to_contain_text("0 documento(s)")
+    expect(modal).to_contain_text("lida de uma vez")
+
+
+def test_criar_uma_pasta_pelo_seletor(pagina: Pagina, upstream: Upstream) -> None:
+    page = pagina.page
+    _arvore_completa(upstream)
+    upstream.respostas[CRIAR_PASTA] = (200, '{"id": 99}')
+    pagina.ir("Excluir em massa")
+    page.get_by_role("button", name="Escolher na estrutura de pastas…").click()
+    modal = _seletor(page)
+    modal.get_by_role("button", name="Abrir Contratos").click()
+    modal.get_by_role("button", name="Nova pasta aqui…").click()
+    expect(modal.get_by_role("button", name="Criar", exact=True)).to_be_disabled()
+    modal.get_by_placeholder("Nome da nova pasta").fill("Aditivos")
+    modal.get_by_role("button", name="Criar", exact=True).click()
+    expect(modal.get_by_placeholder("Nome da nova pasta")).to_have_count(0)  # fechou e recarregou
+    chamada = [c for c in upstream.recebidas if (c["method"], c["rota"]) == CRIAR_PASTA]
+    assert len(chamada) == 1
+    assert "diretorioPaiId=10" in chamada[0]["path"] and "nome=Aditivos" in chamada[0]["path"]
+
+
+def test_criar_pasta_mostra_o_erro_da_api(pagina: Pagina, upstream: Upstream) -> None:
+    page = pagina.page
+    _arvore_completa(upstream)
+    upstream.respostas[CRIAR_PASTA] = (400, '{"retorno": "Já existe uma pasta com esse nome"}')
+    pagina.ir("Excluir em massa")
+    page.get_by_role("button", name="Escolher na estrutura de pastas…").click()
+    modal = _seletor(page)
+    modal.get_by_role("button", name="Nova pasta aqui…").click()
+    modal.get_by_placeholder("Nome da nova pasta").fill("Atas")
+    modal.get_by_role("button", name="Criar", exact=True).click()
+    expect(modal.locator(".dangerbox")).to_contain_text("Já existe uma pasta com esse nome")
+
+
+def _contagens(upstream: Upstream, total: int, pendentes: int) -> None:
+    def resposta(q: dict[str, list[str]]) -> tuple[int, str]:
+        n = pendentes if q.get("status") == ["pendente"] else total
+        return 200, json.dumps({"total": n, "temMais": False, "documentos": []})
+
+    upstream.dinamicas[DOCUMENTOS] = resposta
+
+
+def test_excluir_a_pasta_inteira_so_depois_de_ver_e_confirmar(
+    pagina: Pagina, upstream: Upstream
+) -> None:
+    page = pagina.page
+    _arvore_completa(upstream)
+    _contagens(upstream, total=3, pendentes=0)
+    upstream.respostas[EXCLUIR_PASTA] = (200, "{}")
+    pagina.ir("Excluir em massa")
+    expect(pagina.botao("Ver a pasta inteira")).to_be_disabled()  # sem pasta escolhida
+    page.fill("#ex-dir", "10")
+    pagina.botao("Ver a pasta inteira").click()
+    expect(page.locator("main")).to_contain_text("A pasta 10 tem 3 documento(s) e 1 subpasta(s)")
+    botao = pagina.botao("Excluir a pasta inteira")
+    expect(botao).to_be_disabled()
+    page.fill("#px-conf", "EXCLUIR PASTA 10")
+    botao.click()
+    expect(page.locator("main")).to_contain_text("Pasta 10 excluída inteira")
+    envios = [c for c in upstream.recebidas if (c["method"], c["rota"]) == EXCLUIR_PASTA]
+    assert len(envios) == 1 and "diretorioId=10" in envios[0]["path"]
+
+
+def test_pasta_inteira_com_fluxo_ativo_fica_bloqueada(pagina: Pagina, upstream: Upstream) -> None:
+    page = pagina.page
+    _arvore_completa(upstream)
+    _contagens(upstream, total=5, pendentes=2)
+    pagina.ir("Excluir em massa")
+    page.fill("#ex-dir", "10")
+    pagina.botao("Ver a pasta inteira").click()
+    expect(page.get_by_role("alert")).to_contain_text("2 documento(s) têm fluxo")
+    expect(page.locator("#px-conf")).to_have_count(0)  # nem aparece o campo de confirmação
+    assert [c for c in upstream.recebidas if (c["method"], c["rota"]) == EXCLUIR_PASTA] == []
+
+
+def test_pasta_inteira_nao_vale_com_varias_pastas_marcadas(
+    pagina: Pagina, upstream: Upstream
+) -> None:
+    page = pagina.page
+    _arvore_completa(upstream)
+    pagina.ir("Excluir em massa")
+    page.get_by_role("button", name="Marcar várias pastas de uma pasta pai…").click()
+    modal = _seletor(page)
+    modal.get_by_role("button", name="Marcar todas").click()
+    modal.get_by_role("button", name="Usar 2 pasta(s) marcada(s)").click()
+    expect(pagina.botao("Ver a pasta inteira")).to_be_disabled()
