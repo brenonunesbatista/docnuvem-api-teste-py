@@ -524,7 +524,7 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
           <section class="card">
             <h2>Ou excluir a pasta inteira</h2>
             <p class="muted small">Envia a pasta escolhida acima <strong>e tudo dentro dela</strong> (subpastas e documentos) para a lixeira, de uma vez: bem mais rápido para pastas enormes. Diferente da exclusão em massa, <strong>a própria pasta também vai para a lixeira</strong>. Não cancela fluxos de assinatura: se houver algum ativo, cancele antes pela exclusão em massa com o status Pendente.</p>
-            <div class="row"><button class="btn" type="button" onClick="{{px.verificar}}" disabled="{{px.verificarOff}}">Ver a pasta inteira</button><span class="muted small">{{px.dica}}</span></div>
+            <div class="row"><button class="btn" type="button" onClick="{{px.escolherPasta}}" disabled="{{px.escolherOff}}">Escolher a pasta na estrutura…</button><button class="btn" type="button" onClick="{{px.verificar}}" disabled="{{px.verificarOff}}">Ver a pasta inteira</button><span class="muted small">{{px.dica}}</span></div>
             <sc-if value="{{px.hasErr}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{px.err}}</span></div></sc-if>
             <sc-if value="{{px.hasOk}}" hint-placeholder-val="{{ false }}"><div class="bxn" role="status"><strong>{{px.okTxt}}</strong></div></sc-if>
             <sc-if value="{{px.has}}" hint-placeholder-val="{{ false }}">
@@ -2523,6 +2523,7 @@ const pxs=s.px,pxe=pxs.ens,pxId=String(fex.diretorioId||'').trim();
 const pxUnica=/^[1-9]\d*$/.test(pxId)&&!(fex.diretorioIds&&fex.diretorioIds.length);
 const pxOk=!!pxe&&String(pxs.conf).trim().toUpperCase().replace(/\s+/g,' ')===pxe.confirmacao;
 const pxv={
+escolherPasta:()=>this.pkAbrir({modo:'id',sc:'excluir'}),escolherOff:pxs.busy||exAtivo||pmE==='bloquear',
 verificar:()=>this.pxVerificar(),verificarOff:!pxUnica||pxs.busy||exAtivo||pmE==='bloquear',busy:pxs.busy,
 dica:pmE==='bloquear'?'Perfil somente leitura: não dá para excluir nele.':pxUnica?'Pasta '+pxId+' (a escolhida acima).':'Escolha ou digite acima UMA pasta (o ID dela).',
 hasErr:!!pxs.erro,err:pxs.erro,hasOk:!!pxs.ok,okTxt:pxs.ok,

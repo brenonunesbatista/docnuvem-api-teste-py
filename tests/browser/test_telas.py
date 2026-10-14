@@ -1141,3 +1141,20 @@ def test_pasta_inteira_nao_vale_com_varias_pastas_marcadas(
     modal.get_by_role("button", name="Marcar todas").click()
     modal.get_by_role("button", name="Usar 2 pasta(s) marcada(s)").click()
     expect(pagina.botao("Ver a pasta inteira")).to_be_disabled()
+
+
+def test_pasta_inteira_tem_o_seletor_de_pastas_no_proprio_cartao(
+    pagina: Pagina, upstream: Upstream
+) -> None:
+    page = pagina.page
+    _arvore_completa(upstream)
+    _contagens(upstream, total=3, pendentes=0)
+    pagina.ir("Excluir em massa")
+    pagina.botao("Escolher a pasta na estrutura…").click()
+    modal = _seletor(page)
+    modal.get_by_role("button", name="Escolher Contratos").click()
+    expect(modal).to_have_count(0)
+    expect(page.locator("#ex-dir")).to_have_value("10")
+    expect(pagina.botao("Ver a pasta inteira")).to_be_enabled()
+    pagina.botao("Ver a pasta inteira").click()
+    expect(page.locator("main")).to_contain_text("A pasta 10 tem 3 documento(s)")
