@@ -11,7 +11,11 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from playwright.sync_api import expect
+
+# O job comum do CI não instala o Playwright: sem ele, este arquivo é só ignorado.
+pytest.importorskip("playwright")
+
+from playwright.sync_api import expect  # noqa: E402
 
 from ..conftest import App, Upstream
 from .conftest import Pagina
