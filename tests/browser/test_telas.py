@@ -1422,3 +1422,53 @@ def test_assinatura_folha_muda_de_formato_e_o_filtro_de_status_funciona(
     modal.get_by_role("button", name="Carta").click()
     carta = folha.bounding_box()
     assert carta and abs(carta["width"] / carta["height"] - 279.4 / 215.9) < 0.02
+
+
+def test_vigia_escolher_documentos_e_juntar_aos_ids_ja_digitados(
+    pagina: Pagina, upstream: Upstream
+) -> None:
+    page = pagina.page
+    _documentos_da_instancia(upstream)
+    pagina.ir("Vigia de assinaturas")
+    page.fill("#vg-ids", "999")
+    pagina.botao("Escolher documentos…").click()
+    modal = _dialogo(page, "Escolher os documentos do vigia")
+    expect(modal.locator(".dprow")).to_have_count(3)
+    expect(modal.get_by_role("button", name="Do computador")).to_have_count(0)  # só da plataforma
+    expect(modal.get_by_role("button", name="Qualquer")).to_have_attribute("aria-pressed", "true")
+    consultas = [c["path"] for c in upstream.recebidas if c["rota"] == "/api/documentos"]
+    assert "status=" not in consultas[-1]  # para o vigia, qualquer status
+    expect(modal.get_by_role("button", name="Adicionar 0 documento(s) ao vigia")).to_be_disabled()
+    modal.get_by_text("Contrato.pdf").click()  # a linha inteira não marca; só o interruptor
+    modal.get_by_label("Marcar Contrato.pdf").check(force=True)
+    modal.get_by_label("Marcar Ata.pdf").check(force=True)
+    expect(modal).to_contain_text("2 marcado(s)")
+    modal.get_by_label("Marcar Ata.pdf").uncheck(force=True)
+    modal.get_by_label("Marcar Ata.pdf").check(force=True)
+    modal.get_by_role("button", name="Adicionar 2 documento(s) ao vigia").click()
+    expect(modal).to_have_count(0)
+    expect(page.locator("#vg-ids")).to_have_value("999, 501, 503")
+
+
+def test_vigia_nao_repete_documento_ja_listado(pagina: Pagina, upstream: Upstream) -> None:
+    page = pagina.page
+    _documentos_da_instancia(upstream)
+    pagina.ir("Vigia de assinaturas")
+    page.fill("#vg-ids", "501")
+    pagina.botao("Escolher documentos…").click()
+    modal = _dialogo(page, "Escolher os documentos do vigia")
+    modal.get_by_label("Marcar Contrato.pdf").check(force=True)
+    modal.get_by_label("Marcar Aditivo.pdf").check(force=True)
+    modal.get_by_role("button", name="Adicionar 2 documento(s) ao vigia").click()
+    expect(page.locator("#vg-ids")).to_have_value("501, 502")
+
+
+def test_status_e_download_tambem_escolhem_o_arquivo(pagina: Pagina, upstream: Upstream) -> None:
+    page = pagina.page
+    _documentos_da_instancia(upstream)
+    for tela, campo in (("Status do documento", "status"), ("Download", "download")):
+        pagina.ir(tela)
+        pagina.botao("Escolher o arquivo…").click()
+        modal = _dialogo(page, "Escolher o arquivo")
+        modal.get_by_role("button", name="Usar Ata.pdf").click()
+        expect(page.locator(f"#f-{campo}-documentoId")).to_have_value("503")

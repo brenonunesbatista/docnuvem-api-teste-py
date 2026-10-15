@@ -674,7 +674,7 @@ html[data-marca-logo] .logo{-webkit-mask:none;mask:none;background:var(--ac);bor
             <div class="fields">
               <div class="field"><label class="lbl" for="vg-int"><span>Verificar</span></label><select id="vg-int" value="{{vg.intervalo}}" onChange="{{vg.onIntervalo}}"><sc-for list="{{vg.intervaloOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.value}}" selected="{{o.selected}}">{{o.label}}</option></sc-for></select><span class="hint">Cada verificação faz uma consulta por documento acompanhado.</span></div>
               <div class="field"><label class="lbl" for="vg-al"><span>Avisar de expiração</span></label><select id="vg-al" value="{{vg.alerta}}" onChange="{{vg.onAlerta}}"><sc-for list="{{vg.alertaOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.value}}" selected="{{o.selected}}">{{o.label}}</option></sc-for></select></div>
-              <div class="field"><label class="lbl" for="vg-ids"><span>Acompanhar também estes documentos</span><span class="tag">opcional</span></label><input id="vg-ids" type="text" value="{{vg.ids}}" placeholder="30542, 29595" autocomplete="off" onInput="{{vg.onIds}}"><span class="hint">documentoId separados por vírgula. Além deles, acompanha até 100 pendentes do perfil.</span></div>
+              <div class="field"><label class="lbl" for="vg-ids"><span>Acompanhar também estes documentos</span><span class="tag">opcional</span></label><input id="vg-ids" type="text" value="{{vg.ids}}" placeholder="30542, 29595" autocomplete="off" onInput="{{vg.onIds}}"><button class="link" type="button" onClick="{{vg.escolherDocs}}">Escolher documentos…</button><span class="hint">documentoId separados por vírgula. Além deles, acompanha até 100 pendentes do perfil.</span></div>
             </div>
             <sc-if value="{{vg.hasErr}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{vg.err}}</span></div></sc-if>
             <div class="row"><button class="btn pri" type="button" onClick="{{vg.iniciar}}">{{vg.iniciarLabel}}</button><sc-if value="{{vg.ativo}}" hint-placeholder-val="{{ false }}"><button class="btn" type="button" onClick="{{vg.agora}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.refresh}}"/></svg>Verificar agora</button><button class="btn dng" type="button" onClick="{{vg.parar}}">Parar</button></sc-if></div>
@@ -1204,9 +1204,9 @@ html[data-marca-logo] .logo{-webkit-mask:none;mask:none;background:var(--ac);bor
   </sc-if>
   <sc-if value="{{dp.open}}" hint-placeholder-val="{{ false }}">
     <div class="pal sheet" onClick="{{dp.fechar}}">
-      <div class="pkm" role="dialog" aria-label="Escolher o arquivo para assinar" onClick="{{stop}}">
-        <div class="pkhead"><h2>Escolher o arquivo · {{perfil}}</h2><button class="ib" type="button" aria-label="Fechar" onClick="{{dp.fechar}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.x}}"/></svg></button></div>
-        <div class="row"><button class="btn sm {{dp.clsInst}}" type="button" onClick="{{dp.abaInst}}">Da plataforma</button><button class="btn sm {{dp.clsPc}}" type="button" onClick="{{dp.abaPc}}">Do computador</button></div>
+      <div class="pkm" role="dialog" aria-label="{{dp.ariaLabel}}" onClick="{{stop}}">
+        <div class="pkhead"><h2>{{dp.titulo}} · {{perfil}}</h2><button class="ib" type="button" aria-label="Fechar" onClick="{{dp.fechar}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.x}}"/></svg></button></div>
+        <sc-if value="{{dp.abas}}" hint-placeholder-val="{{ true }}"><div class="row"><button class="btn sm {{dp.clsInst}}" type="button" onClick="{{dp.abaInst}}">Da plataforma</button><button class="btn sm {{dp.clsPc}}" type="button" onClick="{{dp.abaPc}}">Do computador</button></div></sc-if>
         <sc-if value="{{dp.inst}}" hint-placeholder-val="{{ false }}">
           <div class="grid2">
             <div class="field"><span class="lbl"><span>Status</span></span><div class="row" role="group" aria-label="Filtrar por status" style="gap:6px"><sc-for list="{{dp.statusOpts}}" as="o" hint-placeholder-count="3"><button class="btn sm {{o.cls}}" type="button" aria-pressed="{{o.pressed}}" onClick="{{o.on}}">{{o.label}}</button></sc-for></div></div>
@@ -1216,13 +1216,14 @@ html[data-marca-logo] .logo{-webkit-mask:none;mask:none;background:var(--ac);bor
           <div class="row" style="flex-wrap:nowrap"><input type="search" placeholder="Filtrar pelo nome do arquivo…" aria-label="Filtrar pelo nome do arquivo" value="{{dp.busca}}" onInput="{{dp.onBusca}}" autocomplete="off"><button class="btn sm" type="button" onClick="{{dp.buscar}}">Recarregar</button></div>
           <div class="muted small" aria-live="polite">{{dp.contagem}}</div>
           <div class="dplist">
-            <sc-for list="{{dp.itens}}" as="it" hint-placeholder-count="4"><div class="dprow"><div class="nm"><strong>{{it.nome}}</strong><div class="muted small">{{it.meta}}</div></div><button class="btn pri sm" type="button" aria-label="{{it.usarLabel}}" onClick="{{it.usar}}">Usar</button></div></sc-for>
+            <sc-for list="{{dp.itens}}" as="it" hint-placeholder-count="4"><div class="dprow"><div class="nm"><strong>{{it.nome}}</strong><div class="muted small">{{it.meta}}</div></div><sc-if value="{{dp.simples}}" hint-placeholder-val="{{ true }}"><button class="btn pri sm" type="button" aria-label="{{it.usarLabel}}" onClick="{{it.usar}}">Usar</button></sc-if><sc-if value="{{dp.multi}}" hint-placeholder-val="{{ false }}"><label class="sw" style="flex:none"><input type="checkbox" checked="{{it.marcada}}" aria-label="{{it.marcarLabel}}" onChange="{{it.marcar}}"><span class="track"></span></label></sc-if></div></sc-for>
             <sc-if value="{{dp.busy}}" hint-placeholder-val="{{ false }}"><div class="muted small"><span class="spin"></span> Carregando…</div></sc-if>
             <sc-if value="{{dp.vazio}}" hint-placeholder-val="{{ false }}"><div class="empty small"><strong>Nenhum documento com esses filtros</strong></div></sc-if>
             <sc-if value="{{dp.semResultado}}" hint-placeholder-val="{{ false }}"><div class="empty small"><strong>Nenhum nome confere nos já carregados</strong><span>Use "Carregar mais" ou troque os filtros.</span></div></sc-if>
           </div>
           <sc-if value="{{dp.hasErr}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{dp.err}}</span></div></sc-if>
           <sc-if value="{{dp.temMais}}" hint-placeholder-val="{{ false }}"><div class="row"><button class="btn" type="button" onClick="{{dp.mais}}">Carregar mais</button></div></sc-if>
+          <sc-if value="{{dp.multi}}" hint-placeholder-val="{{ false }}"><div class="pkfoot"><span class="muted small" aria-live="polite">{{dp.nSel}} marcado(s)</span><span class="grow"></span><button class="btn" type="button" onClick="{{dp.fechar}}">Cancelar</button><button class="btn pri" type="button" onClick="{{dp.adicionar}}" disabled="{{dp.adicionarOff}}">{{dp.adicionarLabel}}</button></div></sc-if>
         </sc-if>
         <sc-if value="{{dp.pc}}" hint-placeholder-val="{{ false }}">
           <p class="muted small">Envia um arquivo do seu computador para a plataforma (importar) e já usa o documento criado.</p>
@@ -1592,7 +1593,7 @@ lote:{csvNome:'',csvTexto:'',modo:'enviar',intervalo:'500',confirmando:false},
 fumaca:{ok:false},
 baixar:{diretorioId:'',subpastas:true,estrutura:true,conflito:'renomear',destino:'',status:'',dataInicio:'',dataFim:''},
 perfis:{aberto:false,original:'',nome:'',instancia:'',baseUrl:'',token:'',protecao:'',erro:'',salvando:false,rm:''}},
-results:{},loading:{},lists:{},diag:{},bx:{id:'',snap:null,erro:'',escolhendo:false},cmp:{busy:false,res:null,erro:''},pk:{aberto:false,alvo:null,cache:{},trilha:[],busca:'',sel:{},novo:{aberto:false,nome:'',busy:false,erro:''}},dp:{aberto:false,aba:'inst',status:'sem_assinatura',dir:'',sub:false,busca:'',itens:[],pagina:0,temMais:false,busy:false,erro:'',carregou:false,upNome:'',upPasta:'',upPai:'',upBusy:false,upErro:''},pl:{aberto:false,fmt:'a4',orient:'p',pag:'1',ultima:true,sel:-1},mb:{aberto:false,v:0},px:{ens:null,erro:'',busy:false,conf:'',ok:''},lg:{aberto:false,perfil:'',login:'',senha:'',busy:false,erro:'',voltar:false},pn:{res:null,busy:false,erro:''},mn:{snap:null,vistos:null,sel:{},intervalo:'5',erro:''},ip:{ens:null,erro:'',busy:false,escolhendo:false,id:'',snap:null},ex:{ens:null,erro:'',busy:false,id:'',snap:null,verifId:'',verif:null},vg:{todos:[],vistos:{},notif:false,erro:''},lt:{val:null,erro:'',validando:false,id:'',snap:null},fm:{busy:false,res:null,erro:''},protPend:null,tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
+results:{},loading:{},lists:{},diag:{},bx:{id:'',snap:null,erro:'',escolhendo:false},cmp:{busy:false,res:null,erro:''},pk:{aberto:false,alvo:null,cache:{},trilha:[],busca:'',sel:{},novo:{aberto:false,nome:'',busy:false,erro:''}},dp:{aberto:false,alvo:'assinatura',sel:{},aba:'inst',status:'sem_assinatura',dir:'',sub:false,busca:'',itens:[],pagina:0,temMais:false,busy:false,erro:'',carregou:false,upNome:'',upPasta:'',upPai:'',upBusy:false,upErro:''},pl:{aberto:false,fmt:'a4',orient:'p',pag:'1',ultima:true,sel:-1},mb:{aberto:false,v:0},px:{ens:null,erro:'',busy:false,conf:'',ok:''},lg:{aberto:false,perfil:'',login:'',senha:'',busy:false,erro:'',voltar:false},pn:{res:null,busy:false,erro:''},mn:{snap:null,vistos:null,sel:{},intervalo:'5',erro:''},ip:{ens:null,erro:'',busy:false,escolhendo:false,id:'',snap:null},ex:{ens:null,erro:'',busy:false,id:'',snap:null,verifId:'',verif:null},vg:{todos:[],vistos:{},notif:false,erro:''},lt:{val:null,erro:'',validando:false,id:'',snap:null},fm:{busy:false,res:null,erro:''},protPend:null,tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
 paletteOpen:false,paletteQ:'',toast:'',wizStep:0,lastMat:'',openSol:null,navMin:false,
 lastDoc:{},lastAss:{},
 sort:{documentos:{k:'criadoEm',d:-1},pastas:{k:'caminho',d:1}},openModelo:'',dragging:false,newSg:sg};
@@ -1726,7 +1727,11 @@ pkAtual(){const t=this.state.pk.trilha;return t[t.length-1]||{id:0,nome:'Meus do
 pkEntrar(q){const pk=this.state.pk;this.setState({pk:Object.assign({},pk,{trilha:pk.trilha.concat([q]),busca:'',sel:{},novo:{aberto:false,nome:'',busy:false,erro:''}})});this.pkCarregar(q.id);}
 pkIrPara(i){const pk=this.state.pk;const t=pk.trilha.slice(0,i+1);this.setState({pk:Object.assign({},pk,{trilha:t,busca:'',sel:{},novo:{aberto:false,nome:'',busy:false,erro:''}})});this.pkCarregar(t[t.length-1].id);}
 dpSet(patch){this.setState({dp:Object.assign({},this.state.dp,patch)});}
-dpAbrir(){this.dpSet({aberto:true,upErro:''});if(!this.state.dp.carregou)this.dpCarregar(true);}
+dpAbrir(alvo){
+const a=alvo||'assinatura';
+this.dpSet({aberto:true,alvo:a,sel:{},aba:'inst',upErro:'',status:a==='vigia'?'':'sem_assinatura'});
+this.dpCarregar(true);
+}
 dpCarregar(reset){
 const s=this.state,dp=s.dp,perfil=s.perfil;
 if(!PERFIS[perfil])return;
@@ -1746,7 +1751,17 @@ const cur=this.state.dp;
 this.dpSet({busy:false,pagina:pagina,temMais:!!b.temMais,itens:(reset?[]:cur.itens).concat(b.documentos)});
 }).catch(e=>{if(tok===this._dpTok)this.dpSet({busy:false,erro:'O servidor local não respondeu: '+e.message});});
 }
-dpUsar(it){this.setF('assinatura',{documentoId:String(it.documentoId)});this.dpSet({aberto:false});this.aviso('Documento escolhido: '+(it.nomeArquivo||it.documentoId)+' (ID '+it.documentoId+')');}
+dpUsar(it){this.setF(this.state.dp.alvo,{documentoId:String(it.documentoId)});this.dpSet({aberto:false});this.aviso('Documento escolhido: '+(it.nomeArquivo||it.documentoId)+' (ID '+it.documentoId+')');}
+dpMarcar(it){const dp=this.state.dp,sel=Object.assign({},dp.sel);if(sel[it.documentoId])delete sel[it.documentoId];else sel[it.documentoId]=true;this.dpSet({sel});}
+dpAdicionar(){
+const dp=this.state.dp,novos=Object.keys(dp.sel);
+if(!novos.length)return;
+const atuais=String(this.state.forms.vigia.ids||'').split(/[^0-9]+/).filter(Boolean);
+const todos=atuais.concat(novos.filter(n=>atuais.indexOf(n)<0));
+this.setF('vigia',{ids:todos.join(', ')});
+this.dpSet({aberto:false});
+this.aviso(novos.length+' documento(s) adicionado(s) ao vigia');
+}
 dpArquivo(e){const f=e.target.files&&e.target.files[0];DPFILE=f||null;this.dpSet({upNome:f?f.name:'',upErro:''});}
 dpEnviar(){
 const s=this.state,dp=s.dp,perfil=s.perfil,f=DPFILE;
@@ -2446,7 +2461,7 @@ onInput:e=>{if(t==='CHECKBOX')setv(e.target.checked?'sim':'não');else if(t==='D
 }
 let signers=[];
 if(eff==='assinatura'){
-C({title:'Documento',fields:[T('assinatura','documentoId',Object.assign({label:'Documento',api:'documentoId',req:true,placeholder:'48204',useLast2:true,last2Label:'Escolher o arquivo…',onLast2:()=>this.dpAbrir()},docLast('assinatura')))]});
+C({title:'Documento',fields:[T('assinatura','documentoId',Object.assign({label:'Documento',api:'documentoId',req:true,placeholder:'48204',useLast2:true,last2Label:'Escolher o arquivo…',onLast2:()=>this.dpAbrir('assinatura')},docLast('assinatura')))]});
 C({title:'Signatários',sub:'Adicione, remova e reordene. O CPF ou o CNPJ é detectado pelo número de dígitos.',signers:true,fields:[T('assinatura','consideraOrdem',{kind:'switch',label:'Respeitar a ordem',api:'consideraOrdem',switchText:f.consideraOrdem?'Ligado: assinam na ordem':'Desligado: todos podem assinar já',hint:'Se ligado, ordem 0-based e contígua.'})]});
 const sa=(i,patch)=>this.setF('assinatura',{signers:f.signers.map((x,j)=>j===i?Object.assign({},x,patch):x)});
 const mv=(i,d)=>{const a=f.signers.slice();const t=a[i];a[i]=a[i+d];a[i+d]=t;this.setF('assinatura',{signers:a.map((x,j)=>Object.assign({},x,{ordem:String(j)}))});};
@@ -2495,7 +2510,7 @@ T('pastas','nome',{label:'Nome',api:'nome',half:true,placeholder:'Contratos'}),
 T('pastas','caminho',{label:'Caminho',api:'caminho',hint:'Partes do caminho, sem diferenciar maiúsculas. Ex.: contratos/loca',placeholder:'contratos/loca'}),
 T('pastas','pagina',{label:'Página',api:'pagina',half:true,hint:'Começa em 0'}),
 T('pastas','tamanho',{label:'Tamanho',api:'tamanho',half:true})]});
-if(eff==='status'||eff==='download')C({title:'Qual documento?',fields:[T(eff,'documentoId',Object.assign({label:'Documento',api:'documentoId',req:true,placeholder:'48201'},docLast(eff)))]});
+if(eff==='status'||eff==='download')C({title:'Qual documento?',fields:[T(eff,'documentoId',Object.assign({label:'Documento',api:'documentoId',req:true,placeholder:'48201'},docLast(eff),{useLast2:true,last2Label:'Escolher o arquivo…',onLast2:()=>this.dpAbrir(eff)}))]});
 if(eff==='alunoSolicitar'){
 C({title:'Atenção: envia e-mail de verdade',tone:'danger',notice:'Esta chamada cria (ou atualiza) o contato do aluno, cria a pasta /Meus documentos/Alunos/{matrícula} - {nome}/Documentos e envia ao aluno o e-mail com o link de envio. Repetir a matrícula reaproveita o contato e a pasta e gera um novo link.'});
 C({title:'Aluno',fields:[
@@ -2741,14 +2756,19 @@ const dpStatusOpts=[['sem_assinatura','Sem assinatura'],['','Qualquer'],['penden
 const dpBusca=(dps.busca||'').trim().toLowerCase();
 const dpv={
 open:!!dps.aberto,fechar:()=>this.dpSet({aberto:false}),
-inst:dps.aba==='inst',pc:dps.aba==='pc',
+multi:dps.alvo==='vigia',simples:dps.alvo!=='vigia',abas:dps.alvo==='assinatura',
+ariaLabel:dps.alvo==='vigia'?'Escolher os documentos do vigia':'Escolher o arquivo para assinar',
+titulo:dps.alvo==='vigia'?'Escolher documentos para o vigia':'Escolher o arquivo',
+nSel:Object.keys(dps.sel||{}).length,
+adicionarLabel:'Adicionar '+Object.keys(dps.sel||{}).length+' documento(s) ao vigia',adicionarOff:Object.keys(dps.sel||{}).length===0,adicionar:()=>this.dpAdicionar(),
+inst:dps.aba==='inst',pc:dps.aba==='pc'&&dps.alvo==='assinatura',
 abaInst:()=>this.dpSet({aba:'inst'}),abaPc:()=>this.dpSet({aba:'pc'}),
 clsInst:dps.aba==='inst'?'pri':'',clsPc:dps.aba==='pc'?'pri':'',
 statusOpts:dpStatusOpts.map(o=>({label:o[1],pressed:o[0]===dps.status,cls:o[0]===dps.status?'pri':'',on:()=>{this.dpSet({status:o[0]});this.dpCarregar(true);}})),
 dir:dps.dir,onDir:e=>this.dpSet({dir:e.target.value.replace(/\D/g,'')}),onDirKey:e=>{if(e.key==='Enter'){e.preventDefault();this.dpCarregar(true);}},
 escolherPasta:()=>this.pkAbrir({modo:'id',sc:'docpick'}),sub:!!dps.sub,onSub:e=>{this.dpSet({sub:e.target.checked});this.dpCarregar(true);},
 busca:dps.busca,onBusca:e=>this.dpSet({busca:e.target.value}),buscar:()=>this.dpCarregar(true),
-itens:dps.itens.filter(it=>!dpBusca||String(it.nomeArquivo||'').toLowerCase().indexOf(dpBusca)>=0).map(it=>({id:it.documentoId,nome:it.nomeArquivo||('documento '+it.documentoId),meta:'ID '+it.documentoId+' · pasta '+it.diretorioId+(it.dataEnvio?' · enviado em '+fmtDT(it.dataEnvio):'')+(it.statusAssinatura?' · '+(STL[it.statusAssinatura]||it.statusAssinatura):''),usarLabel:'Usar '+(it.nomeArquivo||it.documentoId),usar:()=>this.dpUsar(it)})),
+itens:dps.itens.filter(it=>!dpBusca||String(it.nomeArquivo||'').toLowerCase().indexOf(dpBusca)>=0).map(it=>({id:it.documentoId,nome:it.nomeArquivo||('documento '+it.documentoId),meta:'ID '+it.documentoId+' · pasta '+it.diretorioId+(it.dataEnvio?' · enviado em '+fmtDT(it.dataEnvio):'')+(it.statusAssinatura?' · '+(STL[it.statusAssinatura]||it.statusAssinatura):''),usarLabel:'Usar '+(it.nomeArquivo||it.documentoId),usar:()=>this.dpUsar(it),marcada:!!(dps.sel||{})[it.documentoId],marcarLabel:'Marcar '+(it.nomeArquivo||it.documentoId),marcar:()=>this.dpMarcar(it)})),
 busy:!!dps.busy,hasErr:!!dps.erro,err:dps.erro,temMais:!!dps.temMais&&!dps.busy,mais:()=>this.dpCarregar(false),
 vazio:!dps.busy&&!dps.erro&&dps.carregou&&dps.itens.length===0,
 semResultado:!dps.busy&&dps.itens.length>0&&!!dpBusca&&dps.itens.filter(it=>String(it.nomeArquivo||'').toLowerCase().indexOf(dpBusca)>=0).length===0,
@@ -2918,7 +2938,7 @@ const vgNovos=(s.vg.todos||[]).reduce((n,v)=>n+v.eventos.filter(e=>e.id>(s.vg.vi
 const VGT={assinado:['ok','Assinado'],signatario_assinou:['ok','Assinou'],signatario_visualizou:['mu','Visualizou'],perto_de_expirar:['wn','Perto de expirar'],expirado:['er','Expirado'],cancelado:['er','Cancelado'],status:['mu','Status']};
 const fvg=s.forms.vigia;
 const vg={
-intervalo:fvg.intervalo,alerta:fvg.alerta,ids:fvg.ids,onIds:this.hf('vigia','ids'),
+intervalo:fvg.intervalo,alerta:fvg.alerta,ids:fvg.ids,onIds:this.hf('vigia','ids'),escolherDocs:()=>this.dpAbrir('vigia'),
 intervaloOpts:[['5','a cada 5 min'],['10','a cada 10 min'],['30','a cada 30 min'],['60','a cada hora'],['240','a cada 4 horas']].map(a=>({value:a[0],label:a[1],selected:fvg.intervalo===a[0]})),onIntervalo:e=>this.setF('vigia',{intervalo:e.target.value}),
 alertaOpts:[['24','24 horas antes'],['48','48 horas antes'],['72','3 dias antes'],['168','7 dias antes']].map(a=>({value:a[0],label:a[1],selected:fvg.alerta===a[0]})),onAlerta:e=>this.setF('vigia',{alerta:e.target.value}),
 ativo:!!vgV&&vgV.ativo,parado:!(!!vgV&&vgV.ativo),iniciarLabel:(!!vgV&&vgV.ativo)?'Aplicar e reiniciar':'Iniciar vigia',

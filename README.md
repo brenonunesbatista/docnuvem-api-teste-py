@@ -94,6 +94,9 @@ Opções: `--porta N`, `--nao-abrir`, `--sem-historico`, `--dados PASTA`.
   na página…" abre uma folha (A4 ou carta, retrato ou paisagem) onde você **arrasta o carimbo** de cada
   assinante (também com as setas do teclado); grava `posicao` em fração da página (0 a 1) e, sem
   página, vale a última. A folha é só referência de proporção, não mostra o PDF.
+- **Seletor de arquivo também no vigia e nas telas de status e download**: "Escolher documentos…" no
+  vigia marca vários documentos da plataforma de uma vez e junta os IDs aos que você já digitou (sem
+  repetir); em Status e Download, "Escolher o arquivo…" preenche o `documentoId`.
 - **Modo marca branca** (botão do olho riscado, na barra de cima): esconde, na tela, toda menção ao
   Docnuvem (nome, logotipo, endereço do servidor, textos e dicas, e também os textos copiados), com
   um nome opcional no lugar, para demonstrar a clientes. Só muda o que é exibido, nunca o que vai
