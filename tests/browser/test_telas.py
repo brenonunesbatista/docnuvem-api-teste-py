@@ -1391,3 +1391,34 @@ def test_marca_branca_pelo_endereco(pagina: Pagina, upstream: Upstream) -> None:
     assert _menciona_a_marca(page) == []
     page.goto(pagina.base + "/?marca=normal")
     expect(page.locator(".bname")).to_contain_text("Docnuvem")
+
+
+def test_assinatura_folha_muda_de_formato_e_o_filtro_de_status_funciona(
+    pagina: Pagina, upstream: Upstream
+) -> None:
+    page = pagina.page
+    _documentos_da_instancia(upstream)
+    pagina.ir("Solicitar assinatura")
+    pagina.botao("Escolher o arquivo…").click()
+    arquivo = _dialogo(page, "Escolher o arquivo")
+    expect(arquivo.get_by_role("button", name="Sem assinatura")).to_have_attribute(
+        "aria-pressed", "true"
+    )
+    arquivo.get_by_role("button", name="Pendente").click()
+    expect(arquivo.get_by_role("button", name="Pendente")).to_have_attribute("aria-pressed", "true")
+    consultas = [c["path"] for c in upstream.recebidas if c["rota"] == "/api/documentos"]
+    assert "status=pendente" in consultas[-1]
+    arquivo.get_by_role("button", name="Fechar").click()
+    _um_assinante(page)
+    pagina.botao("Posicionar as assinaturas na página…").click()
+    modal = _dialogo(page, "Posicionar")
+    folha = modal.locator("#pl-folha")
+    retrato = folha.bounding_box()
+    assert retrato and retrato["height"] > retrato["width"]
+    modal.get_by_role("button", name="Paisagem").click()
+    expect(modal.get_by_role("button", name="Paisagem")).to_have_attribute("aria-pressed", "true")
+    paisagem = folha.bounding_box()
+    assert paisagem and paisagem["width"] > paisagem["height"]
+    modal.get_by_role("button", name="Carta").click()
+    carta = folha.bounding_box()
+    assert carta and abs(carta["width"] / carta["height"] - 279.4 / 215.9) < 0.02

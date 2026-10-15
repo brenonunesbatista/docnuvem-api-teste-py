@@ -311,7 +311,7 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
 .sk{border-radius:14px;height:50px;background:linear-gradient(90deg,var(--sf2) 25%,var(--sf) 50%,var(--sf2) 75%);background-size:200% 100%;animation:skm 1.2s infinite linear}
 @keyframes skm{from{background-position:200% 0}to{background-position:-200% 0}}
 html[data-marca-logo] .logo{-webkit-mask:none;mask:none;background:var(--ac);border-radius:12px}
-.plwrap{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:16px;overflow:auto;min-height:0}
+.plwrap{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:16px;overflow:auto;min-height:0;user-select:none;-webkit-user-select:none}
 @media(max-width:760px){.plwrap{grid-template-columns:1fr}}
 .plfolha{position:relative;background:#fff;border:1px solid var(--ln);box-shadow:0 6px 24px rgba(0,0,0,.28);margin:0 auto;width:100%;touch-action:none;user-select:none;-webkit-user-select:none}
 .plfolha .linhas{position:absolute;inset:6% 8%;background-image:repeating-linear-gradient(#0000 0 15px,#0000001a 15px 16px);pointer-events:none}
@@ -1209,7 +1209,7 @@ html[data-marca-logo] .logo{-webkit-mask:none;mask:none;background:var(--ac);bor
         <div class="row"><button class="btn sm {{dp.clsInst}}" type="button" onClick="{{dp.abaInst}}">Da plataforma</button><button class="btn sm {{dp.clsPc}}" type="button" onClick="{{dp.abaPc}}">Do computador</button></div>
         <sc-if value="{{dp.inst}}" hint-placeholder-val="{{ false }}">
           <div class="grid2">
-            <div class="field"><label class="lbl" for="dp-st"><span>Status</span></label><select id="dp-st" value="{{dp.status}}" onChange="{{dp.onStatus}}"><sc-for list="{{dp.statusOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.value}}" selected="{{o.selected}}">{{o.label}}</option></sc-for></select></div>
+            <div class="field"><span class="lbl"><span>Status</span></span><div class="row" role="group" aria-label="Filtrar por status" style="gap:6px"><sc-for list="{{dp.statusOpts}}" as="o" hint-placeholder-count="3"><button class="btn sm {{o.cls}}" type="button" aria-pressed="{{o.pressed}}" onClick="{{o.on}}">{{o.label}}</button></sc-for></div></div>
             <div class="field"><label class="lbl" for="dp-dir"><span>Pasta (ID)</span><span class="tag">opcional</span></label><input id="dp-dir" type="text" value="{{dp.dir}}" placeholder="todas as pastas" autocomplete="off" onInput="{{dp.onDir}}" onKeyDown="{{dp.onDirKey}}"><button class="link" type="button" onClick="{{dp.escolherPasta}}">Escolher na estrutura de pastas…</button></div>
           </div>
           <label class="sw"><input type="checkbox" checked="{{dp.sub}}" onChange="{{dp.onSub}}"><span class="track"></span><span class="swt">Incluir as subpastas</span></label>
@@ -1243,8 +1243,9 @@ html[data-marca-logo] .logo{-webkit-mask:none;mask:none;background:var(--ac);bor
       <div class="pkm" style="width:min(980px,100%)" role="dialog" aria-label="Posicionar as assinaturas na página" onClick="{{stop}}">
         <div class="pkhead"><h2>Posicionar as assinaturas</h2><button class="ib" type="button" aria-label="Fechar" onClick="{{pl.fechar}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.x}}"/></svg></button></div>
         <div class="row">
-          <label class="hint" for="pl-fmt">Folha</label><select id="pl-fmt" value="{{pl.fmt}}" onChange="{{pl.onFmt}}" style="width:auto"><sc-for list="{{pl.fmtOpts}}" as="o" hint-placeholder-count="2"><option value="{{o.value}}" selected="{{o.selected}}">{{o.label}}</option></sc-for></select>
-          <select aria-label="Orientação" value="{{pl.orient}}" onChange="{{pl.onOrient}}" style="width:auto"><sc-for list="{{pl.orientOpts}}" as="o" hint-placeholder-count="2"><option value="{{o.value}}" selected="{{o.selected}}">{{o.label}}</option></sc-for></select>
+          <span class="hint">Folha</span>
+          <div class="row" role="group" aria-label="Tamanho da folha" style="gap:6px"><sc-for list="{{pl.fmtOpts}}" as="o" hint-placeholder-count="2"><button class="btn sm {{o.cls}}" type="button" aria-pressed="{{o.pressed}}" onClick="{{o.on}}">{{o.label}}</button></sc-for></div>
+          <div class="row" role="group" aria-label="Orientação da folha" style="gap:6px"><sc-for list="{{pl.orientOpts}}" as="o" hint-placeholder-count="2"><button class="btn sm {{o.cls}}" type="button" aria-pressed="{{o.pressed}}" onClick="{{o.on}}">{{o.label}}</button></sc-for></div>
           <label class="sw"><input type="checkbox" checked="{{pl.ultima}}" onChange="{{pl.onUltima}}"><span class="track"></span><span class="swt">Última página</span></label>
           <label class="hint" for="pl-pag">Página</label><input id="pl-pag" type="text" value="{{pl.pag}}" disabled="{{pl.pagOff}}" onInput="{{pl.onPag}}" style="width:70px" inputmode="numeric">
         </div>
@@ -2736,15 +2737,14 @@ logo:!!mbs.logo,onLogo:e=>this.mbDefinir({logo:e.target.checked}),
 estadoTxt:mbs.on?'Ligado: as menções à marca estão ocultas nesta tela.':'Desligado: a tela mostra a marca normalmente.'
 };
 const dps=s.dp;
-const dpStatusOpts=[['sem_assinatura','Sem assinatura (prontos para solicitar)'],['','Qualquer status'],['pendente','Pendente'],['assinado','Assinado'],['expirado','Expirado'],['cancelado','Cancelado']];
+const dpStatusOpts=[['sem_assinatura','Sem assinatura'],['','Qualquer'],['pendente','Pendente'],['assinado','Assinado'],['expirado','Expirado'],['cancelado','Cancelado']];
 const dpBusca=(dps.busca||'').trim().toLowerCase();
 const dpv={
 open:!!dps.aberto,fechar:()=>this.dpSet({aberto:false}),
 inst:dps.aba==='inst',pc:dps.aba==='pc',
 abaInst:()=>this.dpSet({aba:'inst'}),abaPc:()=>this.dpSet({aba:'pc'}),
 clsInst:dps.aba==='inst'?'pri':'',clsPc:dps.aba==='pc'?'pri':'',
-statusOpts:dpStatusOpts.map(o=>({value:o[0],label:o[1],selected:o[0]===dps.status})),
-onStatus:e=>{this.dpSet({status:e.target.value});this.dpCarregar(true);},
+statusOpts:dpStatusOpts.map(o=>({label:o[1],pressed:o[0]===dps.status,cls:o[0]===dps.status?'pri':'',on:()=>{this.dpSet({status:o[0]});this.dpCarregar(true);}})),
 dir:dps.dir,onDir:e=>this.dpSet({dir:e.target.value.replace(/\D/g,'')}),onDirKey:e=>{if(e.key==='Enter'){e.preventDefault();this.dpCarregar(true);}},
 escolherPasta:()=>this.pkAbrir({modo:'id',sc:'docpick'}),sub:!!dps.sub,onSub:e=>{this.dpSet({sub:e.target.checked});this.dpCarregar(true);},
 busca:dps.busca,onBusca:e=>this.dpSet({busca:e.target.value}),buscar:()=>this.dpCarregar(true),
@@ -2766,10 +2766,10 @@ const plTem=g=>g.x!==''&&g.y!==''&&!isNaN(+g.x)&&!isNaN(+g.y);
 const plAqui=g=>plTem(g)&&(pls.ultima?plPg(g)==='':plPg(g)===String(pls.pag).trim());
 const plv={
 abrirBtn:()=>this.plAbrir(),open:!!pls.aberto,fechar:()=>this.plSet({aberto:false}),
-fmtOpts:[['a4','A4'],['carta','Carta']].map(o=>({value:o[0],label:o[1],selected:o[0]===pls.fmt})),onFmt:e=>this.plSet({fmt:e.target.value}),
-orientOpts:[['p','Retrato'],['l','Paisagem']].map(o=>({value:o[0],label:o[1],selected:o[0]===pls.orient})),onOrient:e=>this.plSet({orient:e.target.value}),
+fmtOpts:[['a4','A4'],['carta','Carta']].map(o=>({label:o[1],pressed:o[0]===pls.fmt,cls:o[0]===pls.fmt?'pri':'',on:()=>this.plSet({fmt:o[0]})})),
+orientOpts:[['p','Retrato'],['l','Paisagem']].map(o=>({label:o[1],pressed:o[0]===pls.orient,cls:o[0]===pls.orient?'pri':'',on:()=>this.plSet({orient:o[0]})})),
 ultima:!!pls.ultima,onUltima:e=>this.plSet({ultima:e.target.checked}),pag:pls.pag,onPag:e=>this.plSet({pag:e.target.value.replace(/\D/g,'')}),pagOff:!!pls.ultima,
-folhaStyle:'aspect-ratio:'+(plLand?plDim[1]+' / '+plDim[0]:plDim[0]+' / '+plDim[1])+';max-width:'+(plLand?'600px':'430px'),
+folhaStyle:'aspect-ratio:'+(plLand?plDim[1]/plDim[0]:plDim[0]/plDim[1]).toFixed(4)+';width:min(100%,calc(50vh*'+(plLand?plDim[1]/plDim[0]:plDim[0]/plDim[1]).toFixed(4)+'))',
 carimbos:plf.signers.map((g,i)=>({g,i})).filter(o=>plAqui(o.g)).map(o=>({
 label:(o.i+1)+'. '+(o.g.nome||'Assinante '+(o.i+1)),aria:'Carimbo de '+(o.g.nome||'assinante '+(o.i+1))+'. Arraste ou use as setas.',
 cls:o.i===pls.sel?'sel':'',style:'left:'+(+o.g.x*100)+'%;top:'+(+o.g.y*100)+'%;width:'+(PLW*100)+'%;height:'+(PLH*100)+'%;border-color:'+plCor(o.i)+';background:'+plCor(o.i)+'55',
