@@ -1298,3 +1298,96 @@ def test_assinatura_posicao_sem_pagina_e_aceita_no_formulario(
     modal.get_by_role("button", name="Concluir").click()
     page.get_by_role("button", name="Opções avançadas").first.click()
     expect(page.locator("main")).not_to_contain_text("Preencha")  # página vazia vale a última
+
+
+# ------------------------------------------------------------- marca branca ---
+
+
+def _menciona_a_marca(page: Any) -> list[str]:
+    """Tudo que a tela MOSTRA e cita a marca (textos, títulos, dicas, título da aba)."""
+    achados: list[str] = page.evaluate(
+        """() => {
+        const re = /docnuvem/i, out = [];
+        const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+        for (let n = w.nextNode(); n; n = w.nextNode()) {
+          const e = n.parentElement;
+          const ok = e && !['SCRIPT','STYLE','TEXTAREA'].includes(e.tagName);
+          if (ok && re.test(n.nodeValue)) out.push(n.nodeValue.trim());
+        }
+        document.querySelectorAll('[title],[aria-label],[placeholder],[alt]').forEach(el => {
+          for (const a of ['title','aria-label','placeholder','alt']) {
+            const v = el.getAttribute(a); if (v && re.test(v)) out.push(a + ': ' + v);
+          }
+        });
+        if (re.test(document.title)) out.push('title: ' + document.title);
+        return out;
+      }"""
+    )
+    return [a for a in achados if "Modo marca branca" not in a]
+
+
+def _ligar_marca_branca(pagina: Pagina, nome: str = "") -> None:
+    page = pagina.page
+    page.get_by_role("button", name="Modo marca branca").click()
+    modal = _dialogo(page, "Modo marca branca")
+    if nome:
+        modal.locator("#mb-nome").fill(nome)
+    modal.get_by_text("Ocultar as menções à marca").click()
+    expect(modal).to_contain_text("Ligado")
+    modal.get_by_role("button", name="Concluir").click()
+
+
+def test_marca_branca_esconde_toda_mencao_ao_docnuvem(pagina: Pagina, upstream: Upstream) -> None:
+    page = pagina.page
+    assert _menciona_a_marca(page)  # sem o modo, a marca aparece
+    _ligar_marca_branca(pagina)
+    assert _menciona_a_marca(page) == []
+    expect(page.locator(".bname")).to_contain_text("Plataforma")
+    for tela in ("Importar pasta", "Baixar pasta", "Excluir em massa", "Solicitar assinatura"):
+        pagina.ir(tela)
+        assert _menciona_a_marca(page) == [], tela
+    pagina.ir("Importar pasta")
+    expect(page.locator("main")).to_contain_text("Pasta na plataforma")  # a frase continua certa
+
+
+def test_marca_branca_com_nome_proprio_e_que_persiste(pagina: Pagina, upstream: Upstream) -> None:
+    page = pagina.page
+    _ligar_marca_branca(pagina, "Acme Sign")
+    expect(page.locator(".bname")).to_contain_text("Acme Sign")
+    pagina.ir("Importar pasta")
+    expect(page.locator("main")).to_contain_text("Pasta no Acme Sign")
+    page.reload()
+    expect(page.locator(".bname")).to_contain_text("Acme Sign")  # guardado no navegador
+    assert _menciona_a_marca(page) == []
+    assert "Acme Sign" in page.title()
+
+
+def test_marca_branca_nao_mexe_no_que_e_enviado(pagina: Pagina, upstream: Upstream) -> None:
+    page = pagina.page
+    _documentos_da_instancia(upstream)
+    _ligar_marca_branca(pagina, "Acme Sign")
+    pagina.ir("Solicitar assinatura")
+    pagina.botao("Escolher o arquivo…").click()
+    modal = _dialogo(page, "Escolher o arquivo")
+    expect(modal.locator(".dprow")).to_have_count(3)
+    consultas = [c["path"] for c in upstream.recebidas if c["rota"] == "/api/documentos"]
+    assert consultas and all("Acme" not in c for c in consultas)  # a API não vê a troca
+
+
+def test_marca_branca_desligar_traz_a_marca_de_volta(pagina: Pagina, upstream: Upstream) -> None:
+    page = pagina.page
+    _ligar_marca_branca(pagina)
+    page.get_by_role("button", name="Modo marca branca").click()
+    modal = _dialogo(page, "Modo marca branca")
+    modal.get_by_text("Ocultar as menções à marca").click()  # desliga: a página recarrega
+    expect(page.locator(".bname")).to_contain_text("Docnuvem")
+    assert _menciona_a_marca(page)
+
+
+def test_marca_branca_pelo_endereco(pagina: Pagina, upstream: Upstream) -> None:
+    page = pagina.page
+    page.goto(pagina.base + "/?marca=branca&nome=Minha%20Marca")
+    expect(page.locator(".bname")).to_contain_text("Minha Marca")
+    assert _menciona_a_marca(page) == []
+    page.goto(pagina.base + "/?marca=normal")
+    expect(page.locator(".bname")).to_contain_text("Docnuvem")

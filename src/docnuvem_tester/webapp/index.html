@@ -310,6 +310,7 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
 .pkcard .usar:hover{background:var(--acs);color:var(--act)}
 .sk{border-radius:14px;height:50px;background:linear-gradient(90deg,var(--sf2) 25%,var(--sf) 50%,var(--sf2) 75%);background-size:200% 100%;animation:skm 1.2s infinite linear}
 @keyframes skm{from{background-position:200% 0}to{background-position:-200% 0}}
+html[data-marca-logo] .logo{-webkit-mask:none;mask:none;background:var(--ac);border-radius:12px}
 .plwrap{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:16px;overflow:auto;min-height:0}
 @media(max-width:760px){.plwrap{grid-template-columns:1fr}}
 .plfolha{position:relative;background:#fff;border:1px solid var(--ln);box-shadow:0 6px 24px rgba(0,0,0,.28);margin:0 auto;width:100%;touch-action:none;user-select:none;-webkit-user-select:none}
@@ -370,6 +371,7 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
         </div>
         <label class="sw" title="Desligue para enviar dados inválidos e ver como a API responde"><input type="checkbox" checked="{{validar}}" onChange="{{onValidar}}"><span class="track"></span><span>Validação local</span></label>
         <button class="btn" type="button" onClick="{{toggleLog}}" aria-label="Abrir log de chamadas"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.list}}"/></svg>Log<span class="pill">{{logCount}}</span></button>
+        <button class="btn" type="button" onClick="{{mb.abrir}}" aria-label="Modo marca branca" title="Modo marca branca"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.eyeoff}}"/></svg></button>
         <button class="btn" type="button" onClick="{{toggleTheme}}" aria-label="{{themeLabel}}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{themeIcon}}"/></svg></button>
       </header>
 
@@ -1186,6 +1188,20 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
   </sc-if>
 
   <!-- ===== SELETOR DE PASTAS ===== -->
+  <sc-if value="{{mb.open}}" hint-placeholder-val="{{ false }}">
+    <div class="pal sheet" onClick="{{mb.fechar}}">
+      <div class="pkm" style="width:min(520px,100%)" role="dialog" aria-label="Modo marca branca" data-marca-ignora="1" onClick="{{stop}}">
+        <div class="pkhead"><h2>Modo marca branca</h2><button class="ib" type="button" aria-label="Fechar" onClick="{{mb.fechar}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.x}}"/></svg></button></div>
+        <p class="muted small">Para demonstrar a ferramenta a clientes com a marca deles: esconde, na tela, toda menção ao Docnuvem (nome, logotipo, endereço do servidor, textos e dicas). Só muda o que é exibido; nada muda no que é enviado à API. Fica guardado neste navegador.</p>
+        <label class="sw"><input type="checkbox" checked="{{mb.on}}" onChange="{{mb.onLigar}}"><span class="track"></span><span class="swt">Ocultar as menções à marca</span></label>
+        <div class="field"><label class="lbl" for="mb-nome"><span>Nome para exibir no lugar</span><span class="tag">opcional</span></label><input id="mb-nome" type="text" value="{{mb.nome}}" placeholder="vazio = texto neutro (&quot;plataforma&quot;)" autocomplete="off" onInput="{{mb.onNome}}"></div>
+        <label class="sw"><input type="checkbox" checked="{{mb.logo}}" onChange="{{mb.onLogo}}"><span class="track"></span><span class="swt">Trocar o logotipo por um ícone neutro</span></label>
+        <div class="muted small" role="status">{{mb.estadoTxt}}</div>
+        <div class="muted small">Atalho: abra o endereço com <code>?marca=branca</code> (e <code>&amp;nome=Minha Marca</code>) para ligar, ou <code>?marca=normal</code> para desligar. Ao desligar, a página recarrega.</div>
+        <div class="pkfoot"><span class="grow"></span><button class="btn pri" type="button" onClick="{{mb.fechar}}">Concluir</button></div>
+      </div>
+    </div>
+  </sc-if>
   <sc-if value="{{dp.open}}" hint-placeholder-val="{{ false }}">
     <div class="pal sheet" onClick="{{dp.fechar}}">
       <div class="pkm" role="dialog" aria-label="Escolher o arquivo para assinar" onClick="{{stop}}">
@@ -1303,6 +1319,7 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
 
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1360,"height":900}}'>
 const ICON={
+eyeoff:'M3 3l18 18M10.6 10.6a2 2 0 002.8 2.8M9.9 5.1A9.8 9.8 0 0112 5c5 0 8.5 4.2 9.5 7a11 11 0 01-3.2 4.4M6.2 6.3A11 11 0 002.5 12c1 2.8 4.5 7 9.5 7a9.7 9.7 0 004-.9',
 home:'M3 11l9-8 9 8M5 10v10h14V10M10 20v-6h4v6',
 upload:'M12 16V4M7 9l5-5 5 5M4 20h16',
 zap:'M13 2L4 14h7l-1 8 9-12h-7z',
@@ -1396,6 +1413,72 @@ const fmtDur=sec=>{sec=Math.max(1,Math.round(sec));if(sec<60)return sec+' s';if(
 // Estimativa de conclusão: ritmo medido desde a primeira leitura desta tarefa (sobrevive a recarregar a tela).
 const ETA={};
 let DPFILE=null;
+// Modo marca branca (demonstrações): troca, na tela, toda menção à marca. Só mexe no que é MOSTRADO
+// (textos, títulos, dicas, o logotipo); nunca em valores de campos nem no que vai para a API.
+const MARCA=(function(){
+const K='docnuvem-marca';
+let st={on:false,nome:'',logo:true},obs=null;
+const salvar=()=>{try{localStorage.setItem(K,JSON.stringify(st));}catch(e){}};
+try{const r=JSON.parse(localStorage.getItem(K)||'null');if(r&&typeof r==='object')st=Object.assign(st,r);}catch(e){}
+try{const q=new URLSearchParams(location.search),m=q.get('marca');
+if(m==='branca'||m==='1'){st.on=true;if(q.get('nome'))st.nome=q.get('nome').slice(0,40);salvar();}
+else if(m==='normal'||m==='0'){st.on=false;salvar();}}catch(e){}
+const cap=(m,t)=>/^[A-ZÀ-Ý]/.test(m)?t.charAt(0).toUpperCase()+t.slice(1):t;
+const HOST=/(?:[\w-]+\.)*[\w-]*docnuvem[\w-]*(?:\.[\w-]+)+(?::\d+)?/gi;
+function limpa(t){
+if(!st.on||!t||!/docnuvem/i.test(t))return t;
+const N=(st.nome||'').trim();
+let r=t.replace(HOST,'servidor-da-api').replace(/docnuvem-web/gi,'servidor-local');
+if(N)return r.replace(/docnuvem/gi,N);
+r=r.replace(/\b(n|d|a|pel)o\s+docnuvem\b/gi,(m,p)=>cap(m,({n:'na',d:'da',a:'à',pel:'pela'})[p.toLowerCase()]+' plataforma'));
+r=r.replace(/\bo\s+docnuvem\b/gi,m=>cap(m,'a plataforma'));
+return r.replace(/docnuvem/gi,(m,i)=>i===0?'Plataforma':'plataforma');
+}
+const PULA={SCRIPT:1,STYLE:1,TEXTAREA:1,NOSCRIPT:1};
+const ignorado=n=>{const e=n.nodeType===1?n:n.parentElement;return !e||!!PULA[e.tagName]||!!(e.closest&&e.closest('[data-marca-ignora]'));};
+const ATTR=['title','aria-label','placeholder','alt'];
+function attrs(el){ATTR.forEach(a=>{const v=el.getAttribute&&el.getAttribute(a);if(v){const n=limpa(v);if(n!==v)el.setAttribute(a,n);}});}
+function varre(raiz){
+if(!st.on||!raiz)return;
+if(raiz.nodeType===3){if(!ignorado(raiz)){const n=limpa(raiz.nodeValue);if(n!==raiz.nodeValue)raiz.nodeValue=n;}return;}
+if(raiz.nodeType!==1||ignorado(raiz))return;
+const w=document.createTreeWalker(raiz,NodeFilter.SHOW_TEXT);let x;const lote=[];
+while((x=w.nextNode()))lote.push(x);
+lote.forEach(t=>{if(!ignorado(t)){const n=limpa(t.nodeValue);if(n!==t.nodeValue)t.nodeValue=n;}});
+attrs(raiz);raiz.querySelectorAll('[title],[aria-label],[placeholder],[alt]').forEach(el=>{if(!ignorado(el))attrs(el);});
+}
+function icone(){
+const l=document.querySelector('link[rel=icon]');if(!l)return;
+if(!l.dataset.orig)l.dataset.orig=l.getAttribute('href')||'';
+l.setAttribute('href',st.on&&st.logo?'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#5b5bd6"/></svg>'):l.dataset.orig);
+}
+function aplica(){
+const h=document.documentElement;
+if(st.on&&st.logo)h.setAttribute('data-marca-logo','1');else h.removeAttribute('data-marca-logo');
+if(st.on)h.setAttribute('data-marca','1');else h.removeAttribute('data-marca');
+if(st.on){document.title=limpa(document.title);varre(document.body);}
+icone();
+}
+function observa(){
+if(obs||!window.MutationObserver)return;
+obs=new MutationObserver(ms=>{
+if(!st.on)return;
+obs.disconnect();
+try{ms.forEach(m=>{
+if(m.type==='characterData')varre(m.target);
+else if(m.type==='attributes'){if(!ignorado(m.target))attrs(m.target);}
+else m.addedNodes.forEach(n=>varre(n));});
+const t=limpa(document.title);if(t!==document.title)document.title=t;
+}finally{obs.observe(document.documentElement,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:ATTR});}
+});
+obs.observe(document.documentElement,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:ATTR});
+}
+return {
+estado:()=>Object.assign({},st),limpa,
+iniciar(){observa();aplica();},
+definir(p){const antes=st.on;st=Object.assign(st,p);salvar();if(antes&&!st.on){location.reload();return;}aplica();}
+};
+})();
 const PLW=0.284,PLH=0.081;
 function eta(chave,id,ativo,feitos,total){
 if(!ativo||!total){delete ETA[chave];return '';}
@@ -1508,7 +1591,7 @@ lote:{csvNome:'',csvTexto:'',modo:'enviar',intervalo:'500',confirmando:false},
 fumaca:{ok:false},
 baixar:{diretorioId:'',subpastas:true,estrutura:true,conflito:'renomear',destino:'',status:'',dataInicio:'',dataFim:''},
 perfis:{aberto:false,original:'',nome:'',instancia:'',baseUrl:'',token:'',protecao:'',erro:'',salvando:false,rm:''}},
-results:{},loading:{},lists:{},diag:{},bx:{id:'',snap:null,erro:'',escolhendo:false},cmp:{busy:false,res:null,erro:''},pk:{aberto:false,alvo:null,cache:{},trilha:[],busca:'',sel:{},novo:{aberto:false,nome:'',busy:false,erro:''}},dp:{aberto:false,aba:'inst',status:'sem_assinatura',dir:'',sub:false,busca:'',itens:[],pagina:0,temMais:false,busy:false,erro:'',carregou:false,upNome:'',upPasta:'',upPai:'',upBusy:false,upErro:''},pl:{aberto:false,fmt:'a4',orient:'p',pag:'1',ultima:true,sel:-1},px:{ens:null,erro:'',busy:false,conf:'',ok:''},lg:{aberto:false,perfil:'',login:'',senha:'',busy:false,erro:'',voltar:false},pn:{res:null,busy:false,erro:''},mn:{snap:null,vistos:null,sel:{},intervalo:'5',erro:''},ip:{ens:null,erro:'',busy:false,escolhendo:false,id:'',snap:null},ex:{ens:null,erro:'',busy:false,id:'',snap:null,verifId:'',verif:null},vg:{todos:[],vistos:{},notif:false,erro:''},lt:{val:null,erro:'',validando:false,id:'',snap:null},fm:{busy:false,res:null,erro:''},protPend:null,tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
+results:{},loading:{},lists:{},diag:{},bx:{id:'',snap:null,erro:'',escolhendo:false},cmp:{busy:false,res:null,erro:''},pk:{aberto:false,alvo:null,cache:{},trilha:[],busca:'',sel:{},novo:{aberto:false,nome:'',busy:false,erro:''}},dp:{aberto:false,aba:'inst',status:'sem_assinatura',dir:'',sub:false,busca:'',itens:[],pagina:0,temMais:false,busy:false,erro:'',carregou:false,upNome:'',upPasta:'',upPai:'',upBusy:false,upErro:''},pl:{aberto:false,fmt:'a4',orient:'p',pag:'1',ultima:true,sel:-1},mb:{aberto:false,v:0},px:{ens:null,erro:'',busy:false,conf:'',ok:''},lg:{aberto:false,perfil:'',login:'',senha:'',busy:false,erro:'',voltar:false},pn:{res:null,busy:false,erro:''},mn:{snap:null,vistos:null,sel:{},intervalo:'5',erro:''},ip:{ens:null,erro:'',busy:false,escolhendo:false,id:'',snap:null},ex:{ens:null,erro:'',busy:false,id:'',snap:null,verifId:'',verif:null},vg:{todos:[],vistos:{},notif:false,erro:''},lt:{val:null,erro:'',validando:false,id:'',snap:null},fm:{busy:false,res:null,erro:''},protPend:null,tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
 paletteOpen:false,paletteQ:'',toast:'',wizStep:0,lastMat:'',openSol:null,navMin:false,
 lastDoc:{},lastAss:{},
 sort:{documentos:{k:'criadoEm',d:-1},pastas:{k:'caminho',d:1}},openModelo:'',dragging:false,newSg:sg};
@@ -1516,7 +1599,7 @@ sort:{documentos:{k:'criadoEm',d:-1},pastas:{k:'caminho',d:1}},openModelo:'',dra
 
 class Component extends DCLogic {
 constructor(){super(...arguments);this.state=mkState();this.seq=0;this._sid=Date.now().toString(36);this._p={errs:{},warns:{}};}
-componentDidMount(){try{if(localStorage.getItem('docnuvem-nav-min')==='1')this.setState({navMin:true});const tm=localStorage.getItem('docnuvem-tema');if(tm==='light'||tm==='dark')this.setState({theme:tm});}catch(e){}
+componentDidMount(){MARCA.iniciar();try{if(localStorage.getItem('docnuvem-nav-min')==='1')this.setState({navMin:true});const tm=localStorage.getItem('docnuvem-tema');if(tm==='light'||tm==='dark')this.setState({theme:tm});}catch(e){}
 this._iv=setInterval(()=>{if(this.state.screen==='download'&&this.state.results.download)this.forceUpdate();},1000);
 this._api=setInterval(()=>this.checarApi(false),60000);
 this._vgN={};
@@ -1690,6 +1773,9 @@ const m=b&&(b.retorno||b.erro||b.mensagem)||env.body||'';
 err('A API recusou o envio (HTTP '+env.status+')'+(m?': '+String(m).slice(0,240):'.'));
 }).catch(e=>err('O servidor local não respondeu: '+e.message));
 }
+mbAbrir(){this.setState({mb:{aberto:true,v:this.state.mb.v}});}
+mbFechar(){this.setState({mb:{aberto:false,v:this.state.mb.v}});}
+mbDefinir(p){MARCA.definir(p);this.setState({mb:{aberto:this.state.mb.aberto,v:this.state.mb.v+1}});}
 plSet(patch){this.setState({pl:Object.assign({},this.state.pl,patch)});}
 plAbrir(){this.plSet({aberto:true,sel:-1});}
 plSigners(fn){const f=this.state.forms.assinatura;this.setF('assinatura',{signers:f.signers.map(fn)});}
@@ -1999,7 +2085,7 @@ componentWillUnmount(){clearInterval(this._iv);clearInterval(this._api);clearInt
 eff(){const s=this.state;return s.screen==='fluxo'?['importar','assinatura','resultado'][s.wizStep]:s.screen;}
 setF(sc,patch){const s=this.state;this.setState({forms:Object.assign({},s.forms,{[sc]:Object.assign({},s.forms[sc],patch)})});}
 hf(sc,key,tf){return e=>{const t=e.target;let v=t.type==='checkbox'?t.checked:t.value;if(tf)v=tf(v);this.setF(sc,{[key]:v});};}
-copy(t,msg){const done=()=>{this.setState({toast:msg||'Copiado!'});clearTimeout(this._tt);this._tt=setTimeout(()=>this.setState({toast:''}),msg?3200:1700);};
+copy(t0,msg){const t=MARCA.limpa(t0);const done=()=>{this.setState({toast:msg||'Copiado!'});clearTimeout(this._tt);this._tt=setTimeout(()=>this.setState({toast:''}),msg?3200:1700);};
 try{navigator.clipboard.writeText(t).then(done,()=>this.fb(t,done));}catch(e){this.fb(t,done);}}
 fb(t,done){try{const a=document.createElement('textarea');a.value=t;a.style.position='fixed';a.style.opacity='0';document.body.appendChild(a);a.select();document.execCommand('copy');a.remove();}catch(e){}done();}
 
@@ -2641,6 +2727,14 @@ const pkModoId=!!pkAl&&pkAl.modo==='id';
 const pkModoMulti=!!pkAl&&pkAl.modo==='multi';
 const pkCacheLista=pkC&&pkC.pastas?pkC.pastas:[];
 const pkNMarc=pkCacheLista.filter(q=>pkk.sel[q.id]).length;
+const mbs=MARCA.estado();
+const mbv={
+open:!!s.mb.aberto,fechar:()=>this.mbFechar(),abrir:()=>this.mbAbrir(),
+on:!!mbs.on,onLigar:e=>this.mbDefinir({on:e.target.checked}),
+nome:mbs.nome,onNome:e=>this.mbDefinir({nome:e.target.value.slice(0,40)}),
+logo:!!mbs.logo,onLogo:e=>this.mbDefinir({logo:e.target.checked}),
+estadoTxt:mbs.on?'Ligado: as menções à marca estão ocultas nesta tela.':'Desligado: a tela mostra a marca normalmente.'
+};
 const dps=s.dp;
 const dpStatusOpts=[['sem_assinatura','Sem assinatura (prontos para solicitar)'],['','Qualquer status'],['pendente','Pendente'],['assinado','Assinado'],['expirado','Expirado'],['cancelado','Cancelado']];
 const dpBusca=(dps.busca||'').trim().toLowerCase();
@@ -2972,7 +3066,7 @@ hasRes:!!res0,noRes:!res0&&!loading,res,tabs,tabResumo:s.tab==='resumo',tabJson:
 jsonCopyAll:()=>this.copy(JSON.stringify(res0?res0.body:{},null,2)),jsonCollapse:()=>this.setState({collapsed:allPaths(res0?res0.body:{},'$',{})}),jsonExpand:()=>this.setState({collapsed:{}}),
 nexts,hasNexts:nexts.length>0,
 hasLinks:links.length>0&&eff==='assinatura',links,linksNote:linkSrc?(linkSrc.conviteEnviado?'Convite enviado por e-mail (conviteEnviado = true). Os links abaixo também valem.':'Nenhum e-mail foi enviado (conviteEnviado = false, padrão). Envie cada link ao signatário.'):'',
-dt,pt,md,stv,dl,wiz,al,asv,api,hist,dg:dgn,prot,pf,bx,cm,lote,fumaca,vg,ip:ipv,ex:exv,px:pxv,dp:dpv,pl:plv,pk,lg:lgv,pn:pnn,mn:mnv,
+dt,pt,md,stv,dl,wiz,al,asv,api,hist,dg:dgn,prot,pf,bx,cm,lote,fumaca,vg,ip:ipv,ex:exv,px:pxv,dp:dpv,pl:plv,mb:mbv,pk,lg:lgv,pn:pnn,mn:mnv,
 logOpen:s.logOpen,logFav:s.logFav,onLogFav:e=>this.setState({logFav:e.target.checked}),logRows:lrows,logEmpty:lrows.length===0&&!sel,hasLogSel:!!sel,showLogList:!sel,ld,
 paletteOpen:s.paletteOpen,paletteQ:s.paletteQ,onPaletteQ:e=>this.setState({paletteQ:e.target.value}),palItems,palEmpty:palItems.length===0,closePalette:()=>this.setState({paletteOpen:false}),stop:e=>{if(e&&e.stopPropagation)e.stopPropagation();},
 toast:s.toast,toastCls:s.toast?'':'off'

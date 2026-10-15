@@ -88,6 +88,16 @@ Opções: `--porta N`, `--nao-abrir`, `--sem-historico`, `--dados PASTA`.
   milhares de pastas), navega sem outras chamadas e mostra **quantos documentos há em cada pasta**.
   O botão "Nova pasta aqui…" **cria uma pasta** (`/api/sync/criarDiretorio`) dentro da pasta aberta
   (perfis somente leitura bloqueiam; perfis de produção pedem confirmação).
+- **Solicitar assinatura, com arquivo e posição**: ao lado do campo do documento, "Escolher o arquivo…"
+  lista os documentos da plataforma (por padrão os sem assinatura, com filtro de pasta, status e nome)
+  ou envia um arquivo do computador (importar) e já usa o documento criado. "Posicionar as assinaturas
+  na página…" abre uma folha (A4 ou carta, retrato ou paisagem) onde você **arrasta o carimbo** de cada
+  assinante (também com as setas do teclado); grava `posicao` em fração da página (0 a 1) e, sem
+  página, vale a última. A folha é só referência de proporção, não mostra o PDF.
+- **Modo marca branca** (botão do olho riscado, na barra de cima): esconde, na tela, toda menção ao
+  Docnuvem (nome, logotipo, endereço do servidor, textos e dicas, e também os textos copiados), com
+  um nome opcional no lugar, para demonstrar a clientes. Só muda o que é exibido, nunca o que vai
+  para a API. Também liga com `?marca=branca&nome=Minha Marca` no endereço e desliga com `?marca=normal`.
 - **Excluir a pasta inteira** (destrutivo, na tela de excluir em massa): `/api/sync/excluirDiretorio`
   manda a pasta, as subpastas e os documentos para a lixeira numa chamada só (a própria pasta também
   vai). Mostra antes quantos documentos e subpastas há, só libera ao digitar `EXCLUIR PASTA <id>`, e
