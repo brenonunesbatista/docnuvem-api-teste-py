@@ -1158,3 +1158,143 @@ def test_pasta_inteira_tem_o_seletor_de_pastas_no_proprio_cartao(
     expect(pagina.botao("Ver a pasta inteira")).to_be_enabled()
     pagina.botao("Ver a pasta inteira").click()
     expect(page.locator("main")).to_contain_text("A pasta 10 tem 3 documento(s)")
+
+
+# ------------------------------------- escolher o arquivo e posicionar a assinatura ---
+
+IMPORTAR_API = ("POST", "/importar")
+
+
+def _dialogo(page: Any, nome: str) -> Any:
+    return page.locator(f"[role=dialog][aria-label*='{nome}']")
+
+
+def _documentos_da_instancia(upstream: Upstream) -> None:
+    docs = [
+        {"documentoId": 501, "nomeArquivo": "Contrato.pdf", "diretorioId": 10},
+        {"documentoId": 502, "nomeArquivo": "Aditivo.pdf", "diretorioId": 10},
+        {"documentoId": 503, "nomeArquivo": "Ata.pdf", "diretorioId": 11},
+    ]
+    corpo = {"total": 3, "temMais": False, "documentos": docs}
+    upstream.respostas[DOCUMENTOS] = (200, json.dumps(corpo))
+
+
+def test_assinatura_escolher_o_documento_da_plataforma(pagina: Pagina, upstream: Upstream) -> None:
+    page = pagina.page
+    _documentos_da_instancia(upstream)
+    pagina.ir("Solicitar assinatura")
+    pagina.botao("Escolher o arquivo…").click()
+    modal = _dialogo(page, "Escolher o arquivo")
+    expect(modal.locator(".dprow")).to_have_count(3)
+    consultas = [c["path"] for c in upstream.recebidas if c["rota"] == "/api/documentos"]
+    assert "status=sem_assinatura" in consultas[-1]  # só os prontos para pedir assinatura
+    modal.get_by_placeholder("Filtrar pelo nome do arquivo…").fill("adit")
+    expect(modal.locator(".dprow")).to_have_count(1)
+    modal.get_by_role("button", name="Usar Aditivo.pdf").click()
+    expect(modal).to_have_count(0)
+    expect(page.locator("#f-assinatura-documentoId")).to_have_value("502")
+
+
+def test_assinatura_enviar_um_arquivo_do_computador(pagina: Pagina, upstream: Upstream) -> None:
+    page = pagina.page
+    _documentos_da_instancia(upstream)
+    upstream.respostas[IMPORTAR_API] = (200, '{"documentoId": 777}')
+    pagina.ir("Solicitar assinatura")
+    pagina.botao("Escolher o arquivo…").click()
+    modal = _dialogo(page, "Escolher o arquivo")
+    modal.get_by_role("button", name="Do computador").click()
+    modal.get_by_role("button", name="Enviar e usar este arquivo").click()
+    expect(modal).to_contain_text("Escolha um arquivo do computador")
+    modal.locator("#dp-arq").set_input_files(
+        {"name": "contrato.pdf", "mimeType": "application/pdf", "buffer": b"%PDF-1.4 teste"}
+    )
+    expect(modal.locator("#dp-nome")).to_have_value("contrato.pdf")
+    modal.locator("#dp-pasta").fill("Contratos")
+    modal.get_by_role("button", name="Enviar e usar este arquivo").click()
+    expect(modal).to_have_count(0)
+    expect(page.locator("#f-assinatura-documentoId")).to_have_value("777")
+    envio = [c for c in upstream.recebidas if (c["method"], c["rota"]) == IMPORTAR_API]
+    assert len(envio) == 1
+    assert (
+        "nomePasta=Contratos" in envio[0]["path"] and "nomeArquivo=contrato.pdf" in envio[0]["path"]
+    )
+
+
+def _um_assinante(page: Any) -> None:
+    page.locator("input[id$='-nome']").first.fill("Ana Souza")
+
+
+def test_assinatura_arrastar_o_carimbo_ate_a_posicao(pagina: Pagina, upstream: Upstream) -> None:
+    page = pagina.page
+    pagina.ir("Solicitar assinatura")
+    _um_assinante(page)
+    pagina.botao("Posicionar as assinaturas na página…").click()
+    modal = _dialogo(page, "Posicionar")
+    expect(modal.locator(".plcarimbo")).to_have_count(0)
+    expect(modal).to_contain_text("rodapé da última página")  # padrão, antes de posicionar
+    modal.get_by_role("button", name="Colocar nesta página").click()
+    carimbo = modal.locator(".plcarimbo")
+    expect(carimbo).to_have_count(1)
+    expect(carimbo).to_contain_text("Ana Souza")
+    folha = modal.locator("#pl-folha").bounding_box()
+    antes = carimbo.bounding_box()
+    assert folha and antes
+    # arrasta o carimbo para o meio da folha
+    alvo_x = folha["x"] + folha["width"] * 0.5
+    alvo_y = folha["y"] + folha["height"] * 0.4
+    page.mouse.move(antes["x"] + antes["width"] / 2, antes["y"] + antes["height"] / 2)
+    page.mouse.down()
+    page.mouse.move(alvo_x, alvo_y, steps=8)
+    page.mouse.up()
+    depois = carimbo.bounding_box()
+    assert depois
+    fx = (depois["x"] - folha["x"]) / folha["width"]
+    fy = (depois["y"] - folha["y"]) / folha["height"]
+    assert 0.3 < fx < 0.5 and 0.25 < fy < 0.45  # saiu do rodapé esquerdo
+    expect(modal).to_contain_text("Página última")
+    modal.get_by_role("button", name="Concluir").click()
+    expect(modal).to_have_count(0)
+    page.get_by_role("button", name="Opções avançadas").first.click()
+    x = float(page.locator("input[id$='-x']").first.input_value())
+    y = float(page.locator("input[id$='-y']").first.input_value())
+    assert abs(x - fx) < 0.02 and abs(y - fy) < 0.02  # a folha e o formulário concordam
+    assert page.locator("input[id$='-pg']").first.input_value() == ""  # vazia = última página
+
+
+def test_assinatura_carimbo_com_setas_pagina_e_tirar_posicao(
+    pagina: Pagina, upstream: Upstream
+) -> None:
+    page = pagina.page
+    pagina.ir("Solicitar assinatura")
+    _um_assinante(page)
+    pagina.botao("Posicionar as assinaturas na página…").click()
+    modal = _dialogo(page, "Posicionar")
+    modal.get_by_text("Última página", exact=True).click()  # o interruptor
+    modal.locator("#pl-pag").fill("2")
+    modal.get_by_role("button", name="Colocar nesta página").click()
+    carimbo = modal.locator(".plcarimbo")
+    expect(modal).to_contain_text("Página 2")
+    carimbo.focus()
+    page.keyboard.press("ArrowRight")
+    expect(modal).to_contain_text("x 0.09")  # 0.08 + 0.01
+    modal.locator("#pl-pag").fill("3")  # outra página: o carimbo da 2 não aparece aqui
+    expect(modal.locator(".plcarimbo")).to_have_count(0)
+    modal.get_by_role("button", name="Mover para esta página").click()
+    expect(modal).to_contain_text("Página 3")
+    modal.get_by_role("button", name="Tirar a posição de Ana Souza").click()
+    expect(modal.locator(".plcarimbo")).to_have_count(0)
+    expect(modal).to_contain_text("rodapé da última página")
+
+
+def test_assinatura_posicao_sem_pagina_e_aceita_no_formulario(
+    pagina: Pagina, upstream: Upstream
+) -> None:
+    page = pagina.page
+    pagina.ir("Solicitar assinatura")
+    _um_assinante(page)
+    pagina.botao("Posicionar as assinaturas na página…").click()
+    modal = _dialogo(page, "Posicionar")
+    modal.get_by_role("button", name="Colocar nesta página").click()
+    modal.get_by_role("button", name="Concluir").click()
+    page.get_by_role("button", name="Opções avançadas").first.click()
+    expect(page.locator("main")).not_to_contain_text("Preencha")  # página vazia vale a última

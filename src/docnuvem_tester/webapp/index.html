@@ -310,6 +310,18 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
 .pkcard .usar:hover{background:var(--acs);color:var(--act)}
 .sk{border-radius:14px;height:50px;background:linear-gradient(90deg,var(--sf2) 25%,var(--sf) 50%,var(--sf2) 75%);background-size:200% 100%;animation:skm 1.2s infinite linear}
 @keyframes skm{from{background-position:200% 0}to{background-position:-200% 0}}
+.plwrap{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:16px;overflow:auto;min-height:0}
+@media(max-width:760px){.plwrap{grid-template-columns:1fr}}
+.plfolha{position:relative;background:#fff;border:1px solid var(--ln);box-shadow:0 6px 24px rgba(0,0,0,.28);margin:0 auto;width:100%;touch-action:none;user-select:none;-webkit-user-select:none}
+.plfolha .linhas{position:absolute;inset:6% 8%;background-image:repeating-linear-gradient(#0000 0 15px,#0000001a 15px 16px);pointer-events:none}
+.plcarimbo{position:absolute;display:flex;align-items:center;justify-content:center;border:2px solid;border-radius:6px;font-size:11px;font-weight:700;cursor:grab;touch-action:none;color:#111;overflow:hidden;padding:2px;box-sizing:border-box;text-align:center;line-height:1.1}
+.plcarimbo:active{cursor:grabbing}
+.plcarimbo:focus-visible,.plcarimbo.sel{outline:3px solid var(--ac);outline-offset:1px}
+.plside{display:grid;gap:8px;align-content:start}
+.pld{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.dplist{display:grid;gap:6px;overflow:auto;min-height:80px;max-height:44vh}
+.dprow{display:flex;align-items:center;gap:10px;border:1px solid var(--ln);border-radius:12px;padding:8px 10px;background:var(--sf)}
+.dprow .nm{flex:1;min-width:0;overflow-wrap:anywhere;font-size:14px}
 .pkfoot{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;border-top:1px solid var(--ln);padding-top:12px}
 .pkfoot .atual{flex:1 1 220px;min-width:0;font-size:13px;overflow-wrap:anywhere}
 .pal.sheet{align-items:center;padding:4vh 16px}
@@ -801,6 +813,7 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
                         <sc-if value="{{fd.isSelect}}" hint-placeholder-val="{{ false }}"><select id="{{fd.id}}" value="{{fd.value}}" disabled="{{fd.disabled}}" aria-invalid="{{fd.invalid}}" onChange="{{fd.onInput}}"><sc-for list="{{fd.options}}" as="o" hint-placeholder-count="2"><option value="{{o.value}}" selected="{{o.selected}}">{{o.label}}</option></sc-for></select></sc-if>
                         <sc-if value="{{fd.isSwitch}}" hint-placeholder-val="{{ false }}"><label class="sw"><input id="{{fd.id}}" type="checkbox" checked="{{fd.checked}}" disabled="{{fd.disabled}}" onChange="{{fd.onInput}}"><span class="track"></span><span class="swt">{{fd.switchText}}</span></label></sc-if>
                         <sc-if value="{{fd.useLast}}" hint-placeholder-val="{{ false }}"><button class="link" type="button" disabled="{{fd.lastDisabled}}" onClick="{{fd.onLast}}">{{fd.lastLabel}}</button></sc-if>
+                        <sc-if value="{{fd.useLast2}}" hint-placeholder-val="{{ false }}"><button class="link" type="button" onClick="{{fd.onLast2}}">{{fd.last2Label}}</button></sc-if>
                         <sc-if value="{{fd.hasHint}}" hint-placeholder-val="{{ true }}"><span class="hint">{{fd.hint}}</span></sc-if>
                         <sc-if value="{{fd.hasNote}}" hint-placeholder-val="{{ false }}"><span class="msg note"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg>{{fd.note}}</span></sc-if>
                         <sc-if value="{{fd.hasErr}}" hint-placeholder-val="{{ false }}"><span class="msg bad" role="alert"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.x}}"/></svg>{{fd.err}}</span></sc-if>
@@ -847,7 +860,7 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
                                 <sc-if value="{{s.eb.otp}}" hint-placeholder-val="{{ false }}"><span class="msg bad" role="alert">{{s.ek.otp}}</span></sc-if></div>
                               <div class="field {{s.cls.pos}}"><span class="lbl"><span>Posição do carimbo</span><code class="api">posicao</code><span class="tag">fração de 0 a 1</span></span>
                                 <div class="grid2">
-                                  <div><label class="hint" for="{{s.id}}-pg">pagina</label><input id="{{s.id}}-pg" type="text" value="{{s.pagina}}" placeholder="1" onInput="{{s.on.pagina}}"></div>
+                                  <div><label class="hint" for="{{s.id}}-pg">pagina</label><input id="{{s.id}}-pg" type="text" value="{{s.pagina}}" placeholder="última" onInput="{{s.on.pagina}}"></div>
                                   <div><label class="hint" for="{{s.id}}-x">x</label><input id="{{s.id}}-x" type="text" value="{{s.x}}" placeholder="0.5" onInput="{{s.on.x}}"></div>
                                   <div><label class="hint" for="{{s.id}}-y">y</label><input id="{{s.id}}-y" type="text" value="{{s.y}}" placeholder="0.9" onInput="{{s.on.y}}"></div>
                                 </div>
@@ -860,6 +873,7 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
                       </sc-for>
                       <div class="row">
                         <button class="btn" type="button" onClick="{{sAdd}}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.plus}}"/></svg>Adicionar signatário</button>
+                        <button class="btn" type="button" onClick="{{pl.abrirBtn}}">Posicionar as assinaturas na página…</button>
                         <button class="btn ghost" type="button" onClick="{{sExample}}">Preencher exemplo</button>
                       </div>
                       <sc-if value="{{signersErrB}}" hint-placeholder-val="{{ false }}"><span class="msg bad" role="alert">{{signersErr}}</span></sc-if>
@@ -1172,6 +1186,68 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
   </sc-if>
 
   <!-- ===== SELETOR DE PASTAS ===== -->
+  <sc-if value="{{dp.open}}" hint-placeholder-val="{{ false }}">
+    <div class="pal sheet" onClick="{{dp.fechar}}">
+      <div class="pkm" role="dialog" aria-label="Escolher o arquivo para assinar" onClick="{{stop}}">
+        <div class="pkhead"><h2>Escolher o arquivo · {{perfil}}</h2><button class="ib" type="button" aria-label="Fechar" onClick="{{dp.fechar}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.x}}"/></svg></button></div>
+        <div class="row"><button class="btn sm {{dp.clsInst}}" type="button" onClick="{{dp.abaInst}}">Da plataforma</button><button class="btn sm {{dp.clsPc}}" type="button" onClick="{{dp.abaPc}}">Do computador</button></div>
+        <sc-if value="{{dp.inst}}" hint-placeholder-val="{{ false }}">
+          <div class="grid2">
+            <div class="field"><label class="lbl" for="dp-st"><span>Status</span></label><select id="dp-st" value="{{dp.status}}" onChange="{{dp.onStatus}}"><sc-for list="{{dp.statusOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.value}}" selected="{{o.selected}}">{{o.label}}</option></sc-for></select></div>
+            <div class="field"><label class="lbl" for="dp-dir"><span>Pasta (ID)</span><span class="tag">opcional</span></label><input id="dp-dir" type="text" value="{{dp.dir}}" placeholder="todas as pastas" autocomplete="off" onInput="{{dp.onDir}}" onKeyDown="{{dp.onDirKey}}"><button class="link" type="button" onClick="{{dp.escolherPasta}}">Escolher na estrutura de pastas…</button></div>
+          </div>
+          <label class="sw"><input type="checkbox" checked="{{dp.sub}}" onChange="{{dp.onSub}}"><span class="track"></span><span class="swt">Incluir as subpastas</span></label>
+          <div class="row" style="flex-wrap:nowrap"><input type="search" placeholder="Filtrar pelo nome do arquivo…" aria-label="Filtrar pelo nome do arquivo" value="{{dp.busca}}" onInput="{{dp.onBusca}}" autocomplete="off"><button class="btn sm" type="button" onClick="{{dp.buscar}}">Recarregar</button></div>
+          <div class="muted small" aria-live="polite">{{dp.contagem}}</div>
+          <div class="dplist">
+            <sc-for list="{{dp.itens}}" as="it" hint-placeholder-count="4"><div class="dprow"><div class="nm"><strong>{{it.nome}}</strong><div class="muted small">{{it.meta}}</div></div><button class="btn pri sm" type="button" aria-label="{{it.usarLabel}}" onClick="{{it.usar}}">Usar</button></div></sc-for>
+            <sc-if value="{{dp.busy}}" hint-placeholder-val="{{ false }}"><div class="muted small"><span class="spin"></span> Carregando…</div></sc-if>
+            <sc-if value="{{dp.vazio}}" hint-placeholder-val="{{ false }}"><div class="empty small"><strong>Nenhum documento com esses filtros</strong></div></sc-if>
+            <sc-if value="{{dp.semResultado}}" hint-placeholder-val="{{ false }}"><div class="empty small"><strong>Nenhum nome confere nos já carregados</strong><span>Use "Carregar mais" ou troque os filtros.</span></div></sc-if>
+          </div>
+          <sc-if value="{{dp.hasErr}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{dp.err}}</span></div></sc-if>
+          <sc-if value="{{dp.temMais}}" hint-placeholder-val="{{ false }}"><div class="row"><button class="btn" type="button" onClick="{{dp.mais}}">Carregar mais</button></div></sc-if>
+        </sc-if>
+        <sc-if value="{{dp.pc}}" hint-placeholder-val="{{ false }}">
+          <p class="muted small">Envia um arquivo do seu computador para a plataforma (importar) e já usa o documento criado.</p>
+          <div class="field"><label class="lbl" for="dp-arq"><span>Arquivo</span></label><input id="dp-arq" type="file" onChange="{{dp.onArquivo}}"></div>
+          <div class="field"><label class="lbl" for="dp-nome"><span>Nome na plataforma</span></label><input id="dp-nome" type="text" value="{{dp.upNome}}" placeholder="contrato.pdf" autocomplete="off" onInput="{{dp.onUpNome}}"></div>
+          <div class="grid2">
+            <div class="field"><label class="lbl" for="dp-pasta"><span>Pasta de destino</span><span class="req">obrigatório</span></label><input id="dp-pasta" type="text" value="{{dp.upPasta}}" placeholder="Contratos" autocomplete="off" onInput="{{dp.onUpPasta}}"><button class="link" type="button" onClick="{{dp.escolherPastaUp}}">Escolher na estrutura de pastas…</button></div>
+            <div class="field"><label class="lbl" for="dp-pai"><span>Caminho da pasta pai</span><span class="tag">opcional</span></label><input id="dp-pai" type="text" value="{{dp.upPai}}" placeholder="/Meus documentos" autocomplete="off" onInput="{{dp.onUpPai}}"></div>
+          </div>
+          <sc-if value="{{dp.hasUpErr}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{dp.upErr}}</span></div></sc-if>
+          <div class="row"><button class="btn pri" type="button" onClick="{{dp.enviar}}" disabled="{{dp.enviarOff}}">{{dp.enviarLabel}}</button></div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{pl.open}}" hint-placeholder-val="{{ false }}">
+    <div class="pal sheet" onClick="{{pl.fechar}}">
+      <div class="pkm" style="width:min(980px,100%)" role="dialog" aria-label="Posicionar as assinaturas na página" onClick="{{stop}}">
+        <div class="pkhead"><h2>Posicionar as assinaturas</h2><button class="ib" type="button" aria-label="Fechar" onClick="{{pl.fechar}}"><svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.x}}"/></svg></button></div>
+        <div class="row">
+          <label class="hint" for="pl-fmt">Folha</label><select id="pl-fmt" value="{{pl.fmt}}" onChange="{{pl.onFmt}}" style="width:auto"><sc-for list="{{pl.fmtOpts}}" as="o" hint-placeholder-count="2"><option value="{{o.value}}" selected="{{o.selected}}">{{o.label}}</option></sc-for></select>
+          <select aria-label="Orientação" value="{{pl.orient}}" onChange="{{pl.onOrient}}" style="width:auto"><sc-for list="{{pl.orientOpts}}" as="o" hint-placeholder-count="2"><option value="{{o.value}}" selected="{{o.selected}}">{{o.label}}</option></sc-for></select>
+          <label class="sw"><input type="checkbox" checked="{{pl.ultima}}" onChange="{{pl.onUltima}}"><span class="track"></span><span class="swt">Última página</span></label>
+          <label class="hint" for="pl-pag">Página</label><input id="pl-pag" type="text" value="{{pl.pag}}" disabled="{{pl.pagOff}}" onInput="{{pl.onPag}}" style="width:70px" inputmode="numeric">
+        </div>
+        <div class="plwrap">
+          <div>
+            <div id="pl-folha" class="plfolha" style="{{pl.folhaStyle}}" role="group" aria-label="Folha do documento"><div class="linhas"></div>
+              <sc-for list="{{pl.carimbos}}" as="c" hint-placeholder-count="1"><div class="plcarimbo {{c.cls}}" role="button" tabindex="0" aria-label="{{c.aria}}" style="{{c.style}}" onPointerDown="{{c.down}}" onKeyDown="{{c.key}}">{{c.label}}</div></sc-for>
+            </div>
+            <div class="muted small" style="margin-top:8px">{{pl.dica}}</div>
+          </div>
+          <div class="plside">
+            <sc-for list="{{pl.linhas}}" as="r" hint-placeholder-count="2"><div class="dprow" style="flex-direction:column;align-items:stretch"><div><span class="pld" style="background:{{r.cor}}"></span><strong>{{r.n}}. {{r.nome}}</strong></div><div class="muted small">{{r.pos}}</div>
+              <div class="row"><sc-if value="{{r.podeColocar}}" hint-placeholder-val="{{ true }}"><button class="btn sm" type="button" onClick="{{r.colocar}}">{{r.colocarLabel}}</button></sc-if><sc-if value="{{r.temPos}}" hint-placeholder-val="{{ false }}"><button class="btn sm" type="button" aria-label="{{r.limparLabel}}" onClick="{{r.limpar}}">Tirar posição</button></sc-if></div></div></sc-for>
+          </div>
+        </div>
+        <div class="pkfoot"><span class="grow"></span><button class="btn pri" type="button" onClick="{{pl.fechar}}">Concluir</button></div>
+      </div>
+    </div>
+  </sc-if>
   <sc-if value="{{pk.open}}" hint-placeholder-val="{{ false }}">
     <div class="pal sheet" onClick="{{pk.fechar}}">
       <div class="pkm" role="dialog" aria-label="Escolher pasta na estrutura da plataforma" onClick="{{stop}}">
@@ -1319,6 +1395,8 @@ const isoDT=s=>/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(s||'')&&!isNaN(new D
 const fmtDur=sec=>{sec=Math.max(1,Math.round(sec));if(sec<60)return sec+' s';if(sec<3600)return Math.round(sec/60)+' min';const h=Math.floor(sec/3600),m=Math.round((sec%3600)/60);return h<24?h+' h '+m+' min':Math.floor(h/24)+' d '+(h%24)+' h';};
 // Estimativa de conclusão: ritmo medido desde a primeira leitura desta tarefa (sobrevive a recarregar a tela).
 const ETA={};
+let DPFILE=null;
+const PLW=0.284,PLH=0.081;
 function eta(chave,id,ativo,feitos,total){
 if(!ativo||!total){delete ETA[chave];return '';}
 let e=ETA[chave];
@@ -1430,7 +1508,7 @@ lote:{csvNome:'',csvTexto:'',modo:'enviar',intervalo:'500',confirmando:false},
 fumaca:{ok:false},
 baixar:{diretorioId:'',subpastas:true,estrutura:true,conflito:'renomear',destino:'',status:'',dataInicio:'',dataFim:''},
 perfis:{aberto:false,original:'',nome:'',instancia:'',baseUrl:'',token:'',protecao:'',erro:'',salvando:false,rm:''}},
-results:{},loading:{},lists:{},diag:{},bx:{id:'',snap:null,erro:'',escolhendo:false},cmp:{busy:false,res:null,erro:''},pk:{aberto:false,alvo:null,cache:{},trilha:[],busca:'',sel:{},novo:{aberto:false,nome:'',busy:false,erro:''}},px:{ens:null,erro:'',busy:false,conf:'',ok:''},lg:{aberto:false,perfil:'',login:'',senha:'',busy:false,erro:'',voltar:false},pn:{res:null,busy:false,erro:''},mn:{snap:null,vistos:null,sel:{},intervalo:'5',erro:''},ip:{ens:null,erro:'',busy:false,escolhendo:false,id:'',snap:null},ex:{ens:null,erro:'',busy:false,id:'',snap:null,verifId:'',verif:null},vg:{todos:[],vistos:{},notif:false,erro:''},lt:{val:null,erro:'',validando:false,id:'',snap:null},fm:{busy:false,res:null,erro:''},protPend:null,tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
+results:{},loading:{},lists:{},diag:{},bx:{id:'',snap:null,erro:'',escolhendo:false},cmp:{busy:false,res:null,erro:''},pk:{aberto:false,alvo:null,cache:{},trilha:[],busca:'',sel:{},novo:{aberto:false,nome:'',busy:false,erro:''}},dp:{aberto:false,aba:'inst',status:'sem_assinatura',dir:'',sub:false,busca:'',itens:[],pagina:0,temMais:false,busy:false,erro:'',carregou:false,upNome:'',upPasta:'',upPai:'',upBusy:false,upErro:''},pl:{aberto:false,fmt:'a4',orient:'p',pag:'1',ultima:true,sel:-1},px:{ens:null,erro:'',busy:false,conf:'',ok:''},lg:{aberto:false,perfil:'',login:'',senha:'',busy:false,erro:'',voltar:false},pn:{res:null,busy:false,erro:''},mn:{snap:null,vistos:null,sel:{},intervalo:'5',erro:''},ip:{ens:null,erro:'',busy:false,escolhendo:false,id:'',snap:null},ex:{ens:null,erro:'',busy:false,id:'',snap:null,verifId:'',verif:null},vg:{todos:[],vistos:{},notif:false,erro:''},lt:{val:null,erro:'',validando:false,id:'',snap:null},fm:{busy:false,res:null,erro:''},protPend:null,tab:'resumo',collapsed:{},log:[],logOpen:false,logSel:null,logFav:false,
 paletteOpen:false,paletteQ:'',toast:'',wizStep:0,lastMat:'',openSol:null,navMin:false,
 lastDoc:{},lastAss:{},
 sort:{documentos:{k:'criadoEm',d:-1},pastas:{k:'caminho',d:1}},openModelo:'',dragging:false,newSg:sg};
@@ -1563,6 +1641,91 @@ fetch('/_pastas/filhos?perfil='+encodeURIComponent(this.state.perfil)+'&pai='+pa
 pkAtual(){const t=this.state.pk.trilha;return t[t.length-1]||{id:0,nome:'Meus documentos',caminho:'/Meus documentos'};}
 pkEntrar(q){const pk=this.state.pk;this.setState({pk:Object.assign({},pk,{trilha:pk.trilha.concat([q]),busca:'',sel:{},novo:{aberto:false,nome:'',busy:false,erro:''}})});this.pkCarregar(q.id);}
 pkIrPara(i){const pk=this.state.pk;const t=pk.trilha.slice(0,i+1);this.setState({pk:Object.assign({},pk,{trilha:t,busca:'',sel:{},novo:{aberto:false,nome:'',busy:false,erro:''}})});this.pkCarregar(t[t.length-1].id);}
+dpSet(patch){this.setState({dp:Object.assign({},this.state.dp,patch)});}
+dpAbrir(){this.dpSet({aberto:true,upErro:''});if(!this.state.dp.carregou)this.dpCarregar(true);}
+dpCarregar(reset){
+const s=this.state,dp=s.dp,perfil=s.perfil;
+if(!PERFIS[perfil])return;
+const pagina=reset?0:dp.pagina+1,tok=(this._dpTok=(this._dpTok||0)+1);
+this.dpSet(Object.assign({busy:true,erro:'',carregou:true},reset?{itens:[],pagina:0,temMais:false}:{}));
+const q=['pagina='+pagina,'tamanho=50'];
+if(dp.status)q.push('status='+encodeURIComponent(dp.status));
+const d=String(dp.dir||'').trim();
+if(/^\d+$/.test(d)){q.push('diretorioId='+d);if(dp.sub)q.push('incluirSubpastas=true');}
+fetch('/_proxy/'+encodeURIComponent(perfil)+'/api/documentos?'+q.join('&'),{cache:'no-store'}).then(r=>r.json()).then(env=>{
+if(tok!==this._dpTok)return;
+let b;try{b=JSON.parse(env.body);}catch(e){b=null;}
+if(env.status!==200||!b||!Array.isArray(b.documentos)){
+const m=b&&(b.retorno||b.erro||b.mensagem)||env.body||'';
+this.dpSet({busy:false,erro:'Não consegui listar os documentos (HTTP '+env.status+')'+(m?': '+String(m).slice(0,200):'.')});return;}
+const cur=this.state.dp;
+this.dpSet({busy:false,pagina:pagina,temMais:!!b.temMais,itens:(reset?[]:cur.itens).concat(b.documentos)});
+}).catch(e=>{if(tok===this._dpTok)this.dpSet({busy:false,erro:'O servidor local não respondeu: '+e.message});});
+}
+dpUsar(it){this.setF('assinatura',{documentoId:String(it.documentoId)});this.dpSet({aberto:false});this.aviso('Documento escolhido: '+(it.nomeArquivo||it.documentoId)+' (ID '+it.documentoId+')');}
+dpArquivo(e){const f=e.target.files&&e.target.files[0];DPFILE=f||null;this.dpSet({upNome:f?f.name:'',upErro:''});}
+dpEnviar(){
+const s=this.state,dp=s.dp,perfil=s.perfil,f=DPFILE;
+if(dp.upBusy)return;
+const err=m=>this.dpSet({upErro:m,upBusy:false});
+if(!f)return err('Escolha um arquivo do computador.');
+const nome=(dp.upNome||f.name).trim(),ext=(/\.([A-Za-z0-9]+)$/.exec(nome)||[])[1];
+if(!ext||EXT.indexOf(ext.toLowerCase())<0)return err('O nome precisa ter uma extensão aceita: '+EXT.join(', ')+'.');
+const pasta=(dp.upPasta||'').trim();
+if(!pasta)return err('Informe a pasta de destino (ela precisa já existir).');
+const pm=(PERFIS[perfil]||{}).protegido||'';
+if(pm==='bloquear')return err('Perfil somente leitura: não dá para enviar arquivos nele.');
+if(pm==='confirmar'&&!window.confirm('Este perfil é protegido (produção). Enviar "'+nome+'" para a pasta "'+pasta+'"?'))return;
+this.dpSet({upBusy:true,upErro:''});
+const qs='nomeArquivo='+encodeURIComponent(nome)+'&nomePasta='+encodeURIComponent(pasta)+((dp.upPai||'').trim()?'&nomePastaPai='+encodeURIComponent(dp.upPai.trim()):'');
+const fd=new FormData();fd.append('file',f,nome);
+const headers={};if(pm==='confirmar')headers['X-Docnuvem-Confirmado']='sim';
+fetch('/_proxy/'+encodeURIComponent(perfil)+'/importar?'+qs,{method:'POST',headers,body:fd}).then(r=>r.json()).then(env=>{
+let b;try{b=JSON.parse(env.body);}catch(e){b=null;}
+if(env.status===200&&b&&b.documentoId){
+this.setF('assinatura',{documentoId:String(b.documentoId)});
+DPFILE=null;this.dpSet({aberto:false,upBusy:false,upNome:'',carregou:false});
+this.aviso('Arquivo enviado: documentoId '+b.documentoId);return;}
+const m=b&&(b.retorno||b.erro||b.mensagem)||env.body||'';
+err('A API recusou o envio (HTTP '+env.status+')'+(m?': '+String(m).slice(0,240):'.'));
+}).catch(e=>err('O servidor local não respondeu: '+e.message));
+}
+plSet(patch){this.setState({pl:Object.assign({},this.state.pl,patch)});}
+plAbrir(){this.plSet({aberto:true,sel:-1});}
+plSigners(fn){const f=this.state.forms.assinatura;this.setF('assinatura',{signers:f.signers.map(fn)});}
+plAplicar(i,x,y){
+const pl=this.state.pl,r3=v=>String(Math.round(v*1000)/1000);
+this.plSigners((g,j)=>j===i?Object.assign({},g,{x:r3(x),y:r3(y),pagina:pl.ultima?'':String(pl.pag).trim(),semCarimbo:false}):g);
+this.plSet({sel:i});
+}
+plColocar(i){
+const f=this.state.forms.assinatura,pl=this.state.pl;
+const aqui=f.signers.filter((g,j)=>j!==i&&g.x!==''&&g.y!==''&&(pl.ultima?String(g.pagina||'').trim()==='':String(g.pagina||'').trim()===String(pl.pag).trim())).length;
+const y=Math.max(0,1-PLH-0.04-aqui*(PLH+0.012));
+this.plAplicar(i,0.08,y);
+}
+plLimpar(i){this.plSigners((g,j)=>j===i?Object.assign({},g,{x:'',y:'',pagina:''}):g);}
+plKey(i,e){
+const passo=e.shiftKey?0.05:0.01,f=this.state.forms.assinatura,g=f.signers[i];
+const d={ArrowLeft:[-passo,0],ArrowRight:[passo,0],ArrowUp:[0,-passo],ArrowDown:[0,passo]}[e.key];
+if(!d||g.x===''||g.y==='')return;
+e.preventDefault();
+const cl=(v,m)=>Math.min(Math.max(v,0),m);
+this.plAplicar(i,cl(+g.x+d[0],1-PLW),cl(+g.y+d[1],1-PLH));
+}
+plDown(i,e){
+const folha=document.getElementById('pl-folha'),el=e.currentTarget;
+if(!folha||!el)return;
+e.preventDefault();
+const r=folha.getBoundingClientRect(),g=this.state.forms.assinatura.signers[i];
+const ini={cx:e.clientX,cy:e.clientY,x:+g.x,y:+g.y};
+let cur={x:ini.x,y:ini.y};
+const cl=(v,m)=>Math.min(Math.max(v,0),m);
+this.plSet({sel:i});
+const mv=ev=>{cur={x:cl(ini.x+(ev.clientX-ini.cx)/r.width,1-PLW),y:cl(ini.y+(ev.clientY-ini.cy)/r.height,1-PLH)};el.style.left=(cur.x*100)+'%';el.style.top=(cur.y*100)+'%';};
+const up=()=>{window.removeEventListener('pointermove',mv);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',up);this.plAplicar(i,cur.x,cur.y);};
+window.addEventListener('pointermove',mv);window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);
+}
 pkNovoSet(patch){const pk=this.state.pk;this.setState({pk:Object.assign({},pk,{novo:Object.assign({},pk.novo,patch)})});}
 pkNovaAbrir(){this.pkNovoSet({aberto:true,nome:'',erro:''});setTimeout(()=>{const i=document.getElementById('pk-novo');if(i)i.focus();},60);}
 pkNovaCriar(){
@@ -1615,10 +1778,12 @@ if(al.sc==='baixar')this.setF('baixar',{diretorioId:String(row.id)});
 else if(al.sc==='documentos')this.setF('documentos',{diretorioId:String(row.id),pagina:'0'});
 else if(al.sc==='pastas')this.setF('pastas',{diretorioPaiId:String(row.id),pagina:'0'});
 else if(al.sc==='excluir'){if(row.id===0)return;this.exSet({diretorioId:String(row.id)});}
+else if(al.sc==='docpick'){this.dpSet({dir:row.id===0?'':String(row.id)});this.dpCarregar(true);}
 }else{
 if(row.id===0)return;
 const cam=row.caminho||'',pai=cam.endsWith('/'+row.nome)?cam.slice(0,cam.length-row.nome.length-1):'';
-if(al.sc==='importarPasta')this.ipSet({pasta:row.nome,pastaPai:pai});
+if(al.sc==='docpick')this.dpSet({upPasta:row.nome,upPai:pai});
+else if(al.sc==='importarPasta')this.ipSet({pasta:row.nome,pastaPai:pai});
 else this.setF(al.sc,{nomePasta:row.nome,nomePastaPai:pai});
 }
 this.pkFechar();
@@ -1979,8 +2144,8 @@ const td=dg(x.tel);if(td&&(td.length<10||td.length>13))E(k+'tel','Telefone com D
 if(!/^\d+$/.test(String(x.ordem).trim()))E(k+'ordem','Inteiro a partir de 0.');
 ords.push(parseInt(x.ordem,10));
 const hasPos=x.pagina!==''||x.x!==''||x.y!=='';
-if(hasPos){if(x.pagina===''||x.x===''||x.y==='')E(k+'pos','Preencha pagina, x e y.');
-else if(!(parseInt(x.pagina,10)>=1)||!(+x.x>=0&&+x.x<=1)||!(+x.y>=0&&+x.y<=1)||isNaN(+x.x)||isNaN(+x.y))E(k+'pos','pagina ≥ 1; x e y entre 0 e 1 (use ponto: 0.5).');}
+if(hasPos){if(x.x===''||x.y==='')E(k+'pos','Preencha x e y (a página vazia vale a última).');
+else if((x.pagina!==''&&!(parseInt(x.pagina,10)>=1))||!(+x.x>=0&&+x.x<=1)||!(+x.y>=0&&+x.y<=1)||isNaN(+x.x)||isNaN(+x.y))E(k+'pos','pagina ≥ 1 (vazia = última); x e y entre 0 e 1 (use ponto: 0.5).');}
 if(x.semCarimbo&&hasPos)E(k+'sem','“Sem carimbo” é incompatível com a posição do carimbo.');
 const o={nome:x.nome.trim(),email:x.email.trim()};
 if(d){if(d.length>11)o.cnpj=d;else o.cpf=d;}
@@ -1988,7 +2153,7 @@ if(td)o.telefone=td;
 o.ordem=/^\d+$/.test(String(x.ordem).trim())?parseInt(x.ordem,10):x.ordem;
 if(x.selfie)o.solicitarSelfie=true;
 if(x.otp)o.otp=x.otp;
-if(hasPos)o.posicao={pagina:parseInt(x.pagina,10),x:+x.x,y:+x.y};
+if(hasPos){o.posicao={x:+x.x,y:+x.y};if(x.pagina!=='')o.posicao.pagina=parseInt(x.pagina,10);}
 if(x.semCarimbo)o.semCarimbo=true;
 return o;});
 const sorted=ords.slice().sort((a,b)=>a-b);
@@ -2131,7 +2296,7 @@ const val=o.get?o.get():s.forms[sc][key];
 const ek=o.ek||key,err=o.err||p.errs[ek]||'',warn=p.warns[ek]||'';
 const v=val==null?'':val;
 const id='f-'+(sc+'-'+key).replace(/[^a-zA-Z0-9_-]/g,'_');
-return Object.assign({id,req:false,hint:'',note:'',inputType:'text',placeholder:'',half:false,disabled:false,useLast:false,tag:'',listId:'',switchText:'',lastLabel:'',lastDisabled:false},o,{
+return Object.assign({id,req:false,hint:'',note:'',inputType:'text',placeholder:'',half:false,disabled:false,useLast:false,useLast2:false,last2Label:'',tag:'',listId:'',switchText:'',lastLabel:'',lastDisabled:false},o,{
 value:k==='switch'?'':String(v),checked:k==='switch'?!!v:false,onInput:o.onInput||this.hf(sc,key),
 isText:k==='text',isArea:k==='area',isSelect:k==='select',isSwitch:k==='switch',
 err,hasErr:!!err,warn,hasWarn:!!warn&&!err,invalid:!!err,hasHint:!!o.hint,hasNote:!!o.note,hasTag:!!o.tag,
@@ -2194,7 +2359,7 @@ onInput:e=>{if(t==='CHECKBOX')setv(e.target.checked?'sim':'não');else if(t==='D
 }
 let signers=[];
 if(eff==='assinatura'){
-C({title:'Documento',fields:[T('assinatura','documentoId',Object.assign({label:'Documento',api:'documentoId',req:true,placeholder:'48204'},docLast('assinatura')))]});
+C({title:'Documento',fields:[T('assinatura','documentoId',Object.assign({label:'Documento',api:'documentoId',req:true,placeholder:'48204',useLast2:true,last2Label:'Escolher o arquivo…',onLast2:()=>this.dpAbrir()},docLast('assinatura')))]});
 C({title:'Signatários',sub:'Adicione, remova e reordene. O CPF ou o CNPJ é detectado pelo número de dígitos.',signers:true,fields:[T('assinatura','consideraOrdem',{kind:'switch',label:'Respeitar a ordem',api:'consideraOrdem',switchText:f.consideraOrdem?'Ligado: assinam na ordem':'Desligado: todos podem assinar já',hint:'Se ligado, ordem 0-based e contígua.'})]});
 const sa=(i,patch)=>this.setF('assinatura',{signers:f.signers.map((x,j)=>j===i?Object.assign({},x,patch):x)});
 const mv=(i,d)=>{const a=f.signers.slice();const t=a[i];a[i]=a[i+d];a[i+d]=t;this.setF('assinatura',{signers:a.map((x,j)=>Object.assign({},x,{ordem:String(j)}))});};
@@ -2476,6 +2641,53 @@ const pkModoId=!!pkAl&&pkAl.modo==='id';
 const pkModoMulti=!!pkAl&&pkAl.modo==='multi';
 const pkCacheLista=pkC&&pkC.pastas?pkC.pastas:[];
 const pkNMarc=pkCacheLista.filter(q=>pkk.sel[q.id]).length;
+const dps=s.dp;
+const dpStatusOpts=[['sem_assinatura','Sem assinatura (prontos para solicitar)'],['','Qualquer status'],['pendente','Pendente'],['assinado','Assinado'],['expirado','Expirado'],['cancelado','Cancelado']];
+const dpBusca=(dps.busca||'').trim().toLowerCase();
+const dpv={
+open:!!dps.aberto,fechar:()=>this.dpSet({aberto:false}),
+inst:dps.aba==='inst',pc:dps.aba==='pc',
+abaInst:()=>this.dpSet({aba:'inst'}),abaPc:()=>this.dpSet({aba:'pc'}),
+clsInst:dps.aba==='inst'?'pri':'',clsPc:dps.aba==='pc'?'pri':'',
+statusOpts:dpStatusOpts.map(o=>({value:o[0],label:o[1],selected:o[0]===dps.status})),
+onStatus:e=>{this.dpSet({status:e.target.value});this.dpCarregar(true);},
+dir:dps.dir,onDir:e=>this.dpSet({dir:e.target.value.replace(/\D/g,'')}),onDirKey:e=>{if(e.key==='Enter'){e.preventDefault();this.dpCarregar(true);}},
+escolherPasta:()=>this.pkAbrir({modo:'id',sc:'docpick'}),sub:!!dps.sub,onSub:e=>{this.dpSet({sub:e.target.checked});this.dpCarregar(true);},
+busca:dps.busca,onBusca:e=>this.dpSet({busca:e.target.value}),buscar:()=>this.dpCarregar(true),
+itens:dps.itens.filter(it=>!dpBusca||String(it.nomeArquivo||'').toLowerCase().indexOf(dpBusca)>=0).map(it=>({id:it.documentoId,nome:it.nomeArquivo||('documento '+it.documentoId),meta:'ID '+it.documentoId+' · pasta '+it.diretorioId+(it.dataEnvio?' · enviado em '+fmtDT(it.dataEnvio):'')+(it.statusAssinatura?' · '+(STL[it.statusAssinatura]||it.statusAssinatura):''),usarLabel:'Usar '+(it.nomeArquivo||it.documentoId),usar:()=>this.dpUsar(it)})),
+busy:!!dps.busy,hasErr:!!dps.erro,err:dps.erro,temMais:!!dps.temMais&&!dps.busy,mais:()=>this.dpCarregar(false),
+vazio:!dps.busy&&!dps.erro&&dps.carregou&&dps.itens.length===0,
+semResultado:!dps.busy&&dps.itens.length>0&&!!dpBusca&&dps.itens.filter(it=>String(it.nomeArquivo||'').toLowerCase().indexOf(dpBusca)>=0).length===0,
+contagem:dps.itens.length+' carregado(s)'+(dpBusca?' · o filtro de nome vale só para os já carregados':''),
+upNome:dps.upNome,onUpNome:e=>this.dpSet({upNome:e.target.value}),onArquivo:e=>this.dpArquivo(e),
+upPasta:dps.upPasta,onUpPasta:e=>this.dpSet({upPasta:e.target.value}),upPai:dps.upPai,onUpPai:e=>this.dpSet({upPai:e.target.value}),
+escolherPastaUp:()=>this.pkAbrir({modo:'caminho',sc:'docpick'}),
+enviar:()=>this.dpEnviar(),enviarOff:!!dps.upBusy,enviarLabel:dps.upBusy?'Enviando…':'Enviar e usar este arquivo',hasUpErr:!!dps.upErro,upErr:dps.upErro
+};
+const pls=s.pl,plf=s.forms.assinatura,PLFM={a4:[210,297],carta:[215.9,279.4]};
+const plDim=PLFM[pls.fmt]||PLFM.a4,plLand=pls.orient==='l';
+const plCor=i=>'hsl('+((i*67+210)%360)+' 70% 55%)';
+const plPg=g=>String(g.pagina||'').trim();
+const plTem=g=>g.x!==''&&g.y!==''&&!isNaN(+g.x)&&!isNaN(+g.y);
+const plAqui=g=>plTem(g)&&(pls.ultima?plPg(g)==='':plPg(g)===String(pls.pag).trim());
+const plv={
+abrirBtn:()=>this.plAbrir(),open:!!pls.aberto,fechar:()=>this.plSet({aberto:false}),
+fmtOpts:[['a4','A4'],['carta','Carta']].map(o=>({value:o[0],label:o[1],selected:o[0]===pls.fmt})),onFmt:e=>this.plSet({fmt:e.target.value}),
+orientOpts:[['p','Retrato'],['l','Paisagem']].map(o=>({value:o[0],label:o[1],selected:o[0]===pls.orient})),onOrient:e=>this.plSet({orient:e.target.value}),
+ultima:!!pls.ultima,onUltima:e=>this.plSet({ultima:e.target.checked}),pag:pls.pag,onPag:e=>this.plSet({pag:e.target.value.replace(/\D/g,'')}),pagOff:!!pls.ultima,
+folhaStyle:'aspect-ratio:'+(plLand?plDim[1]+' / '+plDim[0]:plDim[0]+' / '+plDim[1])+';max-width:'+(plLand?'600px':'430px'),
+carimbos:plf.signers.map((g,i)=>({g,i})).filter(o=>plAqui(o.g)).map(o=>({
+label:(o.i+1)+'. '+(o.g.nome||'Assinante '+(o.i+1)),aria:'Carimbo de '+(o.g.nome||'assinante '+(o.i+1))+'. Arraste ou use as setas.',
+cls:o.i===pls.sel?'sel':'',style:'left:'+(+o.g.x*100)+'%;top:'+(+o.g.y*100)+'%;width:'+(PLW*100)+'%;height:'+(PLH*100)+'%;border-color:'+plCor(o.i)+';background:'+plCor(o.i)+'55',
+down:e=>this.plDown(o.i,e),key:e=>this.plKey(o.i,e)})),
+linhas:plf.signers.map((g,i)=>({
+n:i+1,nome:g.nome||'Assinante '+(i+1),cor:plCor(i),
+pos:g.semCarimbo?'Assina sem carimbo (não tem posição).':plTem(g)?'Página '+(plPg(g)||'última')+' · x '+g.x+' · y '+g.y:'Padrão: rodapé da última página.',
+podeColocar:!g.semCarimbo&&!plAqui(g),colocarLabel:plTem(g)?'Mover para esta página':'Colocar nesta página',colocar:()=>this.plColocar(i),
+temPos:plTem(g),limpar:()=>this.plLimpar(i),limparLabel:'Tirar a posição de '+(g.nome||'assinante '+(i+1)),sel:i===pls.sel
+})),
+dica:'A folha é só uma referência de proporção: a posição é gravada em fração da página (0 a 1, a partir do canto superior esquerdo), então vale para qualquer tamanho. Sem posição, o carimbo vai para o rodapé da última página.'
+};
 const pk={
 open:!!pkk.aberto,fechar:()=>this.pkFechar(),
 crumbs:pkTrilha.map((q,i)=>({nome:i===0?'Meus documentos':q.nome,cur:i===pkTrilha.length-1,notCur:i!==pkTrilha.length-1,first:i===0,ir:()=>this.pkIrPara(i)})),
@@ -2760,7 +2972,7 @@ hasRes:!!res0,noRes:!res0&&!loading,res,tabs,tabResumo:s.tab==='resumo',tabJson:
 jsonCopyAll:()=>this.copy(JSON.stringify(res0?res0.body:{},null,2)),jsonCollapse:()=>this.setState({collapsed:allPaths(res0?res0.body:{},'$',{})}),jsonExpand:()=>this.setState({collapsed:{}}),
 nexts,hasNexts:nexts.length>0,
 hasLinks:links.length>0&&eff==='assinatura',links,linksNote:linkSrc?(linkSrc.conviteEnviado?'Convite enviado por e-mail (conviteEnviado = true). Os links abaixo também valem.':'Nenhum e-mail foi enviado (conviteEnviado = false, padrão). Envie cada link ao signatário.'):'',
-dt,pt,md,stv,dl,wiz,al,asv,api,hist,dg:dgn,prot,pf,bx,cm,lote,fumaca,vg,ip:ipv,ex:exv,px:pxv,pk,lg:lgv,pn:pnn,mn:mnv,
+dt,pt,md,stv,dl,wiz,al,asv,api,hist,dg:dgn,prot,pf,bx,cm,lote,fumaca,vg,ip:ipv,ex:exv,px:pxv,dp:dpv,pl:plv,pk,lg:lgv,pn:pnn,mn:mnv,
 logOpen:s.logOpen,logFav:s.logFav,onLogFav:e=>this.setState({logFav:e.target.checked}),logRows:lrows,logEmpty:lrows.length===0&&!sel,hasLogSel:!!sel,showLogList:!sel,ld,
 paletteOpen:s.paletteOpen,paletteQ:s.paletteQ,onPaletteQ:e=>this.setState({paletteQ:e.target.value}),palItems,palEmpty:palItems.length===0,closePalette:()=>this.setState({paletteOpen:false}),stop:e=>{if(e&&e.stopPropagation)e.stopPropagation();},
 toast:s.toast,toastCls:s.toast?'':'off'
