@@ -491,18 +491,20 @@ html[data-marca-logo] .logo{-webkit-mask:none;mask:none;background:var(--ac);bor
         <!-- ===== EXCLUIR EM MASSA ===== -->
         <sc-if value="{{show.excluir}}" hint-placeholder-val="{{ false }}">
           <section class="card">
-            <h2>1. Qual pasta esvaziar</h2>
-            <div class="dangerbox"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span><strong>Ação destrutiva.</strong> Os documentos vão para a <strong>lixeira</strong> da plataforma (não é exclusão definitiva). Cancelar um fluxo de assinatura, porém, <strong>não tem volta</strong>. Por isso você verá tudo antes e terá de digitar uma confirmação.</span></div>
+            <h2>{{ex.h1}}</h2>
+            <sc-if value="{{ex.modoCancelar}}" hint-placeholder-val="{{ false }}"><div class="dangerbox"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span><strong>Ação sem volta.</strong> Cancelar um fluxo derruba o fluxo inteiro: todos os signatários passam a <em>cancelado</em> (inclusive quem já assinou), os links param de funcionar e, se alguém já assinou, o arquivo volta à versão anterior às assinaturas. <strong>Nenhum documento é excluído.</strong> Só entram os fluxos ativos (e, se você marcar, os vencidos); documentos já assinados não são tocados. Você verá tudo antes e terá de digitar uma confirmação.</span></div></sc-if>
+            <sc-if value="{{ex.modoExcluir}}" hint-placeholder-val="{{ false }}"><div class="dangerbox"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span><strong>Ação destrutiva.</strong> Os documentos vão para a <strong>lixeira</strong> da plataforma (não é exclusão definitiva). Cancelar um fluxo de assinatura, porém, <strong>não tem volta</strong>. Por isso você verá tudo antes e terá de digitar uma confirmação.</span></div></sc-if>
             <div class="fields">
               <div class="field"><label class="lbl" for="ex-dir"><span>Pasta no Docnuvem</span><code class="api">diretorioId</code><span class="req">obrigatório</span></label><input id="ex-dir" type="text" value="{{ex.dir}}" placeholder="12345" autocomplete="off" disabled="{{ex.ocupado}}" onInput="{{ex.onDir}}"><button class="link" type="button" onClick="{{ex.escolherPasta}}" disabled="{{ex.ocupado}}">Escolher na estrutura de pastas…</button> <button class="link" type="button" onClick="{{ex.escolherVarias}}" disabled="{{ex.ocupado}}">Marcar várias pastas de uma pasta pai…</button><span class="hint">A raiz (Meus documentos) não pode ser esvaziada por aqui.</span><sc-if value="{{ex.temVarias}}" hint-placeholder-val="{{ false }}"><div class="bxn"><strong>{{ex.variasTxt}}</strong> <button class="link" type="button" onClick="{{ex.limparVarias}}" disabled="{{ex.ocupado}}">Limpar seleção</button></div></sc-if></div>
               <div class="field"><label class="sw"><input type="checkbox" checked="{{ex.subpastas}}" disabled="{{ex.ocupado}}" onChange="{{ex.onSub}}"><span class="track"></span><span class="swt">Incluir também as subpastas</span></label><span class="hint">Desligado: só os documentos que estão diretamente nesta pasta.</span></div>
-              <div class="field"><label class="lbl" for="ex-st"><span>Só com o status</span><code class="api">status</code><span class="tag">opcional</span></label><select id="ex-st" value="{{ex.status}}" disabled="{{ex.ocupado}}" onChange="{{ex.onStatus}}"><sc-for list="{{ex.statusOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.value}}" selected="{{o.selected}}">{{o.label}}</option></sc-for></select></div>
+              <sc-if value="{{ex.modoExcluir}}" hint-placeholder-val="{{ false }}"><div class="field"><label class="lbl" for="ex-st"><span>Só com o status</span><code class="api">status</code><span class="tag">opcional</span></label><select id="ex-st" value="{{ex.status}}" disabled="{{ex.ocupado}}" onChange="{{ex.onStatus}}"><sc-for list="{{ex.statusOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.value}}" selected="{{o.selected}}">{{o.label}}</option></sc-for></select></div></sc-if>
               <div class="field"><label class="lbl" for="ex-di"><span>Enviados de</span><code class="api">dataInicio</code><span class="tag">opcional</span></label><input id="ex-di" type="date" value="{{ex.dataInicio}}" disabled="{{ex.ocupado}}" onInput="{{ex.onDataInicio}}"></div>
               <div class="field"><label class="lbl" for="ex-df"><span>Enviados até</span><code class="api">dataFim</code><span class="tag">opcional</span></label><input id="ex-df" type="date" value="{{ex.dataFim}}" disabled="{{ex.ocupado}}" onInput="{{ex.onDataFim}}"></div>
-              <div class="field"><label class="sw"><input type="checkbox" checked="{{ex.cancelar}}" disabled="{{ex.ocupado}}" onChange="{{ex.onCancelarFluxos}}"><span class="track"></span><span class="swt">Cancelar antes os fluxos de assinatura ativos</span></label><span class="hint">Ligado: um documento com assinatura pendente tem o fluxo cancelado e depois é excluído. Desligado: esses documentos são pulados.</span></div>
+              <sc-if value="{{ex.modoCancelar}}" hint-placeholder-val="{{ false }}"><div class="field"><label class="sw"><input type="checkbox" checked="{{ex.incluirExp}}" disabled="{{ex.ocupado}}" onChange="{{ex.onIncluirExp}}"><span class="track"></span><span class="swt">Incluir também os fluxos vencidos (expirados)</span></label><span class="hint">Desligado: só os fluxos ainda pendentes. Documentos já assinados nunca são cancelados por aqui.</span></div></sc-if>
+              <sc-if value="{{ex.modoExcluir}}" hint-placeholder-val="{{ false }}"><div class="field"><label class="sw"><input type="checkbox" checked="{{ex.cancelar}}" disabled="{{ex.ocupado}}" onChange="{{ex.onCancelarFluxos}}"><span class="track"></span><span class="swt">Cancelar antes os fluxos de assinatura ativos</span></label><span class="hint">Ligado: um documento com assinatura pendente tem o fluxo cancelado e depois é excluído. Desligado: esses documentos são pulados.</span></div></sc-if>
             </div>
             <sc-if value="{{ex.hasErr}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{ex.err}}</span></div></sc-if>
-            <div class="row"><button class="btn pri" type="button" onClick="{{ex.verificar}}" disabled="{{ex.verificarOff}}">Ver o que será excluído</button><sc-if value="{{ex.busy}}" hint-placeholder-val="{{ false }}"><button class="btn" type="button" onClick="{{ex.cancelarLeitura}}">Cancelar leitura</button></sc-if></div>
+            <div class="row"><button class="btn pri" type="button" onClick="{{ex.verificar}}" disabled="{{ex.verificarOff}}">{{ex.verificarLabel}}</button><sc-if value="{{ex.busy}}" hint-placeholder-val="{{ false }}"><button class="btn" type="button" onClick="{{ex.cancelarLeitura}}">Cancelar leitura</button></sc-if></div>
             <sc-if value="{{ex.busy}}" hint-placeholder-val="{{ false }}"><div aria-live="polite" style="display:grid;gap:6px"><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ex.verifPct}}"><span style="{{ex.verifBar}}"></span></div><div class="muted small">{{ex.verifTxt}}</div><div class="muted small">Pastas grandes levam alguns minutos para ler. Nada é alterado nesta etapa, e a leitura é aproveitada na hora de excluir.</div></div></sc-if>
           </section>
           <sc-if value="{{ex.has}}" hint-placeholder-val="{{ false }}">
@@ -510,17 +512,17 @@ html[data-marca-logo] .logo{-webkit-mask:none;mask:none;background:var(--ac);bor
               <h2>2. Conferir e confirmar</h2>
               <div class="bxn"><strong>{{ex.resumo}}</strong></div>
               <div class="muted small">{{ex.porStatus}}</div>
-              <sc-if value="{{ex.vazio}}" hint-placeholder-val="{{ false }}"><div class="empty small"><strong>Nenhum documento nesta seleção</strong><span>Não há nada a excluir com esta pasta e estes filtros.</span></div></sc-if>
+              <sc-if value="{{ex.vazio}}" hint-placeholder-val="{{ false }}"><div class="empty small"><strong>{{ex.vazioTit}}</strong><span>{{ex.vazioTxt}}</span></div></sc-if>
               <sc-if value="{{ex.cheio}}" hint-placeholder-val="{{ false }}">
               <div class="muted small"><strong>{{ex.planoTxt}}</strong></div>
               <sc-if value="{{ex.temFluxos}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{ex.fluxoTxt}}</span></div></sc-if>
               <sc-if value="{{ex.hasAmostra}}" hint-placeholder-val="{{ false }}"><strong class="small">Primeiros documentos</strong><div class="dglist"><sc-for list="{{ex.amostra}}" as="a" hint-placeholder-count="3"><div class="mi"><strong style="overflow-wrap:anywhere">{{a.t}}</strong><span class="pill mu">{{a.st}}</span></div></sc-for></div></sc-if>
-              <sc-if value="{{ex.bloqueado}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>Este perfil está protegido como somente leitura: não dá para excluir nele.</span></div></sc-if>
+              <sc-if value="{{ex.bloqueado}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{ex.bloqTxt}}</span></div></sc-if>
               <sc-if value="{{ex.prodAviso}}" hint-placeholder-val="{{ false }}"><div class="muted small">Este perfil está marcado como produção: a confirmação abaixo vale como autorização.</div></sc-if>
               <div class="field"><label class="lbl" for="ex-conf"><span>Para confirmar, digite <code class="api">{{ex.frase}}</code></span></label><input id="ex-conf" type="text" value="{{ex.confirmacao}}" placeholder="{{ex.frase}}" autocomplete="off" disabled="{{ex.ocupado}}" onInput="{{ex.onConfirmacao}}" style="max-width:260px"></div>
-              <div class="field"><label class="lbl" for="ex-int"><span>Intervalo entre as exclusões (ms)</span></label><input id="ex-int" type="text" value="{{ex.intervalo}}" autocomplete="off" disabled="{{ex.ocupado}}" onInput="{{ex.onIntervalo}}" style="max-width:160px"><div class="muted small">{{ex.estMin}}</div></div>
+              <div class="field"><label class="lbl" for="ex-int"><span>{{ex.intervaloLabel}}</span></label><input id="ex-int" type="text" value="{{ex.intervalo}}" autocomplete="off" disabled="{{ex.ocupado}}" onInput="{{ex.onIntervalo}}" style="max-width:160px"><div class="muted small">{{ex.estMin}}</div></div>
               <div class="row"><button class="btn dng" type="button" onClick="{{ex.excluir}}" disabled="{{ex.naoPode}}">{{ex.excluirLabel}}</button><sc-if value="{{ex.ocupado}}" hint-placeholder-val="{{ false }}"><button class="btn" type="button" onClick="{{ex.cancelarExclusao}}">Parar</button></sc-if></div>
-              <div class="muted small">Se várias chamadas falharem em seguida, a exclusão para sozinha. Uma chamada que falha nunca é repetida. Se a pasta mudar depois da verificação, a confirmação deixa de valer.</div>
+              <div class="muted small">{{ex.rodape}}</div>
               </sc-if>
             </section>
           </sc-if>
@@ -532,10 +534,10 @@ html[data-marca-logo] .logo{-webkit-mask:none;mask:none;background:var(--ac);bor
               <div class="bxn"><strong>{{ex.resumoExec}}</strong></div>
               <sc-if value="{{ex.hasEstErro}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>{{ex.estErro}}</span></div></sc-if>
               <sc-if value="{{ex.hasFalhas}}" hint-placeholder-val="{{ false }}"><strong class="small">{{ex.nFalhas}} com falha</strong><div class="dglist"><sc-for list="{{ex.falhas}}" as="f" hint-placeholder-count="2"><div class="mi"><strong style="overflow-wrap:anywhere">{{f.t}}</strong><span class="pill er">{{f.erro}}</span></div></sc-for></div></sc-if>
-              <sc-if value="{{ex.hasFim}}" hint-placeholder-val="{{ false }}"><div class="muted small">Os documentos excluídos estão na lixeira da plataforma. O relatório lista o que foi feito com cada um.</div></sc-if>
+              <sc-if value="{{ex.hasFim}}" hint-placeholder-val="{{ false }}"><div class="muted small">{{ex.fimNota}}</div></sc-if>
             </section>
           </sc-if>
-          <section class="card">
+          <sc-if value="{{ex.modoExcluir}}" hint-placeholder-val="{{ false }}"><section class="card">
             <h2>Ou excluir a pasta inteira</h2>
             <p class="muted small">Envia a pasta escolhida acima <strong>e tudo dentro dela</strong> (subpastas e documentos) para a lixeira, de uma vez: bem mais rápido para pastas enormes. Diferente da exclusão em massa, <strong>a própria pasta também vai para a lixeira</strong>. Não cancela fluxos de assinatura: se houver algum ativo, cancele antes pela exclusão em massa com o status Pendente.</p>
             <div class="row"><button class="btn" type="button" onClick="{{px.escolherPasta}}" disabled="{{px.escolherOff}}">Escolher a pasta na estrutura…</button><button class="btn" type="button" onClick="{{px.verificar}}" disabled="{{px.verificarOff}}">Ver a pasta inteira</button><span class="muted small">{{px.dica}}</span></div>
@@ -549,7 +551,7 @@ html[data-marca-logo] .logo{-webkit-mask:none;mask:none;background:var(--ac);bor
                 <div class="row"><button class="btn dng" type="button" onClick="{{px.excluir}}" disabled="{{px.excluirOff}}">{{px.excluirLabel}}</button></div>
               </sc-if>
             </sc-if>
-          </section>
+          </section></sc-if>
         </sc-if>
 
         <!-- ===== IMPORTAR PASTA ===== -->
@@ -1371,6 +1373,7 @@ importarPasta:{label:'Importar pasta',title:'Importar pasta do computador',sub:'
 modelos:{label:'Modelos',title:'Modelos',method:'GET',path:'/api/modelos',sub:'Lista os modelos de documento e as variáveis de cada um.',d:ICON.layout,grp:'Modelos'},
 template:{label:'Criar de modelo',title:'Criar documento de modelo',method:'POST',path:'/api/documento/from-template',sub:'O formulário é montado a partir das variáveis do modelo escolhido. A pasta precisa já existir.',d:ICON.filetext,grp:''},
 assinatura:{label:'Solicitar assinatura',title:'Solicitar assinatura',method:'POST',path:'/api/assinatura',sub:'Cria a solicitação de assinatura eletrônica. Por padrão a API não envia e-mail: use os links devolvidos.',d:ICON.pen,grp:'Assinatura'},
+cancelarMassa:{label:'Cancelar fluxos em massa',title:'Cancelar fluxos de assinatura em massa',sub:'Cancela todos os fluxos de assinatura ativos dos documentos de uma pasta e das subpastas. Nenhum documento é excluído. Sempre mostra o que será feito e pede confirmação.',d:ICON.ban,grp:''},
 cancelar:{label:'Cancelar assinatura',title:'Cancelar assinatura',method:'DELETE',path:'/api/assinatura/{assinaturaId}',sub:'Cancela a solicitação inteira. Ação destrutiva, com confirmação.',d:ICON.ban,grp:''},
 documentos:{label:'Documentos',title:'Documentos',method:'GET',path:'/api/documentos',sub:'Lista documentos com filtros. Parâmetros vazios nunca são enviados.',d:ICON.files,grp:'Consultar'},
 pastas:{label:'Pastas',title:'Pastas',method:'GET',path:'/api/diretorios',sub:'Encontre o diretorioId e o caminho completo de cada pasta.',d:ICON.folder,grp:''},
@@ -1387,7 +1390,7 @@ painel:{label:'Painel das instâncias',title:'Painel das instâncias',sub:'Todos
 diagnostico:{label:'Diagnóstico',title:'Diagnóstico da instância',sub:'Confere, só com leituras, se o perfil está pronto para uso e mostra a causa provável de cada problema.',d:ICON.pulse,grp:'Suporte'},
 perfis:{label:'Perfis',title:'Perfis',sub:'Crie, edite e remova os perfis do config.json: nome, instância, endereço, token e proteção.',d:ICON.gear,grp:''}
 };
-const ORDER=['inicio','fluxo','importar','envio','importarPasta','modelos','template','assinatura','cancelar','documentos','pastas','status','download','baixarPasta','excluir','alunoSolicitar','alunoStatus','comparar','lote','fumaca','vigia','painel','diagnostico','perfis'];
+const ORDER=['inicio','fluxo','importar','envio','importarPasta','modelos','template','assinatura','cancelar','cancelarMassa','documentos','pastas','status','download','baixarPasta','excluir','alunoSolicitar','alunoStatus','comparar','lote','fumaca','vigia','painel','diagnostico','perfis'];
 const AUTO=['documentos','pastas','modelos'];
 let LIVE=null;const FILEBLOB=new WeakMap();
 const BASE='https://api.docnuvem.example';
@@ -1586,7 +1589,7 @@ pastas:{diretorioPaiId:'',nome:'',caminho:'',pagina:'0',tamanho:'50'},
 status:{documentoId:''},download:{documentoId:''},modelos:{},
 alunoSolicitar:{codigoMatricula:'',nome:'',cpf:'',email:'',telefone:'',tipoSolicitacao:'1',emailResponsavel:'',confirmEmail:false},alunoStatus:{codigoMatricula:''},
 comparar:{a:'',b:'',tipo:'modelos'},
-excluir:{diretorioId:'',diretorioIds:[],pastasSel:[],pastaPai:'',subpastas:false,cancelarFluxos:true,status:'',dataInicio:'',dataFim:'',intervalo:'300',confirmacao:''},
+excluir:{diretorioId:'',diretorioIds:[],pastasSel:[],pastaPai:'',subpastas:false,cSub:true,incluirExpirados:false,cancelarFluxos:true,status:'',dataInicio:'',dataFim:'',intervalo:'300',confirmacao:''},
 importarPasta:{origem:'',subpastas:true,pastaPai:'',pasta:'',tipo:'',pular:true,intervalo:'300',confirmando:false},
 vigia:{ids:'',intervalo:'10',alerta:'48'},
 lote:{csvNome:'',csvTexto:'',modo:'enviar',intervalo:'500',confirmando:false},
@@ -1915,7 +1918,7 @@ clearInterval(this._exv);
 this.setState({forms:Object.assign({},s.forms,{excluir:f}),ex:Object.assign({},s.ex,{ens:null,erro:'',busy:false,verifId:'',verif:null})});
 if('diretorioId' in patch||'diretorioIds' in patch)this.setState({px:{ens:null,erro:'',busy:false,conf:'',ok:''}});
 }
-exCorpo(extra){const s=this.state,f=s.forms.excluir;return Object.assign({perfil:s.perfil,diretorioId:f.diretorioId,diretorioIds:f.diretorioIds&&f.diretorioIds.length?f.diretorioIds:undefined,subpastas:!!f.subpastas,cancelarFluxos:!!f.cancelarFluxos,status:f.status,dataInicio:f.dataInicio,dataFim:f.dataFim},extra||{});}
+exCorpo(extra){const s=this.state,f=s.forms.excluir,mc=this.eff()==='cancelarMassa';return Object.assign({perfil:s.perfil,modo:mc?'cancelar':'excluir',incluirExpirados:mc&&!!f.incluirExpirados,diretorioId:f.diretorioId,diretorioIds:f.diretorioIds&&f.diretorioIds.length?f.diretorioIds:undefined,subpastas:mc?!!f.cSub:!!f.subpastas,cancelarFluxos:!!f.cancelarFluxos,status:f.status,dataInicio:f.dataInicio,dataFim:f.dataFim},extra||{});}
 exVerificar(){
 clearInterval(this._exv);
 this.setState({ex:Object.assign({},this.state.ex,{busy:true,erro:'',ens:null,id:'',snap:null,verifId:'',verif:null})});
@@ -1944,7 +1947,7 @@ const s=this.state,f=s.forms.excluir,ex=s.ex;
 if(ex.snap&&(ex.snap.estado==='executando'||ex.snap.estado==='listando'))return;
 this.cfgCall('/_excluir/iniciar','POST',this.exCorpo({confirmacao:f.confirmacao,intervaloMs:Number(f.intervalo)||0,confirmarProtecao:true,verificacaoId:ex.verifId})).then(r=>{
 if(!r.ok){this.setState({ex:Object.assign({},this.state.ex,{erro:r.erro||'Não foi possível iniciar.'})});return;}
-this.setState({ex:Object.assign({},this.state.ex,{erro:'',id:r.id,snap:{estado:'listando',lidos:0,total:0,feitos:0,excluidos:0,fluxosCancelados:0,pulados:0,nFalhas:0,falhas:[]}})});
+this.setState({ex:Object.assign({},this.state.ex,{erro:'',id:r.id,snap:{modo:this.eff()==='cancelarMassa'?'cancelar':'excluir',estado:'listando',lidos:0,total:0,feitos:0,excluidos:0,fluxosCancelados:0,pulados:0,nFalhas:0,falhas:[]}})});
 this.exPoll(r.id);
 });
 }
@@ -2185,7 +2188,7 @@ if(t&&(t.type==='file'||t.type==='checkbox'||t.type==='search'))return;
 if(s.logOpen)return;
 e.preventDefault();this.send();}
 };
-send(){const sc=this.eff();if(sc==='inicio'||sc==='resultado'||sc==='diagnostico'||sc==='perfis'||sc==='baixarPasta'||sc==='comparar'||sc==='lote'||sc==='fumaca'||sc==='vigia'||sc==='importarPasta'||sc==='painel'||sc==='excluir')return;if(this.state.loading[sc])return;const p=this.plan(sc);if(p.ready)this.run(sc);}
+send(){const sc=this.eff();if(sc==='inicio'||sc==='resultado'||sc==='diagnostico'||sc==='perfis'||sc==='baixarPasta'||sc==='comparar'||sc==='lote'||sc==='fumaca'||sc==='vigia'||sc==='importarPasta'||sc==='painel'||sc==='excluir'||sc==='cancelarMassa')return;if(this.state.loading[sc])return;const p=this.plan(sc);if(p.ready)this.run(sc);}
 
 plan(sc){
 const s=this.state,f=s.forms[sc]||{},perfil=s.perfil,v=s.validar;
@@ -2414,8 +2417,9 @@ const meta=META[s.screen==='fluxo'&&eff!=='resultado'?eff:(eff==='resultado'?'as
 const res0=s.results[eff];
 const loading=!!s.loading[eff];
 const show={};ORDER.concat(['resultado']).forEach(i=>{show[i]=eff===i;});
+show.excluir=eff==='excluir'||eff==='cancelarMassa';
 show.fluxo=s.screen==='fluxo';
-show.form=eff!=='inicio'&&eff!=='resultado'&&eff!=='diagnostico'&&eff!=='perfis'&&eff!=='baixarPasta'&&eff!=='comparar'&&eff!=='lote'&&eff!=='fumaca'&&eff!=='vigia'&&eff!=='importarPasta'&&eff!=='painel'&&eff!=='excluir';
+show.form=eff!=='inicio'&&eff!=='resultado'&&eff!=='diagnostico'&&eff!=='perfis'&&eff!=='baixarPasta'&&eff!=='comparar'&&eff!=='lote'&&eff!=='fumaca'&&eff!=='vigia'&&eff!=='importarPasta'&&eff!=='painel'&&eff!=='excluir'&&eff!=='cancelarMassa';
 const T=(sc,k,o)=>this.fld(sc,k,o);
 const last=s.lastDoc[perfil],lastA=s.lastAss[perfil];
 const docLast=(sc)=>({useLast:true,lastLabel:last?'Usar último documentoId ('+last+')':'Nenhum documentoId recente',lastDisabled:!last,onLast:()=>this.setF(sc,{documentoId:String(last)})});
@@ -2838,8 +2842,10 @@ bloqueado:pmLg==='bloquear',naoPode:lgs.busy||pmLg==='bloquear'||!lgs.login.trim
 instancia:(PERFIS[lgs.perfil]||{}).instancia||'',
 entrar:()=>this.lgEntrar(),fechar:()=>this.lgFechar()};
 // excluir em massa
-const fex=s.forms.excluir,exst=s.ex,exe=exst.ens,exn=exst.snap;
-const exAtivo=!!exn&&(exn.estado==='executando'||exn.estado==='listando');
+const exModoC=eff==='cancelarMassa',exModo=exModoC?'cancelar':'excluir';
+const fex=s.forms.excluir,exst=s.ex;
+const exe=exst.ens&&(exst.ens.modo||'excluir')===exModo?exst.ens:null,exn=exst.snap&&(exst.snap.modo||'excluir')===exModo?exst.snap:null;
+const exAtivo=!!exst.snap&&(exst.snap.estado==='executando'||exst.snap.estado==='listando');
 const pmE=(PERFIS[perfil]||{}).protegido||'';
 const EXT={listando:'Lendo a pasta…',executando:'Excluindo…',concluido:'Concluído',cancelado:'Cancelado',erro:'Interrompido'};
 const EXC={listando:'mu',executando:'mu',concluido:'ok',cancelado:'wn',erro:'er'};
@@ -2865,7 +2871,17 @@ temVarias:!!fex.diretorioIds&&fex.diretorioIds.length>0,
 variasTxt:fex.diretorioIds&&fex.diretorioIds.length?(fex.diretorioIds.length+' pasta(s) marcada(s) em '+fex.pastaPai+': '+fex.pastasSel.slice(0,8).join(', ')+(fex.pastasSel.length>8?' e mais '+(fex.pastasSel.length-8):'')):'',
 limparVarias:()=>this.exSet({diretorioIds:[],pastasSel:[],pastaPai:''}),
 escolherPasta:()=>this.pkAbrir({modo:'id',sc:'excluir'}),
-subpastas:!!fex.subpastas,onSub:e=>this.exSet({subpastas:e.target.checked}),
+subpastas:exModoC?!!fex.cSub:!!fex.subpastas,onSub:e=>this.exSet(exModoC?{cSub:e.target.checked}:{subpastas:e.target.checked}),
+modoExcluir:!exModoC,modoCancelar:exModoC,
+h1:exModoC?'1. Em qual pasta cancelar os fluxos':'1. Qual pasta esvaziar',
+incluirExp:!!fex.incluirExpirados,onIncluirExp:e=>this.exSet({incluirExpirados:e.target.checked}),
+verificarLabel:exModoC?'Ver o que será cancelado':'Ver o que será excluído',
+vazioTit:exModoC?'Nenhum fluxo ativo nesta seleção':'Nenhum documento nesta seleção',
+vazioTxt:exModoC?'Não há fluxo de assinatura ativo com esta pasta e estes filtros.':'Não há nada a excluir com esta pasta e estes filtros.',
+intervaloLabel:exModoC?'Intervalo entre os cancelamentos (ms)':'Intervalo entre as exclusões (ms)',
+rodape:exModoC?'Se várias chamadas falharem em seguida, o cancelamento para sozinho. Uma chamada que falha nunca é repetida. Se a pasta mudar depois da verificação, a confirmação deixa de valer.':'Se várias chamadas falharem em seguida, a exclusão para sozinha. Uma chamada que falha nunca é repetida. Se a pasta mudar depois da verificação, a confirmação deixa de valer.',
+bloqTxt:exModoC?'Este perfil está protegido como somente leitura: não dá para cancelar fluxos nele.':'Este perfil está protegido como somente leitura: não dá para excluir nele.',
+fimNota:exModoC?'Os documentos continuam na plataforma; só os fluxos foram cancelados. O relatório lista o que foi feito com cada um.':'Os documentos excluídos estão na lixeira da plataforma. O relatório lista o que foi feito com cada um.',
 cancelar:!!fex.cancelarFluxos,onCancelarFluxos:e=>this.exSet({cancelarFluxos:e.target.checked}),
 status:fex.status,onStatus:e=>this.exSet({status:e.target.value}),dataInicio:fex.dataInicio,onDataInicio:e=>this.exSet({dataInicio:e.target.value}),dataFim:fex.dataFim,onDataFim:e=>this.exSet({dataFim:e.target.value}),
 statusOpts:[['','Todos os status'],['pendente','Pendente'],['assinado','Assinado'],['expirado','Expirado'],['cancelado','Cancelado'],['sem_assinatura','Sem assinatura']].map(a=>({value:a[0],label:a[1],selected:fex.status===a[0]})),
@@ -2875,23 +2891,23 @@ verifPct:exst.verif&&exst.verif.total?Math.min(100,Math.round(exst.verif.lidos*1
 verifBar:'width:'+(exst.verif&&exst.verif.total?Math.min(100,Math.round(exst.verif.lidos*100/exst.verif.total)):0)+'%',
 verifTxt:exst.verif?('Lendo a pasta: '+exst.verif.lidos+' de '+exst.verif.total+' documento(s)'+(exst.verif.restante!=null?' · faltam cerca de '+fmtDur(exst.verif.restante):'')+' · '+exst.verif.decorrido+' s decorridos'):'Iniciando a leitura da pasta…',
 has:!!exe,vazio:!!exe&&exe.total===0,cheio:!!exe&&exe.total>0,
-resumo:exe?exe.total+' documento(s) nesta seleção':'',
+resumo:exe?(exModoC?exe.total+' documento(s) com fluxo ativo nesta seleção':exe.total+' documento(s) nesta seleção'):'',
 porStatus:exe?Object.keys(exe.porStatus).sort().map(k=>k+': '+exe.porStatus[k]).join(' · '):'',
 fluxos:exe?exe.fluxosAtivos:0,temFluxos:!!exe&&exe.fluxosAtivos>0,
-fluxoTxt:exe&&exe.fluxosAtivos>0?(fex.cancelarFluxos?exe.fluxosAtivos+' têm fluxo de assinatura ATIVO e serão CANCELADOS antes. Cancelar um fluxo não tem volta: os links param de funcionar e, se alguém já assinou, o arquivo volta à versão anterior às assinaturas.':exe.fluxosAtivos+' têm fluxo de assinatura ativo e serão PULADOS (o cancelamento está desligado).'):'',
-planoTxt:exe?exe.serao.excluidos+' documento(s) irão para a lixeira da plataforma'+(exe.serao.pulados?' · '+exe.serao.pulados+' pulado(s)':'')+(exe.serao.cancelados?' · '+exe.serao.cancelados+' fluxo(s) cancelado(s)':''):'',
+fluxoTxt:exe&&exe.fluxosAtivos>0?(exModoC?exe.fluxosAtivos+' fluxo(s) de assinatura serão CANCELADOS. Cancelar um fluxo não tem volta: derruba o fluxo inteiro, os links param de funcionar e, se alguém já assinou, o arquivo volta à versão anterior às assinaturas. Nenhum documento será excluído.':fex.cancelarFluxos?exe.fluxosAtivos+' têm fluxo de assinatura ATIVO e serão CANCELADOS antes. Cancelar um fluxo não tem volta: os links param de funcionar e, se alguém já assinou, o arquivo volta à versão anterior às assinaturas.':exe.fluxosAtivos+' têm fluxo de assinatura ativo e serão PULADOS (o cancelamento está desligado).'):'',
+planoTxt:exe?(exModoC?exe.serao.cancelados+' fluxo(s) serão cancelados · nenhum documento será excluído'+(exe.serao.pulados?' · '+exe.serao.pulados+' pulado(s) (sem fluxo)':''):exe.serao.excluidos+' documento(s) irão para a lixeira da plataforma'+(exe.serao.pulados?' · '+exe.serao.pulados+' pulado(s)':'')+(exe.serao.cancelados?' · '+exe.serao.cancelados+' fluxo(s) cancelado(s)':'')):'',
 amostra:(exe&&exe.amostra||[]).map(a=>({t:a.nome,st:a.status})),hasAmostra:!!exe&&exe.amostra.length>0,
 frase:exFrase,confirmacao:fex.confirmacao,onConfirmacao:e=>this.setState({forms:Object.assign({},s.forms,{excluir:Object.assign({},fex,{confirmacao:e.target.value})})}),
 intervalo:fex.intervalo,onIntervalo:e=>this.setF('excluir',{intervalo:e.target.value}),
-estMin:exe&&exe.total?('Só a espera entre as exclusões soma '+fmtDur(exe.total*(Number(fex.intervalo)||0)/1000)+'. Cada chamada à API leva tempo além disso; a estimativa real aparece assim que a exclusão começa.'):'',
+estMin:exe&&exe.total?('Só a espera entre '+(exModoC?'os cancelamentos':'as exclusões')+' soma '+fmtDur(exe.total*(Number(fex.intervalo)||0)/1000)+'. Cada chamada à API leva tempo além disso; a estimativa real aparece assim que '+(exModoC?'o cancelamento':'a exclusão')+' começa.'):'',
 bloqueado:pmE==='bloquear',prodAviso:pmE==='confirmar',
 podeExcluir:exConf&&!exAtivo&&pmE!=='bloquear'&&!!exe&&exe.total>0,naoPode:!(exConf&&!exAtivo&&pmE!=='bloquear'&&!!exe&&exe.total>0),
-excluirLabel:exe?'Excluir '+exe.total+' documento(s)':'Excluir',excluir:()=>this.exIniciar(),
+excluirLabel:exe?(exModoC?'Cancelar '+exe.total+' fluxo(s)':'Excluir '+exe.total+' documento(s)'):(exModoC?'Cancelar':'Excluir'),excluir:()=>this.exIniciar(),
 ocupado:exAtivo,cancelarExclusao:()=>this.exCancelar(),
 prog:!!exn,cls:exn?(EXC[exn.estado]||'mu'):'mu',label:exn?(EXT[exn.estado]||exn.estado):'',
 pct:exn&&exn.total?Math.min(100,Math.round((exn.estado==='listando'?exn.lidos:exn.feitos)*100/exn.total)):0,barStyle:'width:'+(exn&&exn.total?Math.min(100,Math.round((exn.estado==='listando'?exn.lidos:exn.feitos)*100/exn.total)):0)+'%',
-progresso:exn?(exn.estado==='listando'?'Lendo a pasta antes de excluir qualquer coisa: '+exn.lidos+' de '+exn.total+' documento(s)'+eta('exl',exn.id,exn.estado==='listando',exn.lidos,exn.total):exn.feitos+' de '+exn.total+eta('ex',exn.id,exn.estado==='executando',exn.feitos,exn.total)):'',hasAtual:!!exn&&!!exn.atual,atual:exn?exn.atual:'',
-resumoExec:exn?(exn.excluidos+' excluído(s) · '+exn.fluxosCancelados+' fluxo(s) cancelado(s) · '+exn.pulados+' pulado(s) · '+exn.nFalhas+' com falha'):'',
+progresso:exn?(exn.estado==='listando'?'Lendo a pasta antes de '+(exModoC?'cancelar':'excluir')+' qualquer coisa: '+exn.lidos+' de '+exn.total+' documento(s)'+eta('exl',exn.id,exn.estado==='listando',exn.lidos,exn.total):exn.feitos+' de '+exn.total+eta('ex',exn.id,exn.estado==='executando',exn.feitos,exn.total)):'',hasAtual:!!exn&&!!exn.atual,atual:exn?exn.atual:'',
+resumoExec:exn?(exModoC?exn.fluxosCancelados+' fluxo(s) cancelado(s) · '+exn.pulados+' pulado(s) · '+exn.nFalhas+' com falha':exn.excluidos+' excluído(s) · '+exn.fluxosCancelados+' fluxo(s) cancelado(s) · '+exn.pulados+' pulado(s) · '+exn.nFalhas+' com falha'):'',
 hasFim:!!exn&&exn.estado!=='executando'&&exn.estado!=='listando',relHref:exst.id?'/_excluir/'+encodeURIComponent(exst.id)+'/relatorio.csv':'#',
 hasEstErro:!!exn&&!!exn.erro,estErro:exn?exn.erro:'',
 falhas:(exn&&exn.falhas||[]).map(x=>({t:x.nome,erro:x.erro})),hasFalhas:!!exn&&exn.nFalhas>0,nFalhas:exn?exn.nFalhas:0};

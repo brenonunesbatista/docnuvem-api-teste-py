@@ -58,8 +58,12 @@ class ErroExclusao(Exception):
     """Pedido inválido ou recusado (a mensagem pode ser mostrada ao usuário)."""
 
 
-def frase_de_confirmacao(n: int) -> str:
-    return f"EXCLUIR {n}"
+MODOS = ("excluir", "cancelar")  # excluir: manda à lixeira; cancelar: só cancela os fluxos
+MOTIVO_CANCELAR = "Cancelamento em massa (Docnuvem API Tester)"
+
+
+def frase_de_confirmacao(n: int, modo: str = "excluir") -> str:
+    return f"{'CANCELAR' if modo == 'cancelar' else 'EXCLUIR'} {n}"
 
 
 def credencial(perfil: PerfilConfig) -> str:
@@ -79,9 +83,16 @@ def validar_pedido(
     if len(diretorio_ids) > MAX_PASTAS:
         raise ErroExclusao(f"Escolha no máximo {MAX_PASTAS} pastas por vez.")
     try:
-        validar_filtros(status, data_inicio, data_fim)
+        for parte in partes_de_status(status):
+            validar_filtros(parte, data_inicio, data_fim)
     except ErroDownload as exc:
         raise ErroExclusao(str(exc)) from exc
+
+
+def partes_de_status(status: str) -> list[str]:
+    """ "pendente,expirado" -> ["pendente", "expirado"]; vazio -> [""] (qualquer status)."""
+    partes = [p.strip() for p in status.split(",") if p.strip()]
+    return list(dict.fromkeys(partes)) or [""]
 
 
 def _consulta(
@@ -125,12 +136,16 @@ def contar_rapido(cliente: httpx.Client, perfil: PerfilConfig, **filtros: Any) -
     ids = filtros.pop("diretorio_ids")
     validar_pedido(ids, filtros["status"], filtros["data_inicio"], filtros["data_fim"])
     soma = 0
-    for id_ in ids:
-        dado = _consulta(cliente, perfil, diretorio_id=id_, pagina=0, tamanho=1, **filtros)
-        total = dado.get("total")
-        if not isinstance(total, int):
-            return None
-        soma += total
+    status = filtros.pop("status")
+    for parte in partes_de_status(status):
+        for id_ in ids:
+            dado = _consulta(
+                cliente, perfil, diretorio_id=id_, status=parte, pagina=0, tamanho=1, **filtros
+            )
+            total = dado.get("total")
+            if not isinstance(total, int):
+                return None
+            soma += total
     return soma
 
 
@@ -146,7 +161,9 @@ def _acumular(dado: dict[str, Any], alvos: list[dict[str, Any]], vistos: set[int
                 {
                     "documentoId": id_,
                     "nome": str(d.get("nomeArquivo") or f"documento {id_}"),
-                    "status": str(d.get("status") or "sem_assinatura").lower(),
+                    "status": str(
+                        d.get("statusAssinatura") or d.get("status") or "sem_assinatura"
+                    ).lower(),
                     "assinaturaId": d.get("assinaturaId"),
                     "diretorioId": d.get("diretorioId"),
                 }
@@ -174,7 +191,8 @@ def listar_alvos(
     alvos: list[dict[str, Any]] = []
     vistos: set[int] = set()
     total_geral: int | None = None
-    if len(diretorio_ids) > 1:  # o total de todas as pastas, para o progresso fazer sentido
+    partes = partes_de_status(status)
+    if len(diretorio_ids) * len(partes) > 1:  # o total geral, para o progresso fazer sentido
         total_geral = contar_rapido(
             cliente,
             perfil,
@@ -184,23 +202,24 @@ def listar_alvos(
             data_inicio=data_inicio,
             data_fim=data_fim,
         )
-    for id_ in diretorio_ids:
-        if cancelar is not None and cancelar.is_set():
-            break
-        _listar_pasta(
-            cliente,
-            perfil,
-            id_,
-            alvos,
-            vistos,
-            total_geral,
-            subpastas=subpastas,
-            status=status,
-            data_inicio=data_inicio,
-            data_fim=data_fim,
-            cancelar=cancelar,
-            ao_ler=ao_ler,
-        )
+    for parte in partes:
+        for id_ in diretorio_ids:
+            if cancelar is not None and cancelar.is_set():
+                return alvos
+            _listar_pasta(
+                cliente,
+                perfil,
+                id_,
+                alvos,
+                vistos,
+                total_geral,
+                subpastas=subpastas,
+                status=parte,
+                data_inicio=data_inicio,
+                data_fim=data_fim,
+                cancelar=cancelar,
+                ao_ler=ao_ler,
+            )
     return alvos
 
 
@@ -361,13 +380,79 @@ def excluir_pasta(
 
 def _ativo(doc: dict[str, Any]) -> bool:
     """Tem fluxo de assinatura em andamento (o único caso em que o cancelamento se aplica)."""
-    return doc["status"] == "pendente" and isinstance(doc["assinaturaId"], int)
+    return doc["status"] == "pendente"
+
+
+CANCELAVEIS = ("pendente", "expirado")  # os únicos status cujo fluxo o cancelamento em massa toca
+
+
+class _SemFluxo(Exception):
+    """O documento não tem (mais) fluxo de assinatura."""
+
+
+class _FalhaConsulta(Exception):
+    """Não foi possível descobrir o fluxo do documento (a mensagem vai para o relatório)."""
+
+
+def _assinatura_id(
+    cliente: httpx.Client,
+    base: str,
+    instancia: str,
+    auth: dict[str, str],
+    doc: dict[str, Any],
+) -> int:
+    """O id do fluxo do documento. A listagem da API não o traz: consulta o status do documento."""
+    if isinstance(doc["assinaturaId"], int):
+        return doc["assinaturaId"]
+    try:
+        r = cliente.get(
+            f"{base}/api/documento/{doc['documentoId']}/status",
+            params={"instancia": instancia},
+            headers=auth,
+            timeout=60,
+        )
+    except httpx.HTTPError as exc:
+        raise _FalhaConsulta(f"falha de conexão ao consultar o fluxo: {exc}") from exc
+    if r.status_code != 200:
+        msg = _mensagem(r) or "sem mensagem"
+        raise _FalhaConsulta(f"não consegui consultar o fluxo (HTTP {r.status_code}): {msg}")
+    try:
+        dado = r.json()
+    except ValueError:
+        dado = {}
+    ass = dado.get("assinaturaId") if isinstance(dado, dict) else None
+    if not isinstance(ass, int):
+        raise _SemFluxo
+    doc["assinaturaId"] = ass
+    return ass
+
+
+def ensaio_cancelamento(alvos: list[dict[str, Any]]) -> dict[str, Any]:
+    """Resumo do cancelamento de fluxos, sem alterar nada. Quem não tem fluxo é pulado."""
+    com_fluxo = [d for d in alvos if d["status"] in CANCELAVEIS]
+    return {
+        "modo": "cancelar",
+        "total": len(alvos),
+        "porStatus": dict(Counter(d["status"] for d in alvos)),
+        "fluxosAtivos": len(com_fluxo),
+        "serao": {
+            "cancelados": len(com_fluxo),
+            "excluidos": 0,
+            "pulados": len(alvos) - len(com_fluxo),
+        },
+        "amostra": [
+            {"documentoId": d["documentoId"], "nome": d["nome"], "status": d["status"]}
+            for d in alvos[:8]
+        ],
+        "confirmacao": frase_de_confirmacao(len(alvos), "cancelar"),
+    }
 
 
 def ensaio(alvos: list[dict[str, Any]], cancelar_fluxos: bool) -> dict[str, Any]:
     """Resumo do que seria feito, sem alterar nada."""
     ativos = [d for d in alvos if _ativo(d)]
     return {
+        "modo": "excluir",
         "total": len(alvos),
         "porStatus": dict(Counter(d["status"] for d in alvos)),
         "fluxosAtivos": len(ativos),
@@ -397,6 +482,7 @@ class Verificacao:
     perfil: str
     filtros: tuple[Any, ...]  # (diretorio_ids, subpastas, status, data_inicio, data_fim)
     cancelar_fluxos: bool
+    modo: str = "excluir"
     estado: str = "lendo"  # lendo | pronta | erro | cancelada
     lidos: int = 0
     total: int = 0
@@ -438,6 +524,7 @@ class Exclusao:
     status: str = ""
     data_inicio: str = ""
     data_fim: str = ""
+    modo: str = "excluir"  # excluir (lixeira, cancelando antes os fluxos) | cancelar (só os fluxos)
     confirmado: int = 0  # a quantidade que a pessoa confirmou
     total_previsto: int = 0
     lidos: int = 0
@@ -469,6 +556,7 @@ class Exclusao:
         with self.lock:
             return {
                 "id": self.id,
+                "modo": self.modo,
                 "perfil": self.perfil,
                 "diretorioId": self.diretorio_ids[0],
                 "diretorioIds": list(self.diretorio_ids),
@@ -521,8 +609,11 @@ class GerenciadorExclusao:
         data_inicio: str,
         data_fim: str,
         cancelar_fluxos: bool,
+        modo: str = "excluir",
     ) -> Verificacao:
         """Começa a ler a pasta em segundo plano (só leituras). Valida o pedido na hora."""
+        if modo not in MODOS:
+            raise ErroExclusao("Modo inválido: use excluir ou cancelar.")
         ids = tuple(dict.fromkeys(diretorio_ids))  # sem repetir, na ordem marcada
         validar_pedido(ids, status, data_inicio, data_fim)
         v = Verificacao(
@@ -530,6 +621,7 @@ class GerenciadorExclusao:
             perfil=perfil_nome,
             filtros=(ids, subpastas, status, data_inicio, data_fim),
             cancelar_fluxos=cancelar_fluxos,
+            modo=modo,
         )
         with self._lock:
             self._verificacoes[v.id] = v
@@ -554,7 +646,10 @@ class GerenciadorExclusao:
         intervalo_ms: int,
         verificacao_id: str = "",
         registrar: Callable[[dict[str, Any]], None] | None = None,
+        modo: str = "excluir",
     ) -> Exclusao:
+        if modo not in MODOS:
+            raise ErroExclusao("Modo inválido: use excluir ou cancelar.")
         ids = tuple(dict.fromkeys(diretorio_ids))
         filtros: dict[str, Any] = {
             "diretorio_ids": ids,
@@ -570,7 +665,7 @@ class GerenciadorExclusao:
             total = len(alvos)
         if total == 0:
             raise ErroExclusao("Não há documentos nesta seleção.")
-        esperado = frase_de_confirmacao(total)
+        esperado = frase_de_confirmacao(total, modo)
         if " ".join(confirmacao.upper().split()) != esperado:
             raise ErroExclusao(
                 f"A confirmação não confere. Agora há {total} documento(s) na seleção: "
@@ -584,6 +679,7 @@ class GerenciadorExclusao:
                 v is not None
                 and igual
                 and v.perfil == perfil_nome
+                and v.modo == modo
                 and v.filtros == tuple(filtros.values())
                 and time.time() - (v.terminou_em or 0) < TTL_VERIFICACAO
                 and len(v.alvos) == total
@@ -604,6 +700,7 @@ class GerenciadorExclusao:
                 status=status,
                 data_inicio=data_inicio,
                 data_fim=data_fim,
+                modo=modo,
                 confirmado=total,
                 total_previsto=total,
                 registrar=registrar,
@@ -645,7 +742,9 @@ def _rodar_verificacao(v: Verificacao, cliente: httpx.Client, perfil: PerfilConf
             return
         v.alvos = alvos
         v.total = v.lidos = len(alvos)
-        v.resultado = ensaio(alvos, v.cancelar_fluxos)
+        v.resultado = (
+            ensaio_cancelamento(alvos) if v.modo == "cancelar" else ensaio(alvos, v.cancelar_fluxos)
+        )
         v.estado, v.terminou_em = "pronta", time.time()
 
 
@@ -678,7 +777,7 @@ def _log_falha(
             "url": f"{ex.url_base}{caminho}?instancia={ex.instancia}&{chave}={valor}",
             "status": http if isinstance(http, int) else 0,
             "ms": ms,
-            "resumo": f"Exclusão em massa · documento {doc['documentoId']} ({doc['nome']}): "
+            "resumo": f"{_nome_do_modo(ex)} · documento {doc['documentoId']} ({doc['nome']}): "
             f"{detalhe}"
             + (
                 f" · limite de {MAX_FALHAS_NO_LOG} falhas no log atingido ({extra})"
@@ -708,6 +807,9 @@ def _linha(
         if situacao == "excluido":
             ex.excluidos += 1
             ex.seguidas = 0
+        elif situacao == "cancelado":  # modo cancelar: o fluxo foi derrubado
+            ex.fluxos_cancelados += 1
+            ex.seguidas = 0
         elif situacao == "pulado":
             ex.pulados += 1
         else:
@@ -729,6 +831,7 @@ def executar(ex: Exclusao, cliente: httpx.Client, perfil: PerfilConfig) -> None:
         filtros.append(f"status {ex.status}")
     if ex.data_inicio or ex.data_fim:
         filtros.append(f"período {ex.data_inicio or '…'} a {ex.data_fim or '…'}")
+    inicio = "iniciado" if ex.modo == "cancelar" else "iniciada"
     _gravar_log(
         ex,
         {
@@ -737,9 +840,14 @@ def executar(ex: Exclusao, cliente: httpx.Client, perfil: PerfilConfig) -> None:
             "status": 200,
             "ms": 0,
             "resumo": (
-                f"Exclusão em massa iniciada: {ex.confirmado} documento(s) confirmado(s) "
-                f"({', '.join(filtros)}); cancelar fluxos ativos: "
-                f"{'sim' if ex.cancelar_fluxos else 'não'}; intervalo {ex.intervalo_ms} ms."
+                f"{_nome_do_modo(ex)} {inicio}: {ex.confirmado} documento(s) confirmado(s) "
+                f"({', '.join(filtros)}); "
+                + (
+                    "só cancela os fluxos (nada é excluído)"
+                    if ex.modo == "cancelar"
+                    else f"cancelar fluxos ativos: {'sim' if ex.cancelar_fluxos else 'não'}"
+                )
+                + f"; intervalo {ex.intervalo_ms} ms."
             ),
         },
     )
@@ -814,11 +922,81 @@ def _ler_tudo(ex: Exclusao, cliente: httpx.Client, perfil: PerfilConfig) -> bool
     return True
 
 
+def _nome_do_modo(ex: Exclusao) -> str:
+    return "Cancelamento de fluxos em massa" if ex.modo == "cancelar" else "Exclusão em massa"
+
+
 def _descrever_pastas(ids: Sequence[int]) -> str:
     if len(ids) == 1:
         return f"pasta {ids[0]}"
     amostra = ", ".join(str(i) for i in ids[:10]) + (" …" if len(ids) > 10 else "")
     return f"{len(ids)} pastas ({amostra})"
+
+
+def _cancelar_so_o_fluxo(
+    ex: Exclusao,
+    cliente: httpx.Client,
+    base: str,
+    instancia: str,
+    auth_instancia: dict[str, str],
+    doc: dict[str, Any],
+) -> bool:
+    """Modo "cancelar": derruba o fluxo de assinatura do documento e NÃO exclui nada."""
+    if doc["status"] not in CANCELAVEIS:  # nunca toca em assinado, cancelado ou sem fluxo
+        detalhe = f"status {doc['status']}: só fluxos pendentes (ou vencidos) são cancelados"
+        _linha(ex, doc, "fora do alvo", "pulado", "", detalhe)
+        return False
+    t0 = time.perf_counter()
+    try:
+        ass = _assinatura_id(cliente, base, instancia, auth_instancia, doc)
+    except _SemFluxo:
+        _linha(ex, doc, "sem fluxo", "pulado", "", "não tem fluxo de assinatura para cancelar")
+        return False
+    except _FalhaConsulta as exc:
+        _linha(ex, doc, "erro ao cancelar", "falhou", "", str(exc), _ms(t0))
+        return False
+    try:
+        r = cliente.delete(
+            f"{base}/api/assinatura/{ass}",
+            params={"instancia": instancia, "motivo": MOTIVO_CANCELAR},
+            headers=auth_instancia,
+            timeout=60,
+        )
+    except httpx.HTTPError as exc:
+        _linha(
+            ex,
+            doc,
+            "erro ao cancelar",
+            "falhou",
+            "",
+            f"falha de conexão ao cancelar o fluxo: {exc}. Confira antes de repetir.",
+            _ms(t0),
+        )
+        return False
+    if r.status_code == 200:
+        _linha(ex, doc, "cancelado", "cancelado", 200, "fluxo cancelado", _ms(t0))
+        return False
+    if r.status_code in (404, 409):  # já não estava ativo, ou a API recusou reverter com segurança
+        msg = _mensagem(r) or "sem mensagem"
+        _linha(
+            ex, doc, f"não cancelado (HTTP {r.status_code})", "pulado", r.status_code, msg, _ms(t0)
+        )
+        return False
+    msg = _mensagem(r) or "sem mensagem"
+    _linha(
+        ex,
+        doc,
+        "erro ao cancelar",
+        "falhou",
+        r.status_code,
+        f"não consegui cancelar o fluxo (HTTP {r.status_code}): {msg}",
+        _ms(t0),
+    )
+    if r.status_code in (401, 403):  # sem permissão: continuar só geraria mais falhas
+        with ex.lock:
+            ex.erro = f"A API recusou o cancelamento (sem permissão). Detalhe: {msg}."
+        return True
+    return False
 
 
 def _ms(t0: float) -> int:
@@ -835,6 +1013,8 @@ def _processar(
     doc: dict[str, Any],
 ) -> bool:
     """Cancela o fluxo (se for o caso) e exclui o documento. Devolve True para abortar tudo."""
+    if ex.modo == "cancelar":
+        return _cancelar_so_o_fluxo(ex, cliente, base, instancia, auth_instancia, doc)
     fluxo = "—"
     if _ativo(doc):
         if not ex.cancelar_fluxos:
@@ -843,11 +1023,23 @@ def _processar(
             return False
         t0 = time.perf_counter()
         try:
-            r = cliente.delete(
-                f"{base}/api/assinatura/{doc['assinaturaId']}",
-                params={"instancia": instancia, "motivo": MOTIVO},
-                headers=auth_instancia,
-                timeout=60,
+            ass = _assinatura_id(cliente, base, instancia, auth_instancia, doc)
+        except _SemFluxo:
+            ass = None  # a API diz que não há fluxo: pode seguir para a exclusão
+        except _FalhaConsulta as exc:
+            # sem saber qual é o fluxo, NÃO exclui o documento (ficaria com o fluxo ativo)
+            _linha(ex, doc, "erro ao cancelar", "falhou", "", str(exc), _ms(t0))
+            return False
+        try:
+            r = (
+                cliente.delete(
+                    f"{base}/api/assinatura/{ass}",
+                    params={"instancia": instancia, "motivo": MOTIVO},
+                    headers=auth_instancia,
+                    timeout=60,
+                )
+                if ass is not None
+                else None
             )
         except httpx.HTTPError as exc:
             _linha(
@@ -860,7 +1052,9 @@ def _processar(
                 _ms(t0),
             )
             return False
-        if r.status_code == 200:
+        if r is None:
+            fluxo = "sem fluxo ativo"
+        elif r.status_code == 200:
             fluxo = "cancelado"
             with ex.lock:
                 ex.fluxos_cancelados += 1
@@ -919,7 +1113,7 @@ def _terminar(ex: Exclusao, estado: str) -> None:
         ex.terminou_em = time.time()
         falhas, erro = len(ex.falhas), ex.erro
         resumo = (
-            f"Exclusão em massa de {_descrever_pastas(ex.diretorio_ids)} {estado}: "
+            f"{_nome_do_modo(ex)} de {_descrever_pastas(ex.diretorio_ids)} {estado}: "
             f"{ex.excluidos} excluído(s), "
             f"{ex.fluxos_cancelados} fluxo(s) cancelado(s), {ex.pulados} pulado(s), "
             f"{falhas} falha(s)" + (f". {erro}" if erro else "")

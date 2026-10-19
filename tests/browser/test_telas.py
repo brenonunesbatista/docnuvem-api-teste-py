@@ -1472,3 +1472,106 @@ def test_status_e_download_tambem_escolhem_o_arquivo(pagina: Pagina, upstream: U
         modal = _dialogo(page, "Escolher o arquivo")
         modal.get_by_role("button", name="Usar Ata.pdf").click()
         expect(page.locator(f"#f-{campo}-documentoId")).to_have_value("503")
+
+
+# ------------------------------------------------------ cancelar fluxos em massa ---
+
+
+def _fluxos_por_status(upstream: Upstream) -> None:
+    """Dois pendentes, um expirado e um assinado; a API respeita o filtro de status."""
+    todos = [
+        (1, "a.pdf", "pendente", 101),
+        (2, "b.pdf", "pendente", 102),
+        (3, "c.pdf", "expirado", 103),
+        (4, "d.pdf", "assinado", 104),
+    ]
+
+    def resposta(q: dict[str, list[str]]) -> tuple[int, str]:
+        status = q.get("status", [""])[0]
+        docs = [
+            {"documentoId": i, "nomeArquivo": n, "statusAssinatura": st, "diretorioId": 5}
+            for i, n, st, _ in todos
+            if not status or st == status
+        ]
+        return 200, json.dumps({"total": len(docs), "temMais": False, "documentos": docs})
+
+    upstream.dinamicas[DOCUMENTOS] = resposta
+    for i, _, _, ass in todos:
+        corpo = json.dumps({"documentoId": i, "assinaturaId": ass})
+        upstream.respostas[("GET", f"/api/documento/{i}/status")] = (200, corpo)
+
+
+def test_cancelar_fluxos_em_massa_so_depois_de_ver_e_confirmar(
+    pagina: Pagina, upstream: Upstream
+) -> None:
+    page = pagina.page
+    _fluxos_por_status(upstream)
+    pagina.ir("Cancelar fluxos em massa")
+    expect(page.locator("main")).to_contain_text("Nenhum documento é excluído")
+    expect(page.locator("#ex-st")).to_have_count(0)  # o status é sempre "pendente"
+    expect(page.get_by_text("Ou excluir a pasta inteira")).to_have_count(0)
+    expect(
+        page.get_by_text("Incluir também as subpastas").locator("..").locator("input")
+    ).to_be_checked()
+    page.fill("#ex-dir", "5")
+    pagina.botao("Ver o que será cancelado").click()
+    expect(page.locator("main")).to_contain_text("2 documento(s) com fluxo ativo nesta seleção")
+    expect(page.locator("main")).to_contain_text("2 fluxo(s) serão cancelados · nenhum documento")
+    botao = pagina.botao("Cancelar 2 fluxo(s)")
+    expect(botao).to_be_disabled()
+    page.fill("#ex-conf", "EXCLUIR 2")  # a frase da exclusão não vale aqui
+    expect(botao).to_be_disabled()
+    page.fill("#ex-conf", "cancelar  2")
+    expect(botao).to_be_enabled()
+    assert [a for a in _alteracoes(upstream) if "DELETE" in a] == []
+    page.fill("#ex-int", "0")
+    botao.click()
+    expect(page.locator("main")).to_contain_text("2 fluxo(s) cancelado(s)")
+    expect(page.locator("main")).to_contain_text("Os documentos continuam na plataforma")
+    envios = _alteracoes(upstream)
+    assert sorted(a for a in envios if a.startswith("DELETE")) == [
+        "DELETE /api/assinatura/101",
+        "DELETE /api/assinatura/102",
+    ]
+    assert not any("excluirDocumento" in a for a in envios)  # nada foi para a lixeira
+    consultas = [c["path"] for c in upstream.recebidas if c["rota"] == "/api/documentos"]
+    assert all("status=pendente" in c and "incluirSubpastas=true" in c for c in consultas)
+
+
+def test_cancelar_fluxos_incluindo_os_vencidos(pagina: Pagina, upstream: Upstream) -> None:
+    page = pagina.page
+    _fluxos_por_status(upstream)
+    pagina.ir("Cancelar fluxos em massa")
+    page.fill("#ex-dir", "5")
+    page.get_by_text("Incluir também os fluxos vencidos (expirados)").click()
+    pagina.botao("Ver o que será cancelado").click()
+    expect(page.locator("main")).to_contain_text("3 documento(s) com fluxo ativo nesta seleção")
+    expect(page.locator("main")).to_contain_text("expirado: 1")
+    expect(page.locator("main")).to_contain_text("pendente: 2")
+    expect(page.locator("main")).not_to_contain_text("assinado: 1")  # o assinado nunca entra
+
+
+def test_os_dois_modos_nao_misturam_o_resultado(pagina: Pagina, upstream: Upstream) -> None:
+    page = pagina.page
+    _fluxos_por_status(upstream)
+    pagina.ir("Cancelar fluxos em massa")
+    page.fill("#ex-dir", "5")
+    pagina.botao("Ver o que será cancelado").click()
+    expect(page.locator("main")).to_contain_text("2. Conferir e confirmar")
+    pagina.ir("Excluir em massa")
+    expect(page.locator("main")).not_to_contain_text("2. Conferir e confirmar")  # outro modo
+    expect(pagina.botao("Ver o que será excluído")).to_be_visible()
+    expect(page.get_by_text("Ou excluir a pasta inteira")).to_be_visible()
+
+
+def test_cancelar_fluxos_em_perfil_somente_leitura_fica_bloqueado(
+    pagina: Pagina, upstream: Upstream
+) -> None:
+    page = pagina.page
+    _fluxos_por_status(upstream)
+    page.locator("select").first.select_option("leitura")
+    pagina.ir("Cancelar fluxos em massa")
+    page.fill("#ex-dir", "5")
+    pagina.botao("Ver o que será cancelado").click()
+    expect(page.locator("main")).to_contain_text("não dá para cancelar fluxos nele")
+    expect(pagina.botao("Cancelar 2 fluxo(s)")).to_be_disabled()

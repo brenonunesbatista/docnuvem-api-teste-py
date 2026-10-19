@@ -101,6 +101,13 @@ Opções: `--porta N`, `--nao-abrir`, `--sem-historico`, `--dados PASTA`.
   Docnuvem (nome, logotipo, endereço do servidor, textos e dicas, e também os textos copiados), com
   um nome opcional no lugar, para demonstrar a clientes. Só muda o que é exibido, nunca o que vai
   para a API. Também liga com `?marca=branca&nome=Minha Marca` no endereço e desliga com `?marca=normal`.
+- **Cancelar fluxos em massa** (sem volta, no menu Assinatura): varre uma pasta (ou várias marcadas) **e
+  as subpastas** e cancela os fluxos de assinatura **ativos** (`pendente`; opcionalmente os vencidos),
+  **sem excluir nenhum documento**. Documentos já assinados nunca são tocados. Reaproveita toda a
+  segurança da exclusão em massa: mostra tudo antes sem alterar nada, só libera ao digitar
+  `CANCELAR <quantidade>`, lê a pasta inteira antes de agir, tem progresso com estimativa de tempo,
+  intervalo, para sozinho após falhas seguidas, relatório CSV e registro no log. A API não traz o
+  `assinaturaId` na listagem: a ferramenta o consulta no status de cada documento antes de cancelar.
 - **Excluir a pasta inteira** (destrutivo, na tela de excluir em massa): `/api/sync/excluirDiretorio`
   manda a pasta, as subpastas e os documentos para a lixeira numa chamada só (a própria pasta também
   vai). Mostra antes quantos documentos e subpastas há, só libera ao digitar `EXCLUIR PASTA <id>`, e

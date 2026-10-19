@@ -51,8 +51,10 @@ from docnuvem_tester.config import (
 )
 from docnuvem_tester.download import ErroDownload, GerenciadorDownload, validar_destino
 from docnuvem_tester.excluir import (
+    MODOS,
     ErroExclusao,
     GerenciadorExclusao,
+    ensaio_cancelamento,
     excluir_pasta,
     listar_alvos,
     verificar_pasta,
@@ -1062,15 +1064,23 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError:
             self._json({"ok": False, "erro": "Informe o diretorioId (um número)."}, 400)
             return None
+        modo = str(dado.get("modo") or "excluir")
+        if modo not in MODOS:
+            self._json({"ok": False, "erro": "Modo inválido: use excluir ou cancelar."}, 400)
+            return None
+        status = str(dado.get("status") or "")
+        if modo == "cancelar":  # só fluxos ativos (e, se pedido, os vencidos)
+            status = "pendente,expirado" if dado.get("incluirExpirados") is True else "pendente"
         return {
             "nome": alvo[0],
             "perfil": alvo[1],
             "diretorio_ids": ids,
             "subpastas": dado.get("subpastas") is True,
-            "status": str(dado.get("status") or ""),
+            "status": status,
             "data_inicio": str(dado.get("dataInicio") or ""),
             "data_fim": str(dado.get("dataFim") or ""),
             "cancelar_fluxos": dado.get("cancelarFluxos") is not False,
+            "modo": modo,
         }
 
     def _ex_verificar(self) -> None:
@@ -1092,6 +1102,7 @@ class Handler(BaseHTTPRequestHandler):
                 data_inicio=c["data_inicio"],
                 data_fim=c["data_fim"],
                 cancelar_fluxos=c["cancelar_fluxos"],
+                modo=c["modo"],
             )
         except ErroExclusao as exc:
             return self._json({"ok": False, "erro": str(exc)}, 400)
@@ -1271,7 +1282,12 @@ class Handler(BaseHTTPRequestHandler):
             )
         except ErroExclusao as exc:
             return self._json({"ok": False, "erro": str(exc)}, 400)
-        self._json({"ok": True, **ensaio_exclusao(alvos, c["cancelar_fluxos"])})
+        resumo = (
+            ensaio_cancelamento(alvos)
+            if c["modo"] == "cancelar"
+            else ensaio_exclusao(alvos, c["cancelar_fluxos"])
+        )
+        self._json({"ok": True, **resumo})
 
     def _ex_iniciar(self) -> None:
         dado = self._corpo_json()
@@ -1306,6 +1322,7 @@ class Handler(BaseHTTPRequestHandler):
                 data_inicio=c["data_inicio"],
                 data_fim=c["data_fim"],
                 cancelar_fluxos=c["cancelar_fluxos"],
+                modo=c["modo"],
                 confirmacao=str(dado.get("confirmacao") or ""),
                 intervalo_ms=intervalo,
                 verificacao_id=str(dado.get("verificacaoId") or ""),

@@ -122,9 +122,9 @@ def test_so_fluxo_pendente_conta_como_ativo(app: App, upstream: Upstream) -> Non
         (1, "a.pdf", "expirado", 11),
         (2, "b.pdf", "cancelado", 12),
         (3, "c.pdf", "assinado", 13),
-        (4, "d.pdf", "pendente", None),  # pendente mas sem id de assinatura: nada a cancelar
+        (4, "d.pdf", "pendente", None),  # a API real não traz o id na listagem: o id vem depois
     )
-    assert _ensaio(app).json()["fluxosAtivos"] == 0
+    assert _ensaio(app).json()["fluxosAtivos"] == 1  # só o pendente
 
 
 def test_ensaio_passa_pasta_subpastas_e_filtros_para_a_listagem(
