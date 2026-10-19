@@ -1575,3 +1575,79 @@ def test_cancelar_fluxos_em_perfil_somente_leitura_fica_bloqueado(
     pagina.botao("Ver o que será cancelado").click()
     expect(page.locator("main")).to_contain_text("não dá para cancelar fluxos nele")
     expect(pagina.botao("Cancelar 2 fluxo(s)")).to_be_disabled()
+
+
+# ------------------------------------------ funções básicas x fluxos completos (menu) ---
+
+
+def _estrutura_do_menu(page: Any) -> list[tuple[str, str]]:
+    itens: list[list[str]] = page.evaluate(
+        """() => [...document.querySelectorAll('.navl .sec, .navl .grp, .navl .navb')].map(e => [
+          e.classList.contains('sec') ? 'sec' : e.classList.contains('grp') ? 'grp' : 'item',
+          e.innerText.trim()
+        ])"""
+    )
+    return [(a, b) for a, b in itens]
+
+
+def test_menu_separa_funcoes_basicas_de_fluxos_completos_e_mantem_as_subdivisoes(
+    pagina: Pagina, upstream: Upstream
+) -> None:
+    menu = _estrutura_do_menu(pagina.page)
+    esperado = [
+        ("grp", "Começar"),
+        ("item", "Início"),
+        ("sec", "Funções básicas da API"),
+        ("grp", "Enviar"),
+        ("item", "Importar arquivo"),
+        ("item", "Envio inteligente"),
+        ("grp", "Modelos"),
+        ("item", "Modelos"),
+        ("item", "Criar de modelo"),
+        ("grp", "Assinatura"),
+        ("item", "Solicitar assinatura"),
+        ("item", "Cancelar assinatura"),
+        ("grp", "Consultar"),
+        ("item", "Documentos"),
+        ("item", "Pastas"),
+        ("item", "Status do documento"),
+        ("item", "Download"),
+        ("grp", "Escola"),
+        ("item", "Solicitar documentos"),
+        ("item", "Status do aluno"),
+        ("sec", "Fluxos completos"),
+        ("grp", "Passo a passo"),
+        ("item", "Fluxo completo"),
+        ("grp", "Pastas em massa"),
+        ("item", "Importar pasta"),
+        ("item", "Baixar pasta"),
+        ("item", "Excluir em massa"),
+        ("grp", "Assinaturas"),
+        ("item", "Cancelar fluxos em massa"),
+        ("item", "Vigia de assinaturas"),
+        ("grp", "Rotinas"),
+        ("item", "Comparar instâncias"),
+        ("item", "Lote para escolas"),
+        ("item", "Teste de fumaça"),
+        ("item", "Painel das instâncias"),
+        ("grp", "Suporte"),
+        ("item", "Diagnóstico"),
+        ("item", "Perfis"),
+    ]
+    normal = [(a, b.upper() if a != "item" else b) for a, b in menu]  # títulos saem em caixa alta
+    assert [(a, b.casefold()) for a, b in normal] == [(a, b.casefold()) for a, b in esperado]
+
+
+def test_inicio_mostra_os_atalhos_em_duas_secoes(pagina: Pagina, upstream: Upstream) -> None:
+    page = pagina.page
+    pagina.ir("Início")
+    titulos = page.locator("main .sechead")
+    expect(titulos).to_have_text(["Funções básicas da API", "Fluxos completos"])
+    basicas, fluxos = page.locator("main .cards").nth(0), page.locator("main .cards").nth(1)
+    expect(basicas).to_contain_text("Solicitar assinatura")
+    expect(basicas).not_to_contain_text("Cancelar fluxos em massa")
+    expect(fluxos).to_contain_text("Cancelar fluxos em massa")
+    expect(fluxos).to_contain_text("Excluir em massa")
+    expect(fluxos).not_to_contain_text("Importar arquivo")
+    fluxos.get_by_role("button", name="Excluir em massa").click()
+    expect(page.locator("main")).to_contain_text("Ação destrutiva")

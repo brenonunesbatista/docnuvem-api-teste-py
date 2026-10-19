@@ -38,6 +38,8 @@ body{margin:0}
 .app[data-theme="dark"] .logo{background:var(--tx)}
 .bname{display:flex;flex-direction:column;font-weight:700;font-size:16px;line-height:1.15}
 .bname small{font-weight:400;font-size:12px;color:var(--mu)}
+.sec{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--act);background:var(--acs);border-radius:8px;padding:6px 10px;margin:16px 0 2px;font-weight:700}
+.side.min .sec{display:block;height:2px;margin:10px 10px;padding:0;font-size:0;background:var(--ac);opacity:.5}
 .grp{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mu);padding:14px 10px 4px;font-weight:700}
 .navb{display:flex;align-items:center;gap:10px;width:100%;border:0;background:transparent;padding:9px 10px;border-radius:10px;text-align:left;font-size:14.5px;min-height:40px}
 .navb:hover{background:var(--sf2)}
@@ -184,6 +186,7 @@ kbd{font-family:inherit;font-size:11px;border:1px solid var(--ln);border-bottom-
 .empty strong{color:var(--tx)}
 .pager{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.sechead{font-size:15px;margin:18px 0 2px;color:var(--act)}
 .shortcut{display:flex;flex-direction:column;gap:8px;text-align:left;border:1px solid var(--ln);background:var(--sf);border-radius:16px;padding:18px;box-shadow:var(--sh);min-height:120px}
 .shortcut:hover{border-color:var(--ac);background:var(--acs)}
 .shortcut .ico{width:38px;height:38px;border-radius:10px;background:var(--acs);color:var(--act);display:grid;place-items:center}
@@ -264,7 +267,7 @@ html::-webkit-scrollbar-corner,.app ::-webkit-scrollbar-corner{background:transp
 @media (max-width:860px){
 .shell{flex-direction:column}
 .side{position:fixed;left:0;right:0;bottom:0;top:auto;width:100%;max-height:none;padding:6px;border-right:0;border-top:1px solid var(--ln);z-index:30;overflow:visible}
-.brand,.grp,.sidetg,.sidehead{display:none}
+.brand,.grp,.sec,.sidetg,.sidehead{display:none}
 .navl{display:flex;gap:2px;overflow-x:auto}
 .navb{flex-direction:column;gap:2px;width:auto;min-width:76px;font-size:11.5px;padding:6px 8px;text-align:center;white-space:nowrap}
 .top{padding:10px 14px;position:static}
@@ -349,6 +352,7 @@ html[data-marca-logo] .logo{-webkit-mask:none;mask:none;background:var(--ac);bor
       </div>
       <div class="navl">
         <sc-for list="{{nav}}" as="n" hint-placeholder-count="12">
+          <sc-if value="{{n.hasSec}}" hint-placeholder-val="{{ false }}"><div class="sec" role="presentation">{{n.sec}}</div></sc-if>
           <sc-if value="{{n.hasGrp}}" hint-placeholder-val="{{ false }}"><div class="grp">{{n.grp}}</div></sc-if>
           <button class="navb" type="button" title="{{n.label}}" aria-current="{{n.cur}}" onClick="{{n.go}}"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{n.d}}"/></svg><span>{{n.label}}</span></button>
         </sc-for>
@@ -393,8 +397,17 @@ html[data-marca-logo] .logo{-webkit-mask:none;mask:none;background:var(--ac);bor
         <!-- ===== INÍCIO ===== -->
         <sc-if value="{{show.inicio}}" hint-placeholder-val="{{ false }}">
           <sc-if value="{{revogado}}" hint-placeholder-val="{{ false }}"><div class="dangerbox" role="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ic.alert}}"/></svg><span>O perfil <strong>{{perfil}}</strong> está com o token revogado: toda chamada devolve <strong>401</strong>. Troque de perfil no topo para testar fluxos completos.</span></div></sc-if>
+          <h2 class="sechead">Funções básicas da API</h2>
+          <p class="muted small" style="margin:0 0 8px">Uma tela para cada endpoint: monte a chamada, veja a requisição e a resposta.</p>
           <div class="cards">
             <sc-for list="{{home.cards}}" as="c" hint-placeholder-count="6">
+              <button class="shortcut" type="button" onClick="{{c.go}}"><span class="ico"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{c.d}}"/></svg></span><strong>{{c.title}}</strong><span class="d">{{c.desc}}</span></button>
+            </sc-for>
+          </div>
+          <h2 class="sechead">Fluxos completos</h2>
+          <p class="muted small" style="margin:0 0 8px">Tarefas maiores, que juntam várias chamadas, com conferência antes de agir, progresso e relatório.</p>
+          <div class="cards">
+            <sc-for list="{{home.fluxos}}" as="c" hint-placeholder-count="6">
               <button class="shortcut" type="button" onClick="{{c.go}}"><span class="ico"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="{{c.d}}"/></svg></span><strong>{{c.title}}</strong><span class="d">{{c.desc}}</span></button>
             </sc-for>
           </div>
@@ -1365,15 +1378,15 @@ gear:'M12 15a3 3 0 100-6 3 3 0 000 6zM19 12l2-1-2-4-2 .5-1.5-1L15 4h-4l-.5 2.5-1
 };
 const META={
 inicio:{label:'Início',title:'O que você quer testar hoje?',sub:'Escolha uma tarefa ou continue de onde parou. As chamadas são reais.',d:ICON.home,grp:'Começar'},
-fluxo:{label:'Fluxo completo',title:'Fluxo completo',sub:'Importe um arquivo, solicite a assinatura e receba os links, em três passos guiados.',d:ICON.route,grp:''},
-importar:{label:'Importar arquivo',title:'Importar arquivo',method:'POST',path:'/importar',sub:'Envia um arquivo para uma pasta. Se a pasta (ou a árvore de pastas) não existir, ela é criada.',d:ICON.upload,grp:'Enviar'},
+fluxo:{label:'Fluxo completo',title:'Fluxo completo',sub:'Importe um arquivo, solicite a assinatura e receba os links, em três passos guiados.',d:ICON.route,sec:'Fluxos completos',grp:'Passo a passo'},
+importar:{label:'Importar arquivo',title:'Importar arquivo',method:'POST',path:'/importar',sub:'Envia um arquivo para uma pasta. Se a pasta (ou a árvore de pastas) não existir, ela é criada.',d:ICON.upload,sec:'Funções básicas da API',grp:'Enviar'},
 envio:{label:'Envio inteligente',title:'Envio inteligente',method:'POST',path:'/enviarParaEnvioInteligente',sub:'Envia o arquivo para o fluxo de envio inteligente e devolve o documentoId.',d:ICON.zap,grp:''},
 excluir:{label:'Excluir em massa',title:'Excluir documentos em massa',sub:'Envia para a lixeira os documentos de uma pasta, cancelando antes os fluxos de assinatura ativos. Sempre mostra o que será feito e pede confirmação.',d:ICON.trash,grp:''},
-importarPasta:{label:'Importar pasta',title:'Importar pasta do computador',sub:'Envia todos os arquivos de uma pasta do seu computador para o Docnuvem, refazendo as subpastas. Antes de enviar você vê exatamente o que irá.',d:ICON.upload,grp:''},
+importarPasta:{label:'Importar pasta',title:'Importar pasta do computador',sub:'Envia todos os arquivos de uma pasta do seu computador para o Docnuvem, refazendo as subpastas. Antes de enviar você vê exatamente o que irá.',d:ICON.upload,grp:'Pastas em massa'},
 modelos:{label:'Modelos',title:'Modelos',method:'GET',path:'/api/modelos',sub:'Lista os modelos de documento e as variáveis de cada um.',d:ICON.layout,grp:'Modelos'},
 template:{label:'Criar de modelo',title:'Criar documento de modelo',method:'POST',path:'/api/documento/from-template',sub:'O formulário é montado a partir das variáveis do modelo escolhido. A pasta precisa já existir.',d:ICON.filetext,grp:''},
 assinatura:{label:'Solicitar assinatura',title:'Solicitar assinatura',method:'POST',path:'/api/assinatura',sub:'Cria a solicitação de assinatura eletrônica. Por padrão a API não envia e-mail: use os links devolvidos.',d:ICON.pen,grp:'Assinatura'},
-cancelarMassa:{label:'Cancelar fluxos em massa',title:'Cancelar fluxos de assinatura em massa',sub:'Cancela todos os fluxos de assinatura ativos dos documentos de uma pasta e das subpastas. Nenhum documento é excluído. Sempre mostra o que será feito e pede confirmação.',d:ICON.ban,grp:''},
+cancelarMassa:{label:'Cancelar fluxos em massa',title:'Cancelar fluxos de assinatura em massa',sub:'Cancela todos os fluxos de assinatura ativos dos documentos de uma pasta e das subpastas. Nenhum documento é excluído. Sempre mostra o que será feito e pede confirmação.',d:ICON.ban,grp:'Assinaturas'},
 cancelar:{label:'Cancelar assinatura',title:'Cancelar assinatura',method:'DELETE',path:'/api/assinatura/{assinaturaId}',sub:'Cancela a solicitação inteira. Ação destrutiva, com confirmação.',d:ICON.ban,grp:''},
 documentos:{label:'Documentos',title:'Documentos',method:'GET',path:'/api/documentos',sub:'Lista documentos com filtros. Parâmetros vazios nunca são enviados.',d:ICON.files,grp:'Consultar'},
 pastas:{label:'Pastas',title:'Pastas',method:'GET',path:'/api/diretorios',sub:'Encontre o diretorioId e o caminho completo de cada pasta.',d:ICON.folder,grp:''},
@@ -1390,7 +1403,10 @@ painel:{label:'Painel das instâncias',title:'Painel das instâncias',sub:'Todos
 diagnostico:{label:'Diagnóstico',title:'Diagnóstico da instância',sub:'Confere, só com leituras, se o perfil está pronto para uso e mostra a causa provável de cada problema.',d:ICON.pulse,grp:'Suporte'},
 perfis:{label:'Perfis',title:'Perfis',sub:'Crie, edite e remova os perfis do config.json: nome, instância, endereço, token e proteção.',d:ICON.gear,grp:''}
 };
-const ORDER=['inicio','fluxo','importar','envio','importarPasta','modelos','template','assinatura','cancelar','cancelarMassa','documentos','pastas','status','download','baixarPasta','excluir','alunoSolicitar','alunoStatus','comparar','lote','fumaca','vigia','painel','diagnostico','perfis'];
+// Funções básicas da API (uma tela por endpoint) e, depois, os fluxos completos (várias chamadas juntas).
+const ORDER=['inicio',
+'importar','envio','modelos','template','assinatura','cancelar','documentos','pastas','status','download','alunoSolicitar','alunoStatus',
+'fluxo','importarPasta','baixarPasta','excluir','cancelarMassa','vigia','comparar','lote','fumaca','painel','diagnostico','perfis'];
 const AUTO=['documentos','pastas','modelos'];
 let LIVE=null;const FILEBLOB=new WeakMap();
 const BASE='https://api.docnuvem.example';
@@ -3053,10 +3069,16 @@ const steps=['1. Importar arquivo','2. Solicitar assinatura','3. Links dos signa
 const home={cards:[
 {title:'Importar arquivo',desc:'Envie um arquivo para uma pasta (cria a árvore se preciso).',d:ICON.upload,go:()=>this.go('importar')},
 {title:'Solicitar assinatura',desc:'Crie a solicitação e copie os links dos signatários.',d:ICON.pen,go:()=>this.go('assinatura')},
-{title:'Fluxo completo',desc:'Importar e solicitar assinatura em três passos guiados.',d:ICON.route,go:()=>this.go('fluxo')},
 {title:'Criar documento de modelo',desc:'Formulário montado a partir das variáveis do modelo.',d:ICON.filetext,go:()=>this.go('template')},
 {title:'Ver status do documento',desc:'Quem já assinou, quem visualizou e links pendentes.',d:ICON.clip,go:()=>this.go('status')},
 {title:'Listar documentos',desc:'Filtros, ordenação e URL efetiva da consulta.',d:ICON.files,go:()=>this.go('documentos')},
+],fluxos:[
+{title:'Fluxo completo',desc:'Importar e solicitar assinatura em três passos guiados.',d:ICON.route,go:()=>this.go('fluxo')},
+{title:'Importar pasta',desc:'Envia uma pasta do computador, refazendo as subpastas.',d:ICON.upload,go:()=>this.go('importarPasta')},
+{title:'Baixar pasta',desc:'Baixa os documentos de uma pasta (e subpastas) com filtros.',d:ICON.download,go:()=>this.go('baixarPasta')},
+{title:'Excluir em massa',desc:'Esvazia pastas, com prévia e confirmação digitada.',d:ICON.trash,go:()=>this.go('excluir')},
+{title:'Cancelar fluxos em massa',desc:'Cancela os fluxos ativos de uma pasta e das subpastas.',d:ICON.ban,go:()=>this.go('cancelarMassa')},
+{title:'Vigia de assinaturas',desc:'Acompanha pendentes e avisa quando algo muda.',d:ICON.clock,go:()=>this.go('vigia')},
 {title:'Diagnóstico da instância',desc:'Confere token, modelos e pastas e explica o que falta.',d:ICON.pulse,go:()=>this.go('diagnostico')}],
 recent:s.log.slice(0,5).map(e=>this.logRow(e)),noRecent:s.log.length===0};
 
@@ -3082,7 +3104,7 @@ const noPrev=!p.req;
 return {
 theme:s.theme,bannerCls:car?'':'live',modeTitle:sem?'Sem servidor local':car?'Conectando':'API real',modeText:sem?'esta página precisa do programa docnuvem-web: rode "docnuvem-web" no terminal e abra o endereço que ele mostra.':car?'procurando o servidor local…':'as chamadas atingem a API de verdade, com os tokens do config.json. O token fica no servidor local e aparece sempre mascarado.',loadText:'Chamando a API…',themeIcon:s.theme==='dark'?ICON.sun:ICON.moon,themeLabel:s.theme==='dark'?'Mudar para tema claro':'Mudar para tema escuro',toggleTheme:()=>this.setTema(s.theme==='dark'?'light':'dark'),
 ic:ICON,onKey:this.onKey,sideCls:s.navMin?'min':'',sideOpen:!s.navMin,sideLabel:s.navMin?'Expandir menu':'Recolher menu',toggleSide:()=>this.toggleSide(),openPalette:()=>this.openPalette(),
-nav:ORDER.map(id=>({id,label:(id==='vigia'&&vgNovos>0)?META[id].label+' ('+vgNovos+')':(id==='painel'&&mnNovos>0)?META[id].label+' ('+mnNovos+')':META[id].label,d:META[id].d,hasGrp:!!META[id].grp,grp:META[id].grp,cur:s.screen===id?'page':'false',go:()=>this.go(id)})),
+nav:ORDER.map(id=>({id,label:(id==='vigia'&&vgNovos>0)?META[id].label+' ('+vgNovos+')':(id==='painel'&&mnNovos>0)?META[id].label+' ('+mnNovos+')':META[id].label,d:META[id].d,hasSec:!!META[id].sec,sec:META[id].sec,hasGrp:!!META[id].grp,grp:META[id].grp,cur:s.screen===id?'page':'false',go:()=>this.go(id)})),
 perfil,perfilOpts:Object.keys(PERFIS).map(k=>({value:k,label:k,selected:k===perfil})),
 onPerfil:e=>{const v=e.target.value;this.setState({perfil:v,results:{},lists:{},collapsed:{}});setTimeout(()=>{const sc=this.eff();if(AUTO.indexOf(sc)>=0)this.run(sc);if(LIVE&&sc==='template')this.run('modelos');if(LIVE&&sc==='diagnostico'&&!this.state.diag[v])this.diagnosticar();this.checarApi(true);},0);},
 tokenMask:mask(perfil),revogado:false,validar:s.validar,validarOff:!s.validar&&show.form,onValidar:e=>this.setState({validar:e.target.checked}),

@@ -74,6 +74,10 @@ Opções: `--porta N`, `--nao-abrir`, `--sem-historico`, `--dados PASTA`.
   refazendo a árvore), com filtro opcional de status e de período. Você escolhe o destino por uma janela ou digitando o caminho;
   há "só contar" antes de baixar, andamento, cancelamento e um relatório CSV. Nunca sobrescreve
   arquivos. Só lê da API, então vale até em perfil protegido.
+- **Menu em duas partes**: "Funções básicas da API" (uma tela por endpoint: Enviar, Modelos, Assinatura,
+  Consultar e Escola) e "Fluxos completos" (tarefas que juntam várias chamadas, com conferência antes
+  de agir: Passo a passo, Pastas em massa, Assinaturas, Rotinas e Suporte). A tela inicial segue a
+  mesma divisão.
 - **Login de usuário por instância**: em **Perfis** (ou no seletor de pastas, quando a API pede) o botão
   "Entrar com usuário…" faz o login do sincronizador com o SEU usuário nessa instância. Cada instância tem
   os seus próprios usuários, então o login é por perfil. O login registra este computador como
