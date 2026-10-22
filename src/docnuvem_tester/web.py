@@ -811,10 +811,17 @@ class Servidor(ThreadingHTTPServer):
         self.painel.esquecer()
 
     def server_close(self) -> None:
-        self.vigias.parar_todos()
-        self.monitor.parar()
+        # Se o bind da porta falha (ex.: WinError 10013), o `socketserver` chama server_close
+        # antes de o nosso __init__ criar estes atributos: tolera isso, senão o AttributeError
+        # esconde o erro de porta e o programa não chega a tentar outra.
+        vigias = getattr(self, "vigias", None)
+        if vigias is not None:
+            vigias.parar_todos()
+        monitor = getattr(self, "monitor", None)
+        if monitor is not None:
+            monitor.parar()
         super().server_close()
-        if self._cliente_proprio:
+        if getattr(self, "_cliente_proprio", False):
             self.cliente.close()
 
 
