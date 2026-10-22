@@ -1651,3 +1651,64 @@ def test_inicio_mostra_os_atalhos_em_duas_secoes(pagina: Pagina, upstream: Upstr
     expect(fluxos).not_to_contain_text("Importar arquivo")
     fluxos.get_by_role("button", name="Excluir em massa").click()
     expect(page.locator("main")).to_contain_text("Ação destrutiva")
+
+
+# ----------------------------------------- status do aluno: aprovação dos documentos ---
+
+CONSULTAR_ALUNO = ("GET", "/api/solicitacaoAluno/consultarStatus")
+
+
+def _aluno_com_aprovacao(upstream: Upstream) -> None:
+    doc = {"id": 1, "nome": "rg.pdf", "extensao": "pdf", "tamanho": 2048}
+    corpo = {
+        "codigoMatricula": "123",
+        "nome": "Bia",
+        "solicitacoes": [
+            {
+                "solicitacaoId": 9,
+                "status": "PENDENTE",
+                "quantidadeItens": 3,
+                "quantidadeItensEnviados": 2,
+                "quantidadeItensPendentes": 1,
+                "itens": [
+                    {
+                        "id": 1,
+                        "descricao": "RG",
+                        "obrigatorio": True,
+                        "status": "ENVIADO",
+                        "aprovado": True,
+                        "statusAprovacao": "APROVADO",
+                        "dataAprovacao": "2026-10-20T14:30:00",
+                        "documentos": [doc],
+                    },
+                    {
+                        "id": 2,
+                        "descricao": "CPF",
+                        "status": "ENVIADO",
+                        "aprovado": False,
+                        "statusAprovacao": "AGUARDANDO_CONFERENCIA",
+                        "documentos": [doc],
+                    },
+                    {"id": 3, "descricao": "Comprovante", "status": "PENDENTE"},
+                ],
+            }
+        ],
+    }
+    upstream.respostas[CONSULTAR_ALUNO] = (200, json.dumps(corpo))
+
+
+def test_status_do_aluno_mostra_a_aprovacao_dos_itens(pagina: Pagina, upstream: Upstream) -> None:
+    page = pagina.page
+    _aluno_com_aprovacao(upstream)
+    pagina.ir("Status do aluno")
+    page.fill("#f-alunoStatus-codigoMatricula", "123")
+    pagina.botao("Consultar aluno").click()
+    expect(page.locator("main")).to_contain_text("1 aprovado(s)")  # resumo da solicitação
+    pagina.botao("Ver itens").click()
+    linhas = page.locator("main table tbody tr")
+    expect(linhas).to_have_count(3)
+    expect(page.locator("main table thead")).to_contain_text("Aprovação")
+    expect(linhas.nth(0)).to_contain_text("Aprovado em")  # aprovado: o status segue "Enviado"
+    expect(linhas.nth(0)).to_contain_text(re.compile("enviado", re.IGNORECASE))
+    expect(linhas.nth(1)).to_contain_text("Aguardando conferencia")
+    expect(linhas.nth(2)).to_contain_text("Sem conferência")
